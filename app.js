@@ -184,16 +184,16 @@ async function backfillListingWhatsAppNumbers() {
 
 main()
     .then(async () => {
-        await seedSampleListingsIfNeeded();
+
+        if (process.env.NODE_ENV !== "production") {
+            await seedSampleListingsIfNeeded();
+        }
+
         await backfillListingWhatsAppNumbers();
     })
     .catch((err) => {
         console.log(err);
     });
-
-async function main() {
-    await mongoose.connect(dbUrl);
-}
 
 app.set("view engine","ejs");
 app.set("views", path.join(__dirname, "views"));
