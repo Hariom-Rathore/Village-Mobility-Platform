@@ -14,7 +14,7 @@ module.exports.createReview = async (req, res, next) => {
     await listing.save();
 
     req.flash("success", "Review Created Successfully!");
-    res.redirect(`/listings/${listing._id}`);
+    res.redirect(`/cars/${listing._id}`);
   } catch (err) {
     next(new ExpressError(400, err.message));
   }
@@ -29,7 +29,7 @@ module.exports.deleteReview = async (req, res, next) => {
     await Review.findByIdAndDelete(reviewId);
 
     req.flash("success", "Review Deleted!");
-    res.redirect(`/listings/${id}`);
+    res.redirect(`/cars/${id}`);
   } catch (err) {
     next(new ExpressError(404, err.message));
   }

@@ -84,7 +84,7 @@
 
 <nav class="navbar navbar-expand-md bg-body-light border-bottom sticky-top">
   <div class="container-fluid">
-    <a class="navbar-brand" href="/listings"><i class="fa-regular fa-compass"></i></a>
+    <a class="navbar-brand" href="/cars"><i class="fa-regular fa-compass"></i></a>
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNavAltMarkup"
       aria-controls="navbarNavAltMarkup" aria-expanded="false" aria-label="Toggle navigation">
       <span class="navbar-toggler-icon"></span>
@@ -92,13 +92,13 @@
     <div class="collapse navbar-collapse" id="navbarNavAltMarkup">
       <div class="navbar-nav">
        
-        <a class="nav-link" href="/listings">Explore</a>
+        <a class="nav-link" href="/cars">Explore</a>
         <a class="nav-link" href="/chatbot">Chat with AI</a>
 
       </div>
 
       <div class="navbar-nav ms-auto">
-        <form class="d-flex position-relative" role="search" method="GET" action="/listings" autocomplete="off">
+        <form class="d-flex position-relative" role="search" method="GET" action="/cars" autocomplete="off">
       <input id="nav-search-input" class="form-control me-2 search-input" type="search" name="search" value="<%= typeof currentSearch !== 'undefined' ? currentSearch : '' %>" placeholder="Search car name" aria-label="Search"/>
       <button class="btn btn-search" type="submit">
         <i class="fa-solid fa-magnifying-glass"></i>Search</button>
@@ -107,7 +107,7 @@
       </div>
 
       <div class="navbar-nav ms-auto">
-        <a class="nav-link" href="/listings/new">Add new car</a>
+        <a class="nav-link" href="/cars/new">Add new car</a>
         <% if(!currUser) { %>
           <a class="nav-link " href="/signup"><b>Sign up</b></a>
           <a class="nav-link" href="/login"><b>Log in</b></a>
@@ -170,7 +170,7 @@
       if (!q) { clearSuggestions(); return; }
       timeout = setTimeout(async ()=>{
         try{
-          const res = await fetch('/listings/autocomplete?q=' + encodeURIComponent(q));
+          const res = await fetch('/cars/autocomplete?q=' + encodeURIComponent(q));
           if (!res.ok) { clearSuggestions(); return; }
           const data = await res.json();
           renderSuggestions(data);

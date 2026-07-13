@@ -1,18 +1,74 @@
 <% layout("/listings/layouts/boilerplate") %>
 <% const listingImageUrl = (listing.image && listing.image.url) ? listing.image.url : (typeof listing.image === "string" ? listing.image : "https://images.pexels.com/photos/11129937/pexels-photo-11129937.jpeg"); %>
 
+<%
+  const availabilityStatus = listing.availabilityStatus || 'AVAILABLE';
+  const statusColors = {
+    'AVAILABLE': 'success',
+    'BOOKED': 'danger',
+    'RESERVED': 'warning',
+    'UNDER_MAINTENANCE': 'secondary',
+    'HIDDEN': 'dark'
+  };
+  const badgeColor = statusColors[availabilityStatus] || 'secondary';
+  
+  let availabilityText = 'Available Now';
+  if (availabilityStatus === 'BOOKED' && listing.nextAvailableAt) {
+    const nextDate = new Date(listing.nextAvailableAt);
+    const now = new Date();
+    const diffTime = nextDate - now;
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    if (diffDays <= 0) {
+      availabilityText = 'Available Soon';
+    } else if (diffDays === 1) {
+      availabilityText = 'Available Tomorrow';
+    } else {
+      availabilityText = `Available in ${diffDays} days`;
+    }
+  } else if (availabilityStatus === 'UNDER_MAINTENANCE') {
+    availabilityText = 'Under Maintenance';
+  } else if (availabilityStatus === 'RESERVED') {
+    availabilityText = 'Reserved';
+  } else if (availabilityStatus === 'HIDDEN') {
+    availabilityText = 'Not Available';
+  }
+%>
+
   <div class="card mt-3 show-card listing-card">
-    <h3 class="show-title-top">
-      <%= listing.title %>
-    </h3>
+    <div class="d-flex justify-content-between align-items-start">
+      <h3 class="show-title-top mb-0">
+        <%= listing.title %>
+      </h3>
+      <span class="badge bg-<%= badgeColor %> fs-6"><%= availabilityText %></span>
+    </div>
     <img
       src="<%= listingImageUrl %>"
-      class="card-img-top show-img" alt="car_image" onerror="this.onerror=null;this.src='https://images.pexels.com/photos/11129937/pexels-photo-11129937.jpeg';">
+      class="card-img-top show-img" alt="car_image" loading="lazy" onerror="this.onerror=null;this.src='https://images.pexels.com/photos/11129937/pexels-photo-11129937.jpeg';">
     <div class="card-body show-body">
 
       <p class="show-line">
         <%= listing.description %>
       </p>
+      
+      <!-- Availability Section -->
+      <div class="availability-section mb-3 p-3 bg-light rounded">
+        <h6 class="mb-2">Availability Status</h6>
+        <div class="d-flex align-items-center mb-2">
+          <span class="badge bg-<%= badgeColor %> me-2"><%= availabilityText %></span>
+          <% if (listing.nextAvailableAt) { %>
+            <small class="text-muted">Available from: <%= new Date(listing.nextAvailableAt).toLocaleDateString() %></small>
+          <% } %>
+        </div>
+        <% if (listing.totalBookings > 0) { %>
+          <div class="mt-2">
+            <small class="text-muted">
+              <i class="fas fa-car"></i> <%= listing.totalBookings %> bookings | 
+              <i class="fas fa-rupee-sign"></i> ₹<%= listing.totalRevenue.toLocaleString('en-IN') %> total revenue
+            </small>
+          </div>
+        <% } %>
+      </div>
+
       <!-- Change note: owner username is now shown from populated listing.owner -->
       <p class="show-line">
         <b>Owner:</b>
@@ -37,30 +93,60 @@
       <p class="show-line">
         <%= listing.country %>
       </p>
+      
+      <!-- Rating Display -->
+      <% if (listing.averageRating && listing.totalReviews > 0) { %>
+        <div class="rating-section mt-3 p-3 bg-light rounded">
+          <h6 class="mb-2">Rating</h6>
+          <div class="d-flex align-items-center">
+            <span class="text-warning fs-5 me-2">
+              <%= listing.averageRating.toFixed(1) %>
+            </span>
+            <div class="text-warning">
+              <% for(let i = 0; i < 5; i++) { %>
+                <% if (i < Math.floor(listing.averageRating)) { %>
+                  <i class="fas fa-star"></i>
+                <% } else if (i < listing.averageRating) { %>
+                  <i class="fas fa-star-half-alt"></i>
+                <% } else { %>
+                  <i class="far fa-star"></i>
+                <% } %>
+              <% } %>
+            </div>
+            <small class="text-muted ms-2">(<%= listing.totalReviews %> reviews)</small>
+          </div>
+        </div>
+      <% } %>
     </div>
   </div>
   </br>
   <% if(currUser && listing.owner && listing.owner._id && listing.owner._id.equals(currUser._id)){%>
     <div class="show-actions">
 
-      <a href="/listings/<%= listing._id %>/edit" class="btn btn-dark">Edit</a>
-      <form method="post" action="/listings/<%= listing._id %>?_method=DELETE" class="show-delete-form">
+      <a href="/cars/<%= listing._id %>/edit" class="btn btn-dark">Edit</a>
+      <form method="post" action="/cars/<%= listing._id %>?_method=DELETE" class="show-delete-form">
         <button class="btn btn-danger">Delete</button>
       </form>
     </div>
 
     <% } %>
 
-    <div class="mt-3">
-       <a href="/listings/book/<%= listing._id %>" class="btn btn-success">Book</a>
-    </div>
+    <% if (availabilityStatus === 'AVAILABLE' || availabilityStatus === 'RESERVED') { %>
+      <div class="mt-3">
+         <a href="/cars/book/<%= listing._id %>" class="btn btn-success">Book Now</a>
+      </div>
+    <% } else { %>
+      <div class="mt-3">
+         <button class="btn btn-secondary" disabled>Not Available for Booking</button>
+      </div>
+    <% } %>
 
 
       <div class="reviews-section">
         <hr>
         <% if(currUser) {%>
           <h4>Leave a Review</h4>
-          <form action="/listings/<%= listing.id%>/reviews" method="POST" class="mb-3 needs-validation" novalidate>
+          <form action="/cars/<%= listing.id%>/reviews" method="POST" class="mb-3 needs-validation" novalidate>
 
             <div class="star-wrap">
             <fieldset class="starability-slot">
@@ -104,7 +190,7 @@
                   </p>
                   <% if(currUser && review.author && review.author._id.equals(currUser._id)) { %>
                     <form class="mb-3" method="POST"
-                      action="/listings/<%= listing._id %>/reviews/<%=review._id%>?_method=DELETE">
+                      action="/cars/<%= listing._id %>/reviews/<%=review._id%>?_method=DELETE">
                       <button class="btn btn-sm btn-dark">Delete</button>
                     </form>
                     <% } %>

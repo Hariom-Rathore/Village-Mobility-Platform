@@ -12,11 +12,11 @@ function fetch(url) {
 
 (async () => {
   try {
-    const listingsHtml = await fetch('http://localhost:8080/listings');
-    const m = listingsHtml.match(/\/listings\/book\/([a-fA-F0-9]{24})/);
+    const listingsHtml = await fetch('http://localhost:8080/cars');
+    const m = listingsHtml.match(/\/cars\/book\/([a-fA-F0-9]{24})/);
     if (!m) return console.log('NO_LISTING_ID');
     const id = m[1];
-    const bookHtml = await fetch('http://localhost:8080/listings/book/' + id);
+    const bookHtml = await fetch('http://localhost:8080/cars/book/' + id);
     const marker = '<script type="application/json" id="booking-config">';
     const start = bookHtml.indexOf(marker);
     if (start === -1) return console.log('NO_BOOKING_CONFIG');

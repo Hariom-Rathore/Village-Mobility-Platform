@@ -37,6 +37,7 @@ const listings= require("./routes/listing.js"); //this is router
 const reviews=require("./routes/review.js");
 const userRouter=require("./routes/user.js");
 const chatbotRouter=require("./routes/chatbot.js");
+const dashboardRouter=require("./routes/dashboard.js");
 
 const passport=require("passport");
 const localStrategy=require("passport-local");
@@ -151,7 +152,7 @@ async function seedSampleListingsIfNeeded() {
                     whatsappNumber: (listing.whatsappNumber || DEFAULT_OWNER_WHATSAPP_NUMBER || "").trim(),
                 },
             },
-            { upsert: true, new: true, setDefaultsOnInsert: true }
+            { upsert: true, returnDocument: 'after', setDefaultsOnInsert: true }
         );
         if (category) {
             insertedCount += 1;
@@ -181,6 +182,10 @@ async function backfillListingWhatsAppNumbers() {
 
 //make according to joi for  server side all things work systematically and i am use on teh router only this function name
 
+async function main() {
+    await mongoose.connect(dbUrl);
+    console.log("Database connected");
+}
 
 main()
     .then(async () => {
@@ -223,7 +228,7 @@ app.use((req, res, next) => {
 });
 
 app.get("/", (req, res) => {
-    res.redirect("/listings");
+    res.redirect("/cars");
 });
 
 //make a demo user for checking all things works 
@@ -237,10 +242,11 @@ app.get("/", (req, res) => {
 // res.send(registeredUser);
 // });
 
-app.use("/listings",listings);//listings and /listings/:id/reviews this is common part into the all router so this fixed first and after place of this use only /
-app.use("/listings/:id/reviews",reviews);
+app.use("/cars",listings);//cars and /cars/:id/reviews this is common part into the all router so this fixed first and after place of this use only /
+app.use("/cars/:id/reviews",reviews);
 app.use("/chatbot",chatbotRouter);
 app.use("/",userRouter);
+app.use("/dashboard",dashboardRouter);
 
 
 app.all(/.*/,(req,res,next)=>{
@@ -253,14 +259,14 @@ app.use((err,req,res,next)=>{
     const errorMsg = err.message || "Something went wrong!";
 
     // show form errors on add/edit listing pages
-    if (req.path === "/listings" && req.method === "POST") {
+    if (req.path === "/cars" && req.method === "POST") {
         return res.status(statusCode).render("listings/new.ejs", {
             listing: (err.viewData && err.viewData.listing) || emptyListing,
             errorMsg,
         });
     }
 
-    if (req.path.match(/^\/listings\/[^/]+$/) && req.method === "PUT") {
+    if (req.path.match(/^\/cars\/[^/]+$/) && req.method === "PUT") {
         return res.status(statusCode).render("listings/edit.ejs", {
             listing: {
                 ...(err.viewData && err.viewData.listing ? err.viewData.listing : emptyListing),

@@ -1,0 +1,252 @@
+<% layout("/listings/layouts/boilerplate") %>
+
+<div class="container mt-4">
+  <h2>User Dashboard</h2>
+  
+  <!-- Statistics Cards -->
+  <div class="row mb-4">
+    <div class="col-md-3">
+      <div class="card bg-primary text-white">
+        <div class="card-body">
+          <h5 class="card-title">Total Bookings</h5>
+          <h3 class="card-text"><%= stats.totalBookings %></h3>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card bg-success text-white">
+        <div class="card-body">
+          <h5 class="card-title">Completed</h5>
+          <h3 class="card-text"><%= stats.completedBookings %></h3>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card bg-warning text-white">
+        <div class="card-body">
+          <h5 class="card-title">Pending</h5>
+          <h3 class="card-text"><%= stats.pendingBookings %></h3>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card bg-info text-white">
+        <div class="card-body">
+          <h5 class="card-title">Total Spent</h5>
+          <h3 class="card-text">₹<%= stats.totalSpent.toLocaleString('en-IN') %></h3>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Current Rentals -->
+  <% if (currentRentals.length > 0) { %>
+    <div class="row mb-4">
+      <div class="col-12">
+        <div class="card">
+          <div class="card-header bg-warning">
+            <h5>Current Rentals (<%= currentRentals.length %>)</h5>
+          </div>
+          <div class="card-body">
+            <div class="table-responsive">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th>Vehicle</th>
+                    <th>Owner</th>
+                    <th>Pickup Date</th>
+                    <th>Return Date</th>
+                    <th>Amount</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <% currentRentals.forEach(booking => { %>
+                    <tr>
+                      <td>
+                        <a href="/cars/<%= booking.vehicleId?._id %>"><%= booking.vehicleId?.title || 'N/A' %></a>
+                      </td>
+                      <td><%= booking.ownerId?.username || booking.ownerId?.email || 'N/A' %></td>
+                      <td><%= booking.pickupDate ? new Date(booking.pickupDate).toLocaleDateString() : 'N/A' %></td>
+                      <td><%= booking.returnDate ? new Date(booking.returnDate).toLocaleDateString() : 'N/A' %></td>
+                      <td>₹<%= booking.totalPrice?.toLocaleString('en-IN') || 0 %></td>
+                      <td><span class="badge bg-warning"><%= booking.bookingStatus %></span></td>
+                    </tr>
+                  <% }); %>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  <% } %>
+
+  <!-- Upcoming Rentals -->
+  <% if (upcomingRentals.length > 0) { %>
+    <div class="row mb-4">
+      <div class="col-12">
+        <div class="card">
+          <div class="card-header bg-info">
+            <h5>Upcoming Rentals (<%= upcomingRentals.length %>)</h5>
+          </div>
+          <div class="card-body">
+            <div class="table-responsive">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th>Vehicle</th>
+                    <th>Owner</th>
+                    <th>Pickup Date</th>
+                    <th>Return Date</th>
+                    <th>Amount</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <% upcomingRentals.forEach(booking => { %>
+                    <tr>
+                      <td>
+                        <a href="/cars/<%= booking.vehicleId?._id %>"><%= booking.vehicleId?.title || 'N/A' %></a>
+                      </td>
+                      <td><%= booking.ownerId?.username || booking.ownerId?.email || 'N/A' %></td>
+                      <td><%= booking.pickupDate ? new Date(booking.pickupDate).toLocaleDateString() : 'N/A' %></td>
+                      <td><%= booking.returnDate ? new Date(booking.returnDate).toLocaleDateString() : 'N/A' %></td>
+                      <td>₹<%= booking.totalPrice?.toLocaleString('en-IN') || 0 %></td>
+                      <td><span class="badge bg-info"><%= booking.bookingStatus %></span></td>
+                      <td>
+                        <button class="btn btn-sm btn-danger" onclick="cancelBooking('<%= booking._id %>')">Cancel</button>
+                      </td>
+                    </tr>
+                  <% }); %>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  <% } %>
+
+  <!-- Past Rentals -->
+  <% if (pastRentals.length > 0) { %>
+    <div class="row mb-4">
+      <div class="col-12">
+        <div class="card">
+          <div class="card-header bg-success">
+            <h5>Past Rentals (<%= pastRentals.length %>)</h5>
+          </div>
+          <div class="card-body">
+            <div class="table-responsive">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th>Vehicle</th>
+                    <th>Owner</th>
+                    <th>Completed Date</th>
+                    <th>Amount</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <% pastRentals.forEach(booking => { %>
+                    <tr>
+                      <td>
+                        <a href="/cars/<%= booking.vehicleId?._id %>"><%= booking.vehicleId?.title || 'N/A' %></a>
+                      </td>
+                      <td><%= booking.ownerId?.username || booking.ownerId?.email || 'N/A' %></td>
+                      <td><%= booking.bookingCompletedAt ? new Date(booking.bookingCompletedAt).toLocaleDateString() : 'N/A' %></td>
+                      <td>₹<%= booking.totalPrice?.toLocaleString('en-IN') || 0 %></td>
+                      <td>
+                        <a href="/cars/<%= booking.vehicleId?._id %>" class="btn btn-sm btn-outline-primary">Leave Review</a>
+                      </td>
+                    </tr>
+                  <% }); %>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  <% } %>
+
+  <!-- All Bookings -->
+  <div class="row">
+    <div class="col-12">
+      <div class="card">
+        <div class="card-header">
+          <h5>All Bookings History</h5>
+        </div>
+        <div class="card-body">
+          <% if (bookings.length === 0) { %>
+            <p class="text-muted">No bookings yet. <a href="/cars">Browse vehicles</a> to make your first booking.</p>
+          <% } else { %>
+            <div class="table-responsive">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th>Vehicle</th>
+                    <th>Owner</th>
+                    <th>Pickup Date</th>
+                    <th>Return Date</th>
+                    <th>Amount</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <% bookings.forEach(booking => { %>
+                    <tr>
+                      <td>
+                        <a href="/cars/<%= booking.vehicleId?._id %>"><%= booking.vehicleId?.title || 'N/A' %></a>
+                      </td>
+                      <td><%= booking.ownerId?.username || booking.ownerId?.email || 'N/A' %></td>
+                      <td><%= booking.pickupDate ? new Date(booking.pickupDate).toLocaleDateString() : 'N/A' %></td>
+                      <td><%= booking.returnDate ? new Date(booking.returnDate).toLocaleDateString() : 'N/A' %></td>
+                      <td>₹<%= booking.totalPrice?.toLocaleString('en-IN') || 0 %></td>
+                      <td>
+                        <span class="badge bg-<%= 
+                          booking.bookingStatus === 'COMPLETED' ? 'success' : 
+                          booking.bookingStatus === 'CANCELLED' ? 'danger' : 
+                          booking.bookingStatus === 'CONFIRMED' ? 'info' : 'secondary' 
+                        %>"><%= booking.bookingStatus %></span>
+                      </td>
+                    </tr>
+                  <% }); %>
+                </tbody>
+              </table>
+            </div>
+          <% } %>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+async function cancelBooking(bookingId) {
+  if (!confirm('Are you sure you want to cancel this booking?')) return;
+
+  const reason = prompt('Enter cancellation reason (optional):');
+  if (reason === null) return;
+
+  try {
+    const response = await fetch(`/cars/bookings/${bookingId}/cancel`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ reason })
+    });
+
+    const result = await response.json();
+    if (result.success) {
+      alert('Booking cancelled successfully!');
+      location.reload();
+    } else {
+      alert('Failed to cancel booking: ' + result.error);
+    }
+  } catch (error) {
+    alert('Error cancelling booking: ' + error.message);
+  }
+}
+</script>

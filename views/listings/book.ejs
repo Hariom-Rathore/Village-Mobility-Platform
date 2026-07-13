@@ -44,7 +44,14 @@
         <label class="form-label">Total Charges</label>
         <input id="totalCost" class="form-control" readonly />
       </div>
-      <button id="payBtn" class="btn btn-primary" type="button">Pay & Book</button>
+      <div class="mb-3">
+        <label class="form-label">Payment Method</label>
+        <select id="paymentMethod" class="form-select">
+          <option value="razorpay">Pay Online (Razorpay)</option>
+          <option value="cod">Cash on Delivery</option>
+        </select>
+      </div>
+      <button id="payBtn" class="btn btn-primary" type="button">Book Now</button>
     </form>
   </div>
 </div>
@@ -140,7 +147,7 @@ function setDestMarker(latlng) {
 
 async function reverseGeocode(latlng) {
   try {
-    const response = await fetch(`/listings/reverse-geocode?lat=${encodeURIComponent(latlng[0])}&lon=${encodeURIComponent(latlng[1])}`, {
+    const response = await fetch(`/cars/reverse-geocode?lat=${encodeURIComponent(latlng[0])}&lon=${encodeURIComponent(latlng[1])}`, {
       headers: {
         'Accept': 'application/json'
       }
@@ -208,7 +215,7 @@ async function nominatimSearch(query) {
     return geocodeCache.get(cacheKey);
   }
 
-  const url = `/listings/geocode?q=${encodeURIComponent(query)}`;
+  const url = `/cars/geocode?q=${encodeURIComponent(query)}`;
   const request = fetch(url, {
     headers: {
       'Accept': 'application/json'
@@ -504,11 +511,6 @@ document.addEventListener('DOMContentLoaded', () => {
           return;
         }
 
-        if (typeof Razorpay === 'undefined') {
-          alert('Payment library is still loading. Please try again in a moment.');
-          return;
-        }
-
         const amount = Number(payBtn.dataset.amount || 0);
         if (!amount || amount <= 0) {
           alert('Please calculate the route to get a valid amount.');
@@ -523,7 +525,77 @@ document.addEventListener('DOMContentLoaded', () => {
         const purpose = document.getElementById('purpose').value || '';
         if (!purpose.trim() && !confirm('Purpose is empty. Continue?')) return;
 
-        const res = await fetch(`/listings/book/${listing._id}/order`, {
+        const paymentMethod = document.getElementById('paymentMethod').value;
+
+        // Handle Cash on Delivery
+        if (paymentMethod === 'cod') {
+          const payload = {
+            pickup: pickupInput.value,
+            destination: destinationInput.value,
+            purpose: purpose,
+            distanceKm: parseFloat(document.getElementById('distance').value) || 0,
+            amount: amount,
+            paymentMethod: 'cod'
+          };
+
+          const confRes = await fetch(`/cars/book/${listing._id}/confirm`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+            credentials: 'same-origin'
+          });
+
+          const confContentType = confRes.headers.get('content-type') || '';
+          if (!confRes.ok || !confContentType.includes('application/json')) {
+            if (confRes.status === 401 || confRes.redirected) {
+              window.location.href = '/login';
+              return;
+            }
+            alert('Booking failed');
+            return;
+          }
+
+          const conf = await confRes.json();
+          if (!conf.success) {
+            alert(conf.error || 'Booking failed');
+            return;
+          }
+
+          if (conf.whatsappSent) {
+            alert('Booking confirmed with Cash on Delivery. Owner has been notified on WhatsApp.');
+            window.location.href = '/cars/' + listing._id;
+            return;
+          }
+
+          if (conf.whatsappReason === 'missing-recipient-number') {
+            alert('Booking saved, but owner WhatsApp number is missing in this car listing. Please ask owner to update car details.');
+            window.location.href = '/cars/' + listing._id;
+            return;
+          }
+
+          if (conf.whatsappUrl) {
+            const shouldOpenWhatsApp = confirm('Booking confirmed with Cash on Delivery. Open WhatsApp now to send booking details to owner?');
+            if (shouldOpenWhatsApp) {
+              window.location.href = conf.whatsappUrl;
+              return;
+            }
+
+            window.location.href = '/cars/' + listing._id;
+            return;
+          }
+
+          alert('Booking confirmed with Cash on Delivery.');
+          window.location.href = '/cars/' + listing._id;
+          return;
+        }
+
+        // Handle Razorpay payment
+        if (typeof Razorpay === 'undefined') {
+          alert('Payment library is still loading. Please try again in a moment.');
+          return;
+        }
+
+        const res = await fetch(`/cars/book/${listing._id}/order`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ amount }),
@@ -567,12 +639,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 razorpay_signature: response.razorpay_signature,
                 pickup: pickupInput.value,
                 destination: destinationInput.value,
-                purpose: document.getElementById('purpose').value || '',
+                purpose: purpose,
                 distanceKm: parseFloat(document.getElementById('distance').value) || 0,
-                amount: amount
+                amount: amount,
+                paymentMethod: 'razorpay'
               };
 
-              const confRes = await fetch(`/listings/book/${listing._id}/confirm`, {
+              const confRes = await fetch(`/cars/book/${listing._id}/confirm`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload),
@@ -597,13 +670,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
               if (conf.whatsappSent) {
                 alert('Payment successful. Booking confirmed and owner has been notified on WhatsApp.');
-                window.location.href = '/listings/' + listing._id;
+                window.location.href = '/cars/' + listing._id;
                 return;
               }
 
               if (conf.whatsappReason === 'missing-recipient-number') {
                 alert('Payment successful and booking saved, but owner WhatsApp number is missing in this car listing. Please ask owner to update car details.');
-                window.location.href = '/listings/' + listing._id;
+                window.location.href = '/cars/' + listing._id;
                 return;
               }
 
@@ -614,12 +687,12 @@ document.addEventListener('DOMContentLoaded', () => {
                   return;
                 }
 
-                window.location.href = '/listings/' + listing._id;
+                window.location.href = '/cars/' + listing._id;
                 return;
               }
 
               alert('Payment successful and booking saved.');
-              window.location.href = '/listings/' + listing._id;
+              window.location.href = '/cars/' + listing._id;
             } catch (error) {
               console.error(error);
               alert('Unexpected error while confirming booking');

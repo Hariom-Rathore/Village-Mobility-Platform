@@ -5,7 +5,7 @@ const sampleListings = [
       "High-performance sports car with paddle shifters, launch control, and premium leather cabin.",
     image: {
       filename: "listingimage",
-      url: "https://images.unsplash.com/photo-1503376780353-7e6692767b70",
+      url: "https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=800&q=80",
     },
     price: 12999,
     ratePerKm: 50,
@@ -20,7 +20,7 @@ const sampleListings = [
       "Comfort-first premium sedan with ventilated seats, ADAS, and smooth automatic transmission.",
     image: {
       filename: "listingimage",
-      url: "https://images.unsplash.com/photo-1492144534655-ae79c964c9d7",
+      url: "https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?auto=format&fit=crop&w=800&q=80",
     },
     price: 5499,
     ratePerKm: 25,
@@ -35,7 +35,7 @@ const sampleListings = [
       "Rugged 4x4 SUV ready for hills and highways with roof rails and terrain modes.",
     image: {
       filename: "listingimage",
-      url: "https://images.unsplash.com/photo-1511919884226-fd3cad34687c",
+      url: "https://images.unsplash.com/photo-1511919884226-fd3cad34687c?auto=format&fit=crop&w=800&q=80",
     },
     price: 7999,
     ratePerKm: 35,
@@ -65,7 +65,7 @@ const sampleListings = [
       "Stretch limousine experience with ambient lighting and executive rear lounge.",
     image: {
       filename: "listingimage",
-      url: "https://images.unsplash.com/photo-1549399542-7e3f8b79c341",
+      url: "https://images.unsplash.com/photo-1549399542-7e3f8b79c341?auto=format&fit=crop&w=800&q=80",
     },
     price: 18999,
     ratePerKm: 80,
@@ -95,7 +95,7 @@ const sampleListings = [
       "Spacious 7-seater MPV with flexible boot space and rear AC vents for long family tours.",
     image: {
       filename: "listingimage",
-      url: "https://images.unsplash.com/photo-1485291571150-772bcfc10da5",
+      url: "https://images.unsplash.com/photo-1485291571150-772bcfc10da5?auto=format&fit=crop&w=800&q=80",
     },
     price: 4999,
     ratePerKm: 20,
@@ -140,7 +140,7 @@ const sampleListings = [
       "Winter-ready 4x4 with heated seats and intelligent traction system for icy routes.",
     image: {
       filename: "listingimage",
-      url: "https://images.unsplash.com/photo-1519641471654-76ce0107ad1b",
+      url: "https://images.unsplash.com/photo-1519641471654-76ce0107ad1b?auto=format&fit=crop&w=800&q=80",
     },
     price: 8999,
     ratePerKm: 38,

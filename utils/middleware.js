@@ -52,12 +52,12 @@ module.exports.isOwner = async (req, res, next) => {
 
     if (!listing) {
         req.flash("error", "Listing not found");
-        return res.redirect("/listings");
+        return res.redirect("/cars");
     }
 
     if (!req.user || !listing.owner || !listing.owner.equals(req.user._id)) {
         req.flash("error", "you are not owner of this listing");
-        return res.redirect(`/listings/${id}`);
+        return res.redirect(`/cars/${id}`);
     }
     next();
 };
@@ -92,12 +92,12 @@ module.exports.validateReview = (req, res, next) => {
 
     if (!review) {
         req.flash("error", "Review not found");
-        return res.redirect(`/listings/${id}`);
+        return res.redirect(`/cars/${id}`);
     }
 
     if (!req.user || !review.author.equals(req.user._id)) {
         req.flash("error", "you did not create this review");
-        return res.redirect(`/listings/${id}`);
+        return res.redirect(`/cars/${id}`);
     }
     next();
 };

@@ -1,14 +1,14 @@
 (async ()=>{
   try{
     const fetch = globalThis.fetch;
-    const listingsRes = await fetch('http://localhost:8080/listings');
+    const listingsRes = await fetch('http://localhost:8080/cars');
     if(!listingsRes.ok){ console.error('Listings fetch failed', listingsRes.status); process.exit(1);} 
     const listingsHtml = await listingsRes.text();
-    const m = listingsHtml.match(/\/listings\/([a-f0-9]{24})/i);
+    const m = listingsHtml.match(/\/cars\/([a-f0-9]{24})/i);
     if(!m){ console.error('No listing id found'); console.log(listingsHtml.slice(0,800)); process.exit(2);} 
     const id = m[1];
     console.log('Found listing id', id);
-    const bookRes = await fetch(`http://localhost:8080/listings/book/${id}`);
+    const bookRes = await fetch(`http://localhost:8080/cars/book/${id}`);
     console.log('Book page status', bookRes.status);
     const bookHtml = await bookRes.text();
     const hasPayBtn = bookHtml.includes('id="payBtn"') || bookHtml.includes('Pay & Book');

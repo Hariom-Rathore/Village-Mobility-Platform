@@ -8,7 +8,7 @@ const bookingController = require("../controllers/booking.js");
 
 // Debug: log requests hitting this router
 router.use((req, res, next) => {
-	console.log('LISTING ROUTER =>', req.method, req.path);
+	console.log('CAR ROUTER =>', req.method, req.path);
 	next();
 });
 
@@ -38,6 +38,14 @@ router.get('/book/:id', bookingController.renderBooking);
 router.get('/:id/book', bookingController.renderBooking);
 router.post('/book/:id/order', isLoggedIn, bookingController.createOrder);
 router.post('/book/:id/confirm', isLoggedIn, bookingController.confirmPayment);
+
+// Production booking APIs
+router.get('/:id/availability', bookingController.checkAvailability);
+router.get('/:id/calendar', bookingController.getCalendar);
+router.post('/bookings/:bookingId/cancel', isLoggedIn, bookingController.cancelBooking);
+router.post('/bookings/:bookingId/complete', isLoggedIn, bookingController.completeBooking);
+router.get('/bookings/my', isLoggedIn, bookingController.getUserBookings);
+router.get('/bookings/owner', isLoggedIn, bookingController.getOwnerBookings);
 
 router
 .route("/:id")

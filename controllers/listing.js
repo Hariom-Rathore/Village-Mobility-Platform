@@ -114,7 +114,7 @@ module.exports.createListing = async (req, res) => {
     await listing.save();
     console.log("Listing saved with ID:", listing._id);
     req.flash("success", "New listing created and shown on home page!");
-    res.redirect("/listings");
+    res.redirect("/cars");
 };
 
 module.exports.showListing = async (req, res) => {
@@ -165,7 +165,7 @@ module.exports.updateListing = async (req, res) => {
     }
 
     req.flash("success", "Listing updated successfully!");
-    res.redirect(`/listings/${listing._id}`);
+    res.redirect(`/cars/${listing._id}`);
 };
 
 module.exports.deleteListing = async (req, res) => {
@@ -177,7 +177,7 @@ module.exports.deleteListing = async (req, res) => {
     }
 
     req.flash("success", "Listing deleted successfully!");
-    res.redirect("/listings");
+    res.redirect("/cars");
 };
 
 module.exports.reverseGeocode = async (req, res) => {

@@ -1,7 +1,7 @@
 <% layout("/listings/layouts/boilerplate") %>
 <body>
     <!-- <h3>all listings</h3> -->
-    <!-- <form method="GET" action="/listings/new">
+    <!-- <form method="GET" action="/cars/new">
   
     </form> -->
 <style>
@@ -137,84 +137,84 @@
 
   
     <div id="filters">
-      <a href="/listings?category=all" class="filter-link <%= currentCategory === 'all' ? 'active' : '' %>">
+      <a href="/cars?category=all" class="filter-link <%= currentCategory === 'all' ? 'active' : '' %>">
         <div class="filter">
           <div><i class="fa-solid fa-fire"></i></div>
           <p>Trending</p>
         </div>
       </a>
 
-      <a href="/listings?category=sedans" class="filter-link <%= currentCategory === 'sedans' ? 'active' : '' %>">
+      <a href="/cars?category=sedans" class="filter-link <%= currentCategory === 'sedans' ? 'active' : '' %>">
         <div class="filter">
           <div><i class="fa-solid fa-car-side"></i></div>
           <p>Sedans</p>
         </div>
       </a>
 
-      <a href="/listings?category=suvs" class="filter-link <%= currentCategory === 'suvs' ? 'active' : '' %>">
+      <a href="/cars?category=suvs" class="filter-link <%= currentCategory === 'suvs' ? 'active' : '' %>">
         <div class="filter">
           <div><i class="fa-solid fa-truck-monster"></i></div>
           <p>SUVs</p>
         </div>
       </a>
 
-      <a href="/listings?seats=4" class="filter-link <%= Number(currentSeats) === 4 ? 'active' : '' %>">
+      <a href="/cars?seats=4" class="filter-link <%= Number(currentSeats) === 4 ? 'active' : '' %>">
         <div class="filter">
           <div><i class="fa-solid fa-user-friends"></i></div>
           <p>4 Seater</p>
         </div>
       </a>
 
-      <a href="/listings?seats=6" class="filter-link <%= Number(currentSeats) === 6 ? 'active' : '' %>">
+      <a href="/cars?seats=6" class="filter-link <%= Number(currentSeats) === 6 ? 'active' : '' %>">
         <div class="filter">
           <div><i class="fa-solid fa-users"></i></div>
           <p>6 Seater</p>
         </div>
       </a>
 
-      <a href="/listings?seats=10" class="filter-link <%= Number(currentSeats) === 10 ? 'active' : '' %>">
+      <a href="/cars?seats=10" class="filter-link <%= Number(currentSeats) === 10 ? 'active' : '' %>">
         <div class="filter">
           <div><i class="fa-solid fa-people-roof"></i></div>
           <p>10 Seater</p>
         </div>
       </a>
 
-      <a href="/listings?category=luxury" class="filter-link <%= currentCategory === 'luxury' ? 'active' : '' %>">
+      <a href="/cars?category=luxury" class="filter-link <%= currentCategory === 'luxury' ? 'active' : '' %>">
         <div class="filter">
           <div><i class="fa-solid fa-crown"></i></div>
           <p>Luxury</p>
         </div>
       </a>
 
-      <a href="/listings?category=sports" class="filter-link <%= currentCategory === 'sports' ? 'active' : '' %>">
+      <a href="/cars?category=sports" class="filter-link <%= currentCategory === 'sports' ? 'active' : '' %>">
         <div class="filter">
           <div><i class="fa-solid fa-flag-checkered"></i></div>
           <p>Sports</p>
         </div>
       </a>
 
-      <a href="/listings?category=offroad" class="filter-link <%= currentCategory === 'offroad' ? 'active' : '' %>">
+      <a href="/cars?category=offroad" class="filter-link <%= currentCategory === 'offroad' ? 'active' : '' %>">
         <div class="filter">
           <div><i class="fa-solid fa-hill-rockslide"></i></div>
           <p>Offroad</p>
         </div>
       </a>
 
-      <a href="/listings?category=family" class="filter-link <%= currentCategory === 'family' ? 'active' : '' %>">
+      <a href="/cars?category=family" class="filter-link <%= currentCategory === 'family' ? 'active' : '' %>">
         <div class="filter">
           <div><i class="fa-solid fa-people-group"></i></div>
           <p>Family</p>
         </div>
       </a>
 
-      <a href="/listings?category=vintage" class="filter-link <%= currentCategory === 'vintage' ? 'active' : '' %>">
+      <a href="/cars?category=vintage" class="filter-link <%= currentCategory === 'vintage' ? 'active' : '' %>">
         <div class="filter">
           <div><i class="fa-solid fa-clock-rotate-left"></i></div>
           <p>Vintage</p>
         </div>
       </a>
 
-      <a href="/listings?category=winter" class="filter-link <%= currentCategory === 'winter' ? 'active' : '' %>">
+      <a href="/cars?category=winter" class="filter-link <%= currentCategory === 'winter' ? 'active' : '' %>">
         <div class="filter">
           <div><i class="fa-regular fa-snowflake"></i></div>
           <p>Winter</p>
@@ -242,19 +242,61 @@
       <% } %>
          <% for(let listing of alllistings){%>
             <% const listingImageUrl = (listing.image && listing.image.url) ? listing.image.url : (typeof listing.image === "string" ? listing.image : "https://images.pexels.com/photos/11129937/pexels-photo-11129937.jpeg"); %>
-            <a href="/listings/<%=listing._id%>" class="listing-link">
+            <% 
+              const availabilityStatus = listing.availabilityStatus || 'AVAILABLE';
+              const statusColors = {
+                'AVAILABLE': 'success',
+                'BOOKED': 'danger',
+                'RESERVED': 'warning',
+                'UNDER_MAINTENANCE': 'secondary',
+                'HIDDEN': 'dark'
+              };
+              const badgeColor = statusColors[availabilityStatus] || 'secondary';
+              
+              let availabilityText = 'Available';
+              if (availabilityStatus === 'BOOKED' && listing.nextAvailableAt) {
+                const nextDate = new Date(listing.nextAvailableAt);
+                availabilityText = `Available from ${nextDate.toLocaleDateString()}`;
+              } else if (availabilityStatus === 'UNDER_MAINTENANCE') {
+                availabilityText = 'Under Maintenance';
+              } else if (availabilityStatus === 'RESERVED') {
+                availabilityText = 'Reserved';
+              }
+            %>
+            <a href="/cars/<%=listing._id%>" class="listing-link">
     <div class="card col listing-card">
-  <img src="<%= listingImageUrl %>" class="card-img-top" alt="car_image" style="height: 20rem" onerror="this.onerror=null;this.src='https://images.pexels.com/photos/11129937/pexels-photo-11129937.jpeg';"/>
+  <img src="<%= listingImageUrl %>" class="card-img-top" alt="car_image" style="height: 20rem" loading="lazy" onerror="this.onerror=null;this.src='https://images.pexels.com/photos/11129937/pexels-photo-11129937.jpeg';"/>
   <div class="card-img-overlay"></div>
   <div class="card-body">
+    <div class="d-flex justify-content-between align-items-start">
+      <p class="card-text mb-1">
+        <%=listing.title%>
+      </p>
+      <span class="badge bg-<%= badgeColor %>"><%= availabilityText %></span>
+    </div>
     <p class="card-text">
-        <%=listing.title%> <br/>
       <%= listing.price != null ? listing.price.toLocaleString("en-IN") : "Price not available" %> /day
       <% if(listing.ratePerKm != null && listing.ratePerKm !== '') { %>
         <br/><small class="text-muted">&#8377; <%= listing.ratePerKm %> /km</small>
       <% } %>
        <i class="tax-info"> &nbsp:&nbsp;+18%GST</i>
     </p>
+    <% if (listing.averageRating && listing.totalReviews > 0) { %>
+      <div class="mt-2">
+        <small class="text-warning">
+          <% for(let i = 0; i < 5; i++) { %>
+            <% if (i < Math.floor(listing.averageRating)) { %>
+              <i class="fas fa-star"></i>
+            <% } else if (i < listing.averageRating) { %>
+              <i class="fas fa-star-half-alt"></i>
+            <% } else { %>
+              <i class="far fa-star"></i>
+            <% } %>
+          <% } %>
+        </small>
+        <small class="text-muted">(<%= listing.totalReviews %> reviews)</small>
+      </div>
+    <% } %>
   </div>
 </div>
    <%}%>

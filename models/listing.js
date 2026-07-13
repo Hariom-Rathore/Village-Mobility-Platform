@@ -58,6 +58,43 @@ const listingSchema = new Schema({
       type:Schema.Types.ObjectId,
       ref:"User", 
       required:true,
+    },
+    // Production booking fields
+    availabilityStatus: {
+      type: String,
+      enum: ["AVAILABLE", "BOOKED", "RESERVED", "UNDER_MAINTENANCE", "HIDDEN"],
+      default: "AVAILABLE"
+    },
+    nextAvailableAt: {
+      type: Date,
+      default: null
+    },
+    maintenanceMode: {
+      type: Boolean,
+      default: false
+    },
+    currentBookingId: {
+      type: Schema.Types.ObjectId,
+      ref: "Booking",
+      default: null
+    },
+    totalBookings: {
+      type: Number,
+      default: 0
+    },
+    totalRevenue: {
+      type: Number,
+      default: 0
+    },
+    averageRating: {
+      type: Number,
+      default: 0,
+      min: 0,
+      max: 5
+    },
+    totalReviews: {
+      type: Number,
+      default: 0
     }
 });
 

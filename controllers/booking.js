@@ -2,6 +2,8 @@ const Razorpay = require('razorpay');
 const crypto = require('crypto');
 const Listing = require('../models/listing');
 const Booking = require('../models/booking');
+const bookingService = require('../services/bookingService');
+const notificationService = require('../services/notificationService');
 
 const WHATSAPP_PHONE_NUMBER_ID = process.env.WHATSAPP_PHONE_NUMBER_ID || '';
 const WHATSAPP_ACCESS_TOKEN = process.env.WHATSAPP_ACCESS_TOKEN || '';
@@ -96,7 +98,7 @@ module.exports.renderBooking = async (req, res) => {
     const { id } = req.params;
     const listing = await Listing.findById(id);
     if (!listing) {
-        return res.redirect(`/listings/${id}`);
+        return res.redirect(`/cars/${id}`);
     }
     res.render('listings/book.ejs', {
         listing,
@@ -136,14 +138,83 @@ module.exports.createOrder = async (req, res) => {
 module.exports.confirmPayment = async (req, res) => {
     try {
         const { id } = req.params; // listing id
-        const { razorpay_order_id, razorpay_payment_id, razorpay_signature, pickup, destination, purpose, distanceKm, amount } = req.body;
-        const key_secret = process.env.RAZORPAY_KEY_SECRET;
-        if (!key_secret) return res.status(500).json({ success: false, error: 'Razorpay secret not configured' });
+        const { razorpay_order_id, razorpay_payment_id, razorpay_signature, pickup, destination, purpose, distanceKm, amount, paymentMethod, pickupDate, returnDate, pickupTime, returnTime } = req.body;
 
         const listing = await Listing.findById(id);
         if (!listing) {
             return res.status(404).json({ success: false, error: 'Listing not found' });
         }
+
+        // Validate booking
+        const validation = await bookingService.validateBooking({
+            vehicleId: id,
+            pickupDate: pickupDate ? new Date(pickupDate) : null,
+            returnDate: returnDate ? new Date(returnDate) : null,
+            userId: req.user._id,
+            amount: amount
+        });
+
+        if (!validation.valid) {
+            return res.status(400).json({ success: false, error: validation.error });
+        }
+
+        // For COD, skip Razorpay verification
+        if (paymentMethod === 'cod') {
+            const ownerWhatsAppNumber = normalizeWhatsAppNumber(listing.whatsappNumber || '');
+
+            const booking = new Booking({
+                user: req.user._id,
+                listing: id,
+                vehicleId: id,
+                ownerId: listing.owner,
+                renterId: req.user._id,
+                pickup: pickup || '',
+                destination: destination || '',
+                purpose: purpose || '',
+                distanceKm: Number(distanceKm) || 0,
+                amountPaid: Number(amount) || 0,
+                totalPrice: Number(amount) || 0,
+                paymentMethod: 'cod',
+                paymentStatus: 'PENDING',
+                bookingStatus: 'CONFIRMED',
+                pickupDate: pickupDate ? new Date(pickupDate) : null,
+                returnDate: returnDate ? new Date(returnDate) : null,
+                pickupTime: pickupTime || '',
+                returnTime: returnTime || '',
+                ownerWhatsappNumber: ownerWhatsAppNumber,
+            });
+            await booking.save();
+
+            // Update vehicle stats and availability
+            await bookingService.updateVehicleStats(id, Number(amount) || 0);
+            await bookingService.updateVehicleAvailability(id);
+
+            // Send notifications
+            await notificationService.notifyBookingConfirmed(booking._id);
+
+            const whatsappNumber = ownerWhatsAppNumber;
+            const whatsappMessage = buildWhatsAppMessage({ listing, booking, user: req.user });
+            const whatsappUrl = buildWhatsAppUrl(whatsappNumber, whatsappMessage);
+            const whatsappDelivery = await sendWhatsAppTextMessage(whatsappNumber, whatsappMessage);
+
+            if (!whatsappDelivery.sent) {
+                console.warn('Owner WhatsApp auto-send failed:', whatsappDelivery.reason, whatsappDelivery.details || '');
+            }
+
+            return res.json({
+                success: true,
+                bookingId: booking._id,
+                whatsappSent: whatsappDelivery.sent,
+                whatsappReason: whatsappDelivery.sent ? 'sent' : whatsappDelivery.reason,
+                whatsappUrl,
+                whatsappNumber: normalizeWhatsAppNumber(whatsappNumber),
+                paymentMethod: 'cod',
+            });
+        }
+
+        // For Razorpay payment
+        const key_secret = process.env.RAZORPAY_KEY_SECRET;
+        if (!key_secret) return res.status(500).json({ success: false, error: 'Razorpay secret not configured' });
 
         const generated_signature = crypto.createHmac('sha256', key_secret).update(`${razorpay_order_id}|${razorpay_payment_id}`).digest('hex');
         if (generated_signature !== razorpay_signature) {
@@ -156,17 +227,36 @@ module.exports.confirmPayment = async (req, res) => {
         const booking = new Booking({
             user: req.user._id,
             listing: id,
+            vehicleId: id,
+            ownerId: listing.owner,
+            renterId: req.user._id,
             pickup: pickup || '',
             destination: destination || '',
             purpose: purpose || '',
             distanceKm: Number(distanceKm) || 0,
             amountPaid: Number(amount) || 0,
+            totalPrice: Number(amount) || 0,
+            paymentMethod: 'razorpay',
+            paymentStatus: 'PAID',
+            bookingStatus: 'CONFIRMED',
             razorpayOrderId: razorpay_order_id,
             razorpayPaymentId: razorpay_payment_id,
             razorpaySignature: razorpay_signature,
+            pickupDate: pickupDate ? new Date(pickupDate) : null,
+            returnDate: returnDate ? new Date(returnDate) : null,
+            pickupTime: pickupTime || '',
+            returnTime: returnTime || '',
             ownerWhatsappNumber: ownerWhatsAppNumber,
         });
         await booking.save();
+
+        // Update vehicle stats and availability
+        await bookingService.updateVehicleStats(id, Number(amount) || 0);
+        await bookingService.updateVehicleAvailability(id);
+
+        // Send notifications
+        await notificationService.notifyBookingConfirmed(booking._id);
+        await notificationService.notifyPaymentReceived(booking._id);
 
         const whatsappNumber = ownerWhatsAppNumber;
         const whatsappMessage = buildWhatsAppMessage({ listing, booking, user: req.user });
@@ -184,9 +274,227 @@ module.exports.confirmPayment = async (req, res) => {
             whatsappReason: whatsappDelivery.sent ? 'sent' : whatsappDelivery.reason,
             whatsappUrl,
             whatsappNumber: normalizeWhatsAppNumber(whatsappNumber),
+            paymentMethod: 'razorpay',
         });
     } catch (e) {
         console.error('Payment confirmation error', e);
         return res.status(500).json({ success: false, error: 'Unable to confirm payment' });
+    }
+};
+
+// Check availability API
+module.exports.checkAvailability = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { pickupDate, returnDate } = req.query;
+
+        const listing = await Listing.findById(id);
+        if (!listing) {
+            return res.status(404).json({ success: false, error: 'Vehicle not found' });
+        }
+
+        if (!pickupDate || !returnDate) {
+            return res.json({ success: true, available: true, message: 'Dates not provided' });
+        }
+
+        const isAvailable = await bookingService.checkAvailability(
+            id,
+            new Date(pickupDate),
+            new Date(returnDate)
+        );
+
+        return res.json({
+            success: true,
+            available: isAvailable,
+            vehicle: {
+                id: listing._id,
+                title: listing.title,
+                availabilityStatus: listing.availabilityStatus,
+                nextAvailableAt: listing.nextAvailableAt,
+                maintenanceMode: listing.maintenanceMode
+            }
+        });
+    } catch (e) {
+        console.error('Availability check error', e);
+        return res.status(500).json({ success: false, error: 'Unable to check availability' });
+    }
+};
+
+// Get availability calendar API
+module.exports.getCalendar = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { startDate, endDate } = req.query;
+
+        const listing = await Listing.findById(id);
+        if (!listing) {
+            return res.status(404).json({ success: false, error: 'Vehicle not found' });
+        }
+
+        const start = startDate ? new Date(startDate) : new Date();
+        const end = endDate ? new Date(endDate) : new Date(Date.now() + 90 * 24 * 60 * 60 * 1000); // 90 days
+
+        const calendar = await bookingService.getAvailabilityCalendar(id, start, end);
+
+        return res.json({
+            success: true,
+            calendar,
+            vehicle: {
+                id: listing._id,
+                title: listing.title,
+                availabilityStatus: listing.availabilityStatus,
+                nextAvailableAt: listing.nextAvailableAt
+            }
+        });
+    } catch (e) {
+        console.error('Calendar fetch error', e);
+        return res.status(500).json({ success: false, error: 'Unable to fetch calendar' });
+    }
+};
+
+// Cancel booking API
+module.exports.cancelBooking = async (req, res) => {
+    try {
+        const { bookingId } = req.params;
+        const { reason } = req.body;
+
+        const booking = await Booking.findById(bookingId);
+        if (!booking) {
+            return res.status(404).json({ success: false, error: 'Booking not found' });
+        }
+
+        // Check if user is authorized (owner or renter)
+        if (booking.renterId.toString() !== req.user._id.toString() && 
+            booking.ownerId.toString() !== req.user._id.toString()) {
+            return res.status(403).json({ success: false, error: 'Not authorized to cancel this booking' });
+        }
+
+        // Check if booking can be cancelled
+        if (booking.bookingStatus === 'CANCELLED' || booking.bookingStatus === 'COMPLETED') {
+            return res.status(400).json({ success: false, error: 'Cannot cancel this booking' });
+        }
+
+        booking.bookingStatus = 'CANCELLED';
+        booking.cancellationReason = reason || '';
+        booking.cancelledBy = req.user._id;
+        booking.bookingUpdatedAt = new Date();
+
+        await booking.save();
+
+        // Update vehicle availability
+        await bookingService.updateVehicleAvailability(booking.vehicleId);
+
+        // Send notifications
+        await notificationService.notifyBookingCancelled(bookingId);
+
+        return res.json({
+            success: true,
+            booking: {
+                id: booking._id,
+                bookingStatus: booking.bookingStatus,
+                cancellationReason: booking.cancellationReason
+            }
+        });
+    } catch (e) {
+        console.error('Booking cancellation error', e);
+        return res.status(500).json({ success: false, error: 'Unable to cancel booking' });
+    }
+};
+
+// Complete booking API
+module.exports.completeBooking = async (req, res) => {
+    try {
+        const { bookingId } = req.params;
+        const { vehicleConditionAfter } = req.body;
+
+        const booking = await Booking.findById(bookingId);
+        if (!booking) {
+            return res.status(404).json({ success: false, error: 'Booking not found' });
+        }
+
+        // Only owner can complete booking
+        if (booking.ownerId.toString() !== req.user._id.toString()) {
+            return res.status(403).json({ success: false, error: 'Not authorized to complete this booking' });
+        }
+
+        // Check if booking can be completed
+        if (booking.bookingStatus !== 'CONFIRMED') {
+            return res.status(400).json({ success: false, error: 'Booking cannot be completed' });
+        }
+
+        booking.bookingStatus = 'COMPLETED';
+        booking.vehicleConditionAfter = vehicleConditionAfter || '';
+        booking.bookingCompletedAt = new Date();
+        booking.bookingUpdatedAt = new Date();
+
+        await booking.save();
+
+        // Update vehicle availability
+        await bookingService.updateVehicleAvailability(booking.vehicleId);
+
+        // Send notifications
+        await notificationService.notifyBookingCompleted(bookingId);
+
+        return res.json({
+            success: true,
+            booking: {
+                id: booking._id,
+                bookingStatus: booking.bookingStatus,
+                bookingCompletedAt: booking.bookingCompletedAt
+            }
+        });
+    } catch (e) {
+        console.error('Booking completion error', e);
+        return res.status(500).json({ success: false, error: 'Unable to complete booking' });
+    }
+};
+
+// Get user bookings API
+module.exports.getUserBookings = async (req, res) => {
+    try {
+        const { status } = req.query;
+        const filter = { renterId: req.user._id };
+
+        if (status) {
+            filter.bookingStatus = status.toUpperCase();
+        }
+
+        const bookings = await Booking.find(filter)
+            .populate('vehicleId')
+            .populate('ownerId')
+            .sort({ bookingCreatedAt: -1 });
+
+        return res.json({
+            success: true,
+            bookings
+        });
+    } catch (e) {
+        console.error('Get user bookings error', e);
+        return res.status(500).json({ success: false, error: 'Unable to fetch bookings' });
+    }
+};
+
+// Get owner bookings API
+module.exports.getOwnerBookings = async (req, res) => {
+    try {
+        const { status } = req.query;
+        const filter = { ownerId: req.user._id };
+
+        if (status) {
+            filter.bookingStatus = status.toUpperCase();
+        }
+
+        const bookings = await Booking.find(filter)
+            .populate('vehicleId')
+            .populate('renterId')
+            .sort({ bookingCreatedAt: -1 });
+
+        return res.json({
+            success: true,
+            bookings
+        });
+    } catch (e) {
+        console.error('Get owner bookings error', e);
+        return res.status(500).json({ success: false, error: 'Unable to fetch bookings' });
     }
 };
