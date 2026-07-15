@@ -191,7 +191,7 @@ main()
     .then(async () => {
 
         if (process.env.NODE_ENV !== "production") {
-            await seedSampleListingsIfNeeded();
+            // await seedSampleListingsIfNeeded(); // Disabled to prevent re-seeding deleted demo cars
         }
 
         await backfillListingWhatsAppNumbers();
