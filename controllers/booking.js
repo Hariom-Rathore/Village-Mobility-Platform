@@ -145,17 +145,50 @@ module.exports.confirmPayment = async (req, res) => {
             return res.status(404).json({ success: false, error: 'Listing not found' });
         }
 
+        // Calculate total days
+        let totalDays = 1;
+        if (pickupDate && returnDate) {
+            const pickup = new Date(pickupDate);
+            const returnD = new Date(returnDate);
+            totalDays = Math.ceil((returnD - pickup) / (1000 * 60 * 60 * 24)) || 1;
+        }
+
+        // Calculate price breakdown
+        const priceCalculation = bookingService.calculatePrice(listing, totalDays, Number(distanceKm) || 0);
+
         // Validate booking
         const validation = await bookingService.validateBooking({
             vehicleId: id,
             pickupDate: pickupDate ? new Date(pickupDate) : null,
             returnDate: returnDate ? new Date(returnDate) : null,
+            pickupTime,
+            returnTime,
             userId: req.user._id,
-            amount: amount
+            amount: priceCalculation.totalPrice
         });
 
         if (!validation.valid) {
             return res.status(400).json({ success: false, error: validation.error });
+        }
+
+        // Create combined datetime
+        let pickupDateTime = null;
+        let returnDateTime = null;
+        
+        if (pickupDate) {
+            pickupDateTime = new Date(pickupDate);
+            if (pickupTime) {
+                const [hours, minutes] = pickupTime.split(':');
+                pickupDateTime.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+            }
+        }
+        
+        if (returnDate) {
+            returnDateTime = new Date(returnDate);
+            if (returnTime) {
+                const [hours, minutes] = returnTime.split(':');
+                returnDateTime.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+            }
         }
 
         // For COD, skip Razorpay verification
@@ -172,8 +205,12 @@ module.exports.confirmPayment = async (req, res) => {
                 destination: destination || '',
                 purpose: purpose || '',
                 distanceKm: Number(distanceKm) || 0,
-                amountPaid: Number(amount) || 0,
-                totalPrice: Number(amount) || 0,
+                amountPaid: priceCalculation.totalPrice,
+                totalPrice: priceCalculation.totalPrice,
+                basePrice: priceCalculation.basePrice,
+                platformFee: priceCalculation.platformFee,
+                tax: priceCalculation.tax,
+                totalDays,
                 paymentMethod: 'cod',
                 paymentStatus: 'PENDING',
                 bookingStatus: 'CONFIRMED',
@@ -181,12 +218,14 @@ module.exports.confirmPayment = async (req, res) => {
                 returnDate: returnDate ? new Date(returnDate) : null,
                 pickupTime: pickupTime || '',
                 returnTime: returnTime || '',
+                pickupDateTime,
+                returnDateTime,
                 ownerWhatsappNumber: ownerWhatsAppNumber,
             });
             await booking.save();
 
             // Update vehicle stats and availability
-            await bookingService.updateVehicleStats(id, Number(amount) || 0);
+            await bookingService.updateVehicleStats(id, priceCalculation.totalPrice);
             await bookingService.updateVehicleAvailability(id);
 
             // Send notifications
@@ -209,6 +248,7 @@ module.exports.confirmPayment = async (req, res) => {
                 whatsappUrl,
                 whatsappNumber: normalizeWhatsAppNumber(whatsappNumber),
                 paymentMethod: 'cod',
+                priceBreakdown: priceCalculation.breakdown
             });
         }
 
@@ -234,8 +274,12 @@ module.exports.confirmPayment = async (req, res) => {
             destination: destination || '',
             purpose: purpose || '',
             distanceKm: Number(distanceKm) || 0,
-            amountPaid: Number(amount) || 0,
-            totalPrice: Number(amount) || 0,
+            amountPaid: priceCalculation.totalPrice,
+            totalPrice: priceCalculation.totalPrice,
+            basePrice: priceCalculation.basePrice,
+            platformFee: priceCalculation.platformFee,
+            tax: priceCalculation.tax,
+            totalDays,
             paymentMethod: 'razorpay',
             paymentStatus: 'PAID',
             bookingStatus: 'CONFIRMED',
@@ -246,12 +290,14 @@ module.exports.confirmPayment = async (req, res) => {
             returnDate: returnDate ? new Date(returnDate) : null,
             pickupTime: pickupTime || '',
             returnTime: returnTime || '',
+            pickupDateTime,
+            returnDateTime,
             ownerWhatsappNumber: ownerWhatsAppNumber,
         });
         await booking.save();
 
         // Update vehicle stats and availability
-        await bookingService.updateVehicleStats(id, Number(amount) || 0);
+        await bookingService.updateVehicleStats(id, priceCalculation.totalPrice);
         await bookingService.updateVehicleAvailability(id);
 
         // Send notifications
@@ -275,6 +321,7 @@ module.exports.confirmPayment = async (req, res) => {
             whatsappUrl,
             whatsappNumber: normalizeWhatsAppNumber(whatsappNumber),
             paymentMethod: 'razorpay',
+            priceBreakdown: priceCalculation.breakdown
         });
     } catch (e) {
         console.error('Payment confirmation error', e);

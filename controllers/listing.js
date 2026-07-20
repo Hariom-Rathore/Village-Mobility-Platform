@@ -27,7 +27,7 @@ const DEFAULT_OWNER_WHATSAPP_NUMBER = process.env.OWNER_WHATSAPP_NUMBER || "";
 
 module.exports.index = async (req, res) => {
     const { category = "all", type, seats, search } = req.query;
-    const filter = {};
+    const filter = { websiteSource: "car-rental" };
 
     if (seats) {
         const seatsNum = Number(seats);
@@ -97,6 +97,7 @@ module.exports.createListing = async (req, res) => {
     const listingData = buildListingData(req.body.listing);
     listingData.category = listingData.category || "trending";
     listingData.whatsappNumber = (listingData.whatsappNumber || DEFAULT_OWNER_WHATSAPP_NUMBER || "").trim();
+    listingData.websiteSource = "car-rental";
 
     if (req.file) {
         listingData.image = {
@@ -119,7 +120,7 @@ module.exports.createListing = async (req, res) => {
 
 module.exports.showListing = async (req, res) => {
     const { id } = req.params;
-    const listing = await Listing.findById(id)
+    const listing = await Listing.findOne({ _id: id, websiteSource: "car-rental" })
         .populate("owner")
         .populate({ path: "reviews", populate: { path: "author" } });
 
@@ -132,7 +133,7 @@ module.exports.showListing = async (req, res) => {
 
 module.exports.renderEditForm = async (req, res) => {
     const { id } = req.params;
-    const listing = await Listing.findById(id);
+    const listing = await Listing.findOne({ _id: id, websiteSource: "car-rental" });
 
     if (!listing) {
         throw new ExpressError(404, "Listing not found!");
@@ -155,7 +156,7 @@ module.exports.updateListing = async (req, res) => {
         };
     }
 
-    const listing = await Listing.findByIdAndUpdate(id, listingData, {
+    const listing = await Listing.findOneAndUpdate({ _id: id, websiteSource: "car-rental" }, listingData, {
         runValidators: true,
         new: true,
     });
@@ -170,7 +171,7 @@ module.exports.updateListing = async (req, res) => {
 
 module.exports.deleteListing = async (req, res) => {
     const { id } = req.params;
-    const listing = await Listing.findByIdAndDelete(id);
+    const listing = await Listing.findOneAndDelete({ _id: id, websiteSource: "car-rental" });
 
     if (!listing) {
         throw new ExpressError(404, "Listing not found!");

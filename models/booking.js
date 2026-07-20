@@ -32,8 +32,13 @@ const BookingSchema = new Schema({
   returnDate: { type: Date },
   pickupTime: { type: String },
   returnTime: { type: String },
+  pickupDateTime: { type: Date }, // Combined pickup date and time
+  returnDateTime: { type: Date }, // Combined return date and time
   totalDays: { type: Number, default: 1 },
   totalPrice: { type: Number, required: true },
+  basePrice: { type: Number }, // Price before fees and taxes
+  platformFee: { type: Number, default: 0 }, // Platform service fee
+  tax: { type: Number, default: 0 }, // Tax amount
   securityDeposit: { type: Number, default: 0 },
   cancellationReason: { type: String },
   cancelledBy: { type: Schema.Types.ObjectId, ref: 'User' },

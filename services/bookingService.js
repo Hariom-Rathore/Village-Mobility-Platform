@@ -34,7 +34,7 @@ async function checkAvailability(vehicleId, pickupDate, returnDate) {
  * @returns {Object} - { valid: boolean, error: string }
  */
 async function validateBooking(bookingData) {
-  const { vehicleId, pickupDate, returnDate, userId, amount } = bookingData;
+  const { vehicleId, pickupDate, returnDate, pickupTime, returnTime, userId, amount } = bookingData;
 
   // Check if vehicle exists
   const vehicle = await Listing.findById(vehicleId);
@@ -65,7 +65,7 @@ async function validateBooking(bookingData) {
     return { valid: false, error: 'Booking amount is too high' };
   }
 
-  // Validate dates
+  // Validate dates and times
   if (pickupDate && returnDate) {
     const now = new Date();
     const pickup = new Date(pickupDate);
@@ -85,8 +85,32 @@ async function validateBooking(bookingData) {
       return { valid: false, error: 'Maximum booking period is 30 days' };
     }
 
-    // Check for overlapping bookings
-    const isAvailable = await checkAvailability(vehicleId, pickup, returnD);
+    // Validate times if provided
+    if (pickupTime && returnTime) {
+      // If same day, return time must be after pickup time
+      if (pickup.toDateString() === returnD.toDateString()) {
+        if (pickupTime >= returnTime) {
+          return { valid: false, error: 'Return time must be after pickup time on the same day' };
+        }
+      }
+    }
+
+    // Create combined datetime for availability check
+    let pickupDateTime = new Date(pickup);
+    let returnDateTime = new Date(returnD);
+    
+    if (pickupTime) {
+      const [hours, minutes] = pickupTime.split(':');
+      pickupDateTime.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+    }
+    
+    if (returnTime) {
+      const [hours, minutes] = returnTime.split(':');
+      returnDateTime.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+    }
+
+    // Check for overlapping bookings using combined datetime
+    const isAvailable = await checkAvailability(vehicleId, pickupDateTime, returnDateTime);
     if (!isAvailable) {
       return { valid: false, error: 'Vehicle is not available for the selected dates' };
     }
@@ -181,11 +205,11 @@ async function getAvailabilityCalendar(vehicleId, startDate, endDate) {
 }
 
 /**
- * Calculate booking price
+ * Calculate booking price with platform fee and tax
  * @param {Object} vehicle - Vehicle document
  * @param {number} days - Number of days
  * @param {number} distanceKm - Distance in km
- * @returns {number} - Total price
+ * @returns {Object} - Price breakdown object
  */
 function calculatePrice(vehicle, days, distanceKm = 0) {
   const basePrice = vehicle.price || 0;
@@ -193,8 +217,34 @@ function calculatePrice(vehicle, days, distanceKm = 0) {
   
   const dailyCharge = basePrice * days;
   const distanceCharge = distanceKm * ratePerKm;
+  const baseTotal = Math.ceil(dailyCharge + distanceCharge);
   
-  return Math.ceil(dailyCharge + distanceCharge);
+  // Platform fee (5% of base total, minimum ₹50)
+  const platformFee = Math.max(50, Math.ceil(baseTotal * 0.05));
+  
+  // Tax (18% GST on base total + platform fee)
+  const taxableAmount = baseTotal + platformFee;
+  const tax = Math.ceil(taxableAmount * 0.18);
+  
+  // Grand total
+  const grandTotal = baseTotal + platformFee + tax;
+  
+  return {
+    basePrice: baseTotal,
+    platformFee,
+    tax,
+    totalPrice: grandTotal,
+    breakdown: {
+      dailyRate: basePrice,
+      days,
+      dailyCharge,
+      distanceRate: ratePerKm,
+      distanceKm,
+      distanceCharge,
+      platformFeeRate: '5%',
+      taxRate: '18%'
+    }
+  };
 }
 
 /**

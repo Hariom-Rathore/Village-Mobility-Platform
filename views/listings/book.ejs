@@ -9,8 +9,67 @@
   <div class="col-md-6">
     <form id="bookingForm">
       <div id="geoMsg" class="mb-2 text-muted" style="font-size:0.9rem"></div>
+      
+      <!-- Date/Time Selection -->
+      <div class="row mb-3">
+        <div class="col-md-6">
+          <label class="form-label">Pickup Date</label>
+          <input type="date" id="pickupDate" class="form-control" required />
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Pickup Time</label>
+          <input type="time" id="pickupTime" class="form-control" required />
+        </div>
+      </div>
+      
+      <div class="row mb-3">
+        <div class="col-md-6">
+          <label class="form-label">Return Date</label>
+          <input type="date" id="returnDate" class="form-control" required />
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Return Time</label>
+          <input type="time" id="returnTime" class="form-control" required />
+        </div>
+      </div>
+
+      <!-- Price Breakdown -->
+      <div class="card mb-3">
+        <div class="card-header bg-light">
+          <h6 class="mb-0">Booking Summary</h6>
+        </div>
+        <div class="card-body">
+          <div class="d-flex justify-content-between mb-2">
+            <span>Duration:</span>
+            <span id="durationDisplay">0 Days</span>
+          </div>
+          <div class="d-flex justify-content-between mb-2">
+            <span>Daily Rate:</span>
+            <span id="dailyRateDisplay">₹<%= listing.price %>/day</span>
+          </div>
+          <div class="d-flex justify-content-between mb-2">
+            <span>Base Price:</span>
+            <span id="basePriceDisplay">₹0</span>
+          </div>
+          <div class="d-flex justify-content-between mb-2">
+            <span>Platform Fee (5%):</span>
+            <span id="platformFeeDisplay">₹0</span>
+          </div>
+          <div class="d-flex justify-content-between mb-2">
+            <span>Tax (18%):</span>
+            <span id="taxDisplay">₹0</span>
+          </div>
+          <hr>
+          <div class="d-flex justify-content-between fw-bold">
+            <span>Total:</span>
+            <span id="totalPriceDisplay">₹0</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Location Selection (Optional) -->
       <div class="mb-3">
-        <label class="form-label">From (Pickup)</label>
+        <label class="form-label">From (Pickup Location)</label>
         <div class="input-group">
           <input id="pickup" class="form-control" autocomplete="off" placeholder="From: address or lat,lng (e.g., Andheri, Mumbai or 19.1190,72.8466)" />
           <button id="detectBtn" type="button" class="btn btn-outline-secondary">Detect</button>
@@ -40,10 +99,7 @@
         <label class="form-label">Toll Taxes</label>
         <input id="tollTaxes" type="number" min="0" step="1" class="form-control" placeholder="Enter total toll tax amount" value="0" />
       </div>
-      <div class="mb-3">
-        <label class="form-label">Total Charges</label>
-        <input id="totalCost" class="form-control" readonly />
-      </div>
+      
       <div class="mb-3">
         <label class="form-label">Payment Method</label>
         <select id="paymentMethod" class="form-select">
@@ -81,6 +137,84 @@ let destDebounceTimer = null;
 let lastRouteDistanceKm = 0;
 let lastRouteDurationSeconds = 0;
 const geocodeCache = new Map();
+
+// Price calculation variables
+let currentTotalDays = 1;
+let currentBasePrice = 0;
+let currentPlatformFee = 0;
+let currentTax = 0;
+let currentTotalPrice = 0;
+
+// Set minimum date to today
+function setMinDates() {
+  const today = new Date().toISOString().split('T')[0];
+  const pickupDateInput = document.getElementById('pickupDate');
+  const returnDateInput = document.getElementById('returnDate');
+  
+  if (pickupDateInput) pickupDateInput.min = today;
+  if (returnDateInput) returnDateInput.min = today;
+}
+
+// Calculate price based on dates
+function calculatePrice() {
+  const pickupDate = document.getElementById('pickupDate').value;
+  const returnDate = document.getElementById('returnDate').value;
+  const distanceKm = parseFloat(document.getElementById('distance').value) || 0;
+  
+  if (!pickupDate || !returnDate) {
+    updatePriceDisplay(0, 0, 0, 0, 0);
+    return;
+  }
+  
+  const pickup = new Date(pickupDate);
+  const returnD = new Date(returnDate);
+  
+  // Calculate days
+  const daysDiff = Math.ceil((returnD - pickup) / (1000 * 60 * 60 * 24)) || 1;
+  currentTotalDays = daysDiff;
+  
+  // Calculate base price
+  const dailyRate = Number(listing.price) || 0;
+  const ratePerKm = Number(listing.ratePerKm) || 0;
+  
+  const dailyCharge = dailyRate * daysDiff;
+  const distanceCharge = distanceKm * ratePerKm;
+  const baseTotal = Math.ceil(dailyCharge + distanceCharge);
+  
+  // Platform fee (5% of base total, minimum ₹50)
+  const platformFee = Math.max(50, Math.ceil(baseTotal * 0.05));
+  
+  // Tax (18% GST on base total + platform fee)
+  const taxableAmount = baseTotal + platformFee;
+  const tax = Math.ceil(taxableAmount * 0.18);
+  
+  // Grand total
+  const grandTotal = baseTotal + platformFee + tax;
+  
+  currentBasePrice = baseTotal;
+  currentPlatformFee = platformFee;
+  currentTax = tax;
+  currentTotalPrice = grandTotal;
+  
+  updatePriceDisplay(daysDiff, baseTotal, platformFee, tax, grandTotal);
+}
+
+// Update price display
+function updatePriceDisplay(days, basePrice, platformFee, tax, totalPrice) {
+  const durationDisplay = document.getElementById('durationDisplay');
+  const basePriceDisplay = document.getElementById('basePriceDisplay');
+  const platformFeeDisplay = document.getElementById('platformFeeDisplay');
+  const taxDisplay = document.getElementById('taxDisplay');
+  const totalPriceDisplay = document.getElementById('totalPriceDisplay');
+  const payBtn = document.getElementById('payBtn');
+  
+  if (durationDisplay) durationDisplay.textContent = `${days} Day${days !== 1 ? 's' : ''}`;
+  if (basePriceDisplay) basePriceDisplay.textContent = `₹${basePrice}`;
+  if (platformFeeDisplay) platformFeeDisplay.textContent = `₹${platformFee}`;
+  if (taxDisplay) taxDisplay.textContent = `₹${tax}`;
+  if (totalPriceDisplay) totalPriceDisplay.textContent = `₹${totalPrice}`;
+  if (payBtn) payBtn.dataset.amount = totalPrice;
+}
 
 function initMap() {
   map = L.map('map').setView([20.5937, 78.9629], 5);
@@ -457,6 +591,7 @@ function updateFareFields() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+  setMinDates();
   initMap();
 
   const pickupInput = document.getElementById('pickup');
@@ -464,9 +599,36 @@ document.addEventListener('DOMContentLoaded', () => {
   const detectBtn = document.getElementById('detectBtn');
   const payBtn = document.getElementById('payBtn');
   const tollTaxesInput = document.getElementById('tollTaxes');
+  const pickupDateInput = document.getElementById('pickupDate');
+  const returnDateInput = document.getElementById('returnDate');
+  const pickupTimeInput = document.getElementById('pickupTime');
+  const returnTimeInput = document.getElementById('returnTime');
 
   const pickupSuggestions = document.getElementById('pickupSuggestions');
   const destSuggestions = document.getElementById('destSuggestions');
+
+  // Add event listeners for date/time inputs
+  if (pickupDateInput) {
+    pickupDateInput.addEventListener('change', () => {
+      // Update return date minimum to be after pickup date
+      if (returnDateInput) {
+        returnDateInput.min = pickupDateInput.value;
+      }
+      calculatePrice();
+    });
+  }
+
+  if (returnDateInput) {
+    returnDateInput.addEventListener('change', calculatePrice);
+  }
+
+  if (pickupTimeInput) {
+    pickupTimeInput.addEventListener('change', calculatePrice);
+  }
+
+  if (returnTimeInput) {
+    returnTimeInput.addEventListener('change', calculatePrice);
+  }
 
   if (pickupInput) {
     pickupInput.addEventListener('input', () => {
@@ -498,7 +660,10 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   if (tollTaxesInput) {
-    tollTaxesInput.addEventListener('input', updateFareFields);
+    tollTaxesInput.addEventListener('input', () => {
+      updateFareFields();
+      calculatePrice();
+    });
   }
 
   // removed preview button; route now auto-calculates when inputs change or selection is made
@@ -511,9 +676,20 @@ document.addEventListener('DOMContentLoaded', () => {
           return;
         }
 
+        // Validate date/time inputs
+        const pickupDate = pickupDateInput?.value;
+        const returnDate = returnDateInput?.value;
+        const pickupTime = pickupTimeInput?.value;
+        const returnTime = returnTimeInput?.value;
+
+        if (!pickupDate || !returnDate || !pickupTime || !returnTime) {
+          alert('Please select pickup and return dates and times.');
+          return;
+        }
+
         const amount = Number(payBtn.dataset.amount || 0);
         if (!amount || amount <= 0) {
-          alert('Please calculate the route to get a valid amount.');
+          alert('Please select valid dates to calculate the booking amount.');
           return;
         }
 
@@ -535,7 +711,11 @@ document.addEventListener('DOMContentLoaded', () => {
             purpose: purpose,
             distanceKm: parseFloat(document.getElementById('distance').value) || 0,
             amount: amount,
-            paymentMethod: 'cod'
+            paymentMethod: 'cod',
+            pickupDate: pickupDate,
+            returnDate: returnDate,
+            pickupTime: pickupTime,
+            returnTime: returnTime
           };
 
           const confRes = await fetch(`/cars/book/${listing._id}/confirm`, {
@@ -642,7 +822,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 purpose: purpose,
                 distanceKm: parseFloat(document.getElementById('distance').value) || 0,
                 amount: amount,
-                paymentMethod: 'razorpay'
+                paymentMethod: 'razorpay',
+                pickupDate: pickupDate,
+                returnDate: returnDate,
+                pickupTime: pickupTime,
+                returnTime: returnTime
               };
 
               const confRes = await fetch(`/cars/book/${listing._id}/confirm`, {

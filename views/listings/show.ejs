@@ -56,7 +56,7 @@
         <div class="d-flex align-items-center mb-2">
           <span class="badge bg-<%= badgeColor %> me-2"><%= availabilityText %></span>
           <% if (listing.nextAvailableAt) { %>
-            <small class="text-muted">Available from: <%= new Date(listing.nextAvailableAt).toLocaleDateString() %></small>
+            <small class="text-muted">Next available: <%= new Date(listing.nextAvailableAt).toLocaleDateString() %></small>
           <% } %>
         </div>
         <% if (listing.totalBookings > 0) { %>
@@ -67,6 +67,21 @@
             </small>
           </div>
         <% } %>
+      </div>
+
+      <!-- Booking Calendar -->
+      <div class="calendar-section mb-3 p-3 bg-light rounded">
+        <h6 class="mb-2">Booking Calendar</h6>
+        <div id="calendar-container">
+          <div class="calendar-legend mb-2">
+            <span class="badge bg-success me-1">Available</span>
+            <span class="badge bg-danger">Booked</span>
+          </div>
+          <div id="availability-calendar" class="availability-calendar"></div>
+          <div id="calendar-loading" class="text-center">
+            <small class="text-muted">Loading calendar...</small>
+          </div>
+        </div>
       </div>
 
       <!-- Change note: owner username is now shown from populated listing.owner -->
@@ -198,3 +213,150 @@
               </div>
               <%}%>
       </div>
+
+<script>
+const listingId = '<%= listing._id %>';
+
+async function loadBookingCalendar() {
+  const calendarContainer = document.getElementById('availability-calendar');
+  const loadingDiv = document.getElementById('calendar-loading');
+  
+  if (!calendarContainer) return;
+  
+  try {
+    const startDate = new Date();
+    const endDate = new Date();
+    endDate.setDate(endDate.getDate() + 30); // Show 30 days
+    
+    const response = await fetch(`/cars/${listingId}/calendar?startDate=${startDate.toISOString()}&endDate=${endDate.toISOString()}`);
+    const data = await response.json();
+    
+    if (data.success && data.calendar) {
+      loadingDiv.style.display = 'none';
+      renderCalendar(data.calendar);
+    } else {
+      loadingDiv.innerHTML = '<small class="text-danger">Failed to load calendar</small>';
+    }
+  } catch (error) {
+    console.error('Error loading calendar:', error);
+    loadingDiv.innerHTML = '<small class="text-danger">Error loading calendar</small>';
+  }
+}
+
+function renderCalendar(calendarData) {
+  const calendarContainer = document.getElementById('availability-calendar');
+  if (!calendarContainer) return;
+  
+  // Group by week
+  const weeks = [];
+  let currentWeek = [];
+  
+  calendarData.forEach((day, index) => {
+    currentWeek.push(day);
+    if (currentWeek.length === 7 || index === calendarData.length - 1) {
+      weeks.push([...currentWeek]);
+      currentWeek = [];
+    }
+  });
+  
+  // Render calendar
+  let html = '<div class="calendar-grid">';
+  
+  // Add day headers
+  html += '<div class="calendar-header">Sun</div>';
+  html += '<div class="calendar-header">Mon</div>';
+  html += '<div class="calendar-header">Tue</div>';
+  html += '<div class="calendar-header">Wed</div>';
+  html += '<div class="calendar-header">Thu</div>';
+  html += '<div class="calendar-header">Fri</div>';
+  html += '<div class="calendar-header">Sat</div>';
+  
+  // Add days
+  weeks.forEach(week => {
+    week.forEach(day => {
+      const date = new Date(day.date);
+      const dayNum = date.getDate();
+      const statusClass = day.available ? 'available' : 'booked';
+      const statusText = day.available ? 'Available' : 'Booked';
+      
+      html += `<div class="calendar-day ${statusClass}" title="${day.date}: ${statusText}">
+        <span class="day-number">${dayNum}</span>
+      </div>`;
+    });
+  });
+  
+  html += '</div>';
+  calendarContainer.innerHTML = html;
+}
+
+// Load calendar when page loads
+document.addEventListener('DOMContentLoaded', loadBookingCalendar);
+</script>
+
+<style>
+.calendar-section {
+  margin-top: 1rem;
+}
+
+.calendar-legend {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+  margin-top: 0.5rem;
+}
+
+.calendar-header {
+  text-align: center;
+  font-weight: bold;
+  font-size: 0.8rem;
+  padding: 0.25rem;
+  background: #f8f9fa;
+}
+
+.calendar-day {
+  text-align: center;
+  padding: 0.5rem;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.calendar-day.available {
+  background: #d4edda;
+  color: #155724;
+}
+
+.calendar-day.booked {
+  background: #f8d7da;
+  color: #721c24;
+  cursor: not-allowed;
+}
+
+.calendar-day:hover:not(.booked) {
+  transform: scale(1.1);
+}
+
+.day-number {
+  font-weight: bold;
+  font-size: 0.9rem;
+}
+
+@media (max-width: 576px) {
+  .calendar-header {
+    font-size: 0.7rem;
+  }
+  
+  .calendar-day {
+    padding: 0.25rem;
+  }
+  
+  .day-number {
+    font-size: 0.8rem;
+  }
+}
+</style>

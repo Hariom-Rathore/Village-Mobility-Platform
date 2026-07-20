@@ -4,6 +4,12 @@ const Schema=mongoose.Schema;  //ek variable bana lenge joo baar use nahi karna 
 const Review = require("./review.js");
 
 const listingSchema = new Schema({
+    websiteSource: {
+      type: String,
+      enum: ["car-rental", "airbnb"],
+      default: "car-rental",
+      required: true
+    },
     title:{
        type:String,
        required:true,

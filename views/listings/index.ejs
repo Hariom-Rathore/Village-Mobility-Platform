@@ -254,7 +254,14 @@
               const badgeColor = statusColors[availabilityStatus] || 'secondary';
               
               let availabilityText = 'Available';
-              if (availabilityStatus === 'BOOKED' && listing.nextAvailableAt) {
+              if (availabilityStatus === 'BOOKED') {
+                if (listing.nextAvailableAt) {
+                  const nextDate = new Date(listing.nextAvailableAt);
+                  availabilityText = `Booked until ${nextDate.toLocaleDateString()}`;
+                } else {
+                  availabilityText = 'Booked';
+                }
+              } else if (availabilityStatus === 'AVAILABLE' && listing.nextAvailableAt) {
                 const nextDate = new Date(listing.nextAvailableAt);
                 availabilityText = `Available from ${nextDate.toLocaleDateString()}`;
               } else if (availabilityStatus === 'UNDER_MAINTENANCE') {
