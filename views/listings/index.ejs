@@ -241,7 +241,28 @@
         </div>
       <% } %>
          <% for(let listing of alllistings){%>
-            <% const listingImageUrl = (listing.image && listing.image.url) ? listing.image.url : (typeof listing.image === "string" ? listing.image : "https://images.pexels.com/photos/11129937/pexels-photo-11129937.jpeg"); %>
+            <% 
+              let listingImageUrl = "https://images.pexels.com/photos/11129937/pexels-photo-11129937.jpeg";
+              if (listing.image && listing.image.url) {
+                listingImageUrl = listing.image.url;
+                // Add Cloudinary optimization parameters if it's a Cloudinary URL
+                if (listingImageUrl.includes('cloudinary.com')) {
+                  listingImageUrl = listingImageUrl.replace('/upload/', '/upload/q_auto,f_auto,w_800,h_600,c_limit/');
+                }
+                // Add Unsplash optimization parameters if it's an Unsplash URL
+                else if (listingImageUrl.includes('unsplash.com')) {
+                  if (!listingImageUrl.includes('?')) {
+                    listingImageUrl += '?auto=format&fit=crop&w=800&q=80';
+                  }
+                }
+              } else if (typeof listing.image === "string") {
+                listingImageUrl = listing.image;
+                // Add Unsplash optimization if needed
+                if (listingImageUrl.includes('unsplash.com') && !listingImageUrl.includes('?')) {
+                  listingImageUrl += '?auto=format&fit=crop&w=800&q=80';
+                }
+              }
+            %>
             <% 
               const availabilityStatus = listing.availabilityStatus || 'AVAILABLE';
               const statusColors = {
@@ -272,7 +293,15 @@
             %>
             <a href="/cars/<%=listing._id%>" class="listing-link">
     <div class="card col listing-card">
-  <img src="<%= listingImageUrl %>" class="card-img-top" alt="car_image" style="height: 20rem" loading="lazy" onerror="this.onerror=null;this.src='https://images.pexels.com/photos/11129937/pexels-photo-11129937.jpeg';"/>
+  <img 
+    src="<%= listingImageUrl %>" 
+    class="card-img-top" 
+    alt="<%= listing.title %>" 
+    style="height: 20rem; object-fit: cover;" 
+    loading="lazy" 
+    decoding="async"
+    onerror="this.onerror=null;this.src='https://images.pexels.com/photos/11129937/pexels-photo-11129937.jpeg';"
+  />
   <div class="card-img-overlay"></div>
   <div class="card-body">
     <div class="d-flex justify-content-between align-items-start">

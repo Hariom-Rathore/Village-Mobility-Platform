@@ -12,9 +12,13 @@ cloudinary.config({
 const storage = new CloudinaryStorage({
   cloudinary: cloudinary,
   params: {
-    folder: (req, file) => 'wonderlust_DEV',
+    folder: (req, file) => process.env.NODE_ENV === 'production' ? 'wonderlust_PROD' : 'wonderlust_DEV',
     allowedFormates:["png","jpg","jpeg"],
-    },
+    transformation: [
+      { quality: 'auto', fetch_format: 'auto' },
+      { width: 1200, height: 800, crop: 'limit' }
+    ]
+  },
 });
 
 module.exports={

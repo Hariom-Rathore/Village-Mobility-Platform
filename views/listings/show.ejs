@@ -1,5 +1,26 @@
 <% layout("/listings/layouts/boilerplate") %>
-<% const listingImageUrl = (listing.image && listing.image.url) ? listing.image.url : (typeof listing.image === "string" ? listing.image : "https://images.pexels.com/photos/11129937/pexels-photo-11129937.jpeg"); %>
+<% 
+  let listingImageUrl = "https://images.pexels.com/photos/11129937/pexels-photo-11129937.jpeg";
+  if (listing.image && listing.image.url) {
+    listingImageUrl = listing.image.url;
+    // Add Cloudinary optimization parameters if it's a Cloudinary URL
+    if (listingImageUrl.includes('cloudinary.com')) {
+      listingImageUrl = listingImageUrl.replace('/upload/', '/upload/q_auto,f_auto,w_1200,h_800,c_limit/');
+    }
+    // Add Unsplash optimization parameters if it's an Unsplash URL
+    else if (listingImageUrl.includes('unsplash.com')) {
+      if (!listingImageUrl.includes('?')) {
+        listingImageUrl += '?auto=format&fit=crop&w=1200&q=80';
+      }
+    }
+  } else if (typeof listing.image === "string") {
+    listingImageUrl = listing.image;
+    // Add Unsplash optimization if needed
+    if (listingImageUrl.includes('unsplash.com') && !listingImageUrl.includes('?')) {
+      listingImageUrl += '?auto=format&fit=crop&w=1200&q=80';
+    }
+  }
+%>
 
 <%
   const availabilityStatus = listing.availabilityStatus || 'AVAILABLE';
@@ -43,7 +64,11 @@
     </div>
     <img
       src="<%= listingImageUrl %>"
-      class="card-img-top show-img" alt="car_image" loading="lazy" onerror="this.onerror=null;this.src='https://images.pexels.com/photos/11129937/pexels-photo-11129937.jpeg';">
+      class="card-img-top show-img" 
+      alt="<%= listing.title %>" 
+      loading="lazy" 
+      decoding="async"
+      onerror="this.onerror=null;this.src='https://images.pexels.com/photos/11129937/pexels-photo-11129937.jpeg';">
     <div class="card-body show-body">
 
       <p class="show-line">

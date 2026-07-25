@@ -139,8 +139,17 @@ module.exports.renderEditForm = async (req, res) => {
         throw new ExpressError(404, "Listing not found!");
     }
 
-    let originalImageUrl = listing.image.url;
-    originalImageUrl = originalImageUrl.replace("/upload", "/upload/h_150,w_150");
+    let originalImageUrl = listing.image.url || "https://images.pexels.com/photos/11129937/pexels-photo-11129937.jpeg";
+    // Add Cloudinary optimization parameters if it's a Cloudinary URL
+    if (originalImageUrl.includes('cloudinary.com')) {
+        originalImageUrl = originalImageUrl.replace('/upload/', '/upload/q_auto,f_auto,w_150,h_150,c_limit/');
+    }
+    // Add Unsplash optimization parameters if it's an Unsplash URL
+    else if (originalImageUrl.includes('unsplash.com')) {
+        if (!originalImageUrl.includes('?')) {
+            originalImageUrl += '?auto=format&fit=crop&w=150&q=80';
+        }
+    }
     res.render("listings/edit.ejs", { listing, originalImageUrl });
 };
 

@@ -55,8 +55,37 @@
               <% vehicles.forEach(vehicle => { %>
                 <div class="col-md-4 mb-3">
                   <div class="card">
-                    <% const listingImageUrl = (vehicle.image && vehicle.image.url) ? vehicle.image.url : (typeof vehicle.image === "string" ? vehicle.image : "https://images.pexels.com/photos/11129937/pexels-photo-11129937.jpeg"); %>
-                    <img src="<%= listingImageUrl %>" class="card-img-top" alt="<%= vehicle.title %>" style="height: 150px; object-fit: cover;" loading="lazy">
+                    <% 
+                      let listingImageUrl = "https://images.pexels.com/photos/11129937/pexels-photo-11129937.jpeg";
+                      if (vehicle.image && vehicle.image.url) {
+                        listingImageUrl = vehicle.image.url;
+                        // Add Cloudinary optimization parameters if it's a Cloudinary URL
+                        if (listingImageUrl.includes('cloudinary.com')) {
+                          listingImageUrl = listingImageUrl.replace('/upload/', '/upload/q_auto,f_auto,w_400,h_300,c_limit/');
+                        }
+                        // Add Unsplash optimization parameters if it's an Unsplash URL
+                        else if (listingImageUrl.includes('unsplash.com')) {
+                          if (!listingImageUrl.includes('?')) {
+                            listingImageUrl += '?auto=format&fit=crop&w=400&q=80';
+                          }
+                        }
+                      } else if (typeof vehicle.image === "string") {
+                        listingImageUrl = vehicle.image;
+                        // Add Unsplash optimization if needed
+                        if (listingImageUrl.includes('unsplash.com') && !listingImageUrl.includes('?')) {
+                          listingImageUrl += '?auto=format&fit=crop&w=400&q=80';
+                        }
+                      }
+                    %>
+                    <img 
+                      src="<%= listingImageUrl %>" 
+                      class="card-img-top" 
+                      alt="<%= vehicle.title %>" 
+                      style="height: 150px; object-fit: cover;" 
+                      loading="lazy" 
+                      decoding="async"
+                      onerror="this.onerror=null;this.src='https://images.pexels.com/photos/11129937/pexels-photo-11129937.jpeg';"
+                    >
                     <div class="card-body">
                       <h6 class="card-title"><%= vehicle.title %></h6>
                       <p class="card-text small text-muted">
