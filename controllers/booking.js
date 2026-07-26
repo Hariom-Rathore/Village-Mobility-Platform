@@ -545,3 +545,219 @@ module.exports.getOwnerBookings = async (req, res) => {
         return res.status(500).json({ success: false, error: 'Unable to fetch bookings' });
     }
 };
+
+// ---------------------------------------------------
+// NEW PROD TRIP BOOKING FLOW
+// ---------------------------------------------------
+
+module.exports.createBookingRequest = async (req, res) => {
+    try {
+        const { id } = req.params; // listing id
+        const { booking } = req.body;
+        
+        const listing = await Listing.findById(id);
+        if (!listing) {
+            return res.status(404).json({ success: false, error: 'Vehicle not found' });
+        }
+        
+        // Calculate days
+        let totalDays = 1;
+        if (booking.pickupDate && booking.returnDate) {
+            const pickup = new Date(booking.pickupDate);
+            const returnD = new Date(booking.returnDate);
+            totalDays = Math.max(1, Math.ceil((returnD - pickup) / (1000 * 60 * 60 * 24)));
+        }
+
+        let pickupDateTime = new Date(booking.pickupDate);
+        if (booking.pickupTime) {
+            const [hours, minutes] = booking.pickupTime.split(':');
+            pickupDateTime.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+        }
+
+        // Basic price logic for estimates
+        const distanceKm = Number(booking.distanceKm) || 0;
+        const ratePerKm = Number(listing.pricePerKm || listing.ratePerKm || 0);
+        const baseDaily = Number(listing.baseFare || listing.price || 0);
+        
+        const distanceCharge = distanceKm * ratePerKm;
+        const timeCharge = baseDaily * totalDays;
+        const basePrice = Math.ceil(timeCharge + distanceCharge);
+        const platformFee = Math.max(50, Math.ceil(basePrice * 0.05));
+        const tax = Math.ceil((basePrice + platformFee) * 0.18);
+        const estimatedFare = basePrice + platformFee + tax;
+        
+        const ownerWhatsAppNumber = normalizeWhatsAppNumber(listing.whatsappNumber || '');
+
+        const newBooking = new Booking({
+            user: req.user._id,
+            listing: id,
+            vehicleId: id,
+            ownerId: listing.owner,
+            renterId: req.user._id,
+            customerId: req.user._id,
+            
+            pickup: booking.pickupLocation,
+            pickupLocation: booking.pickupLocation,
+            pickupCoordinates: booking.pickupCoordinates ? { type: 'Point', coordinates: booking.pickupCoordinates } : undefined,
+            destination: booking.destination,
+            destinationCoordinates: booking.destinationCoordinates ? { type: 'Point', coordinates: booking.destinationCoordinates } : undefined,
+            
+            pickupDate: new Date(booking.pickupDate),
+            pickupTime: booking.pickupTime,
+            pickupDateTime,
+            
+            tripType: booking.tripType,
+            passengers: booking.passengers,
+            specialInstructions: booking.specialInstructions || '',
+            driverType: booking.driverType || 'dedicated-driver',
+            
+            distanceKm,
+            estimatedDuration: booking.estimatedDuration || '',
+            basePrice,
+            pricePerKM: ratePerKm,
+            totalPrice: estimatedFare,
+            estimatedFare,
+            platformFee,
+            tax,
+            totalDays,
+            
+            paymentMethod: booking.paymentMethod || 'cash',
+            bookingStatus: 'PENDING_OWNER_APPROVAL',
+            paymentStatus: 'PENDING',
+            ownerWhatsappNumber: ownerWhatsAppNumber
+        });
+
+        await newBooking.save();
+
+        // Optional: Send initial Whatsapp message to owner about the pending request
+        
+        return res.json({
+            success: true,
+            bookingId: newBooking._id,
+            message: 'Your trip request has been sent successfully. The owner will review your request.'
+        });
+
+    } catch (e) {
+        console.error('Create booking request error', e);
+        return res.status(500).json({ success: false, error: 'Unable to create booking request' });
+    }
+};
+
+module.exports.acceptBooking = async (req, res) => {
+    try {
+        const { bookingId } = req.params;
+        const booking = await Booking.findById(bookingId).populate('listing');
+        
+        if (!booking) return res.status(404).json({ success: false, error: 'Booking not found' });
+        if (booking.ownerId.toString() !== req.user._id.toString()) {
+            return res.status(403).json({ success: false, error: 'Unauthorized' });
+        }
+        
+        if (booking.bookingStatus !== 'PENDING_OWNER_APPROVAL') {
+            return res.status(400).json({ success: false, error: 'Booking is not pending approval' });
+        }
+        
+        booking.bookingStatus = 'CONFIRMED';
+        booking.bookingUpdatedAt = Date.now();
+        await booking.save();
+        
+        // Notify customer here
+        
+        return res.json({ success: true, message: 'Booking accepted successfully', booking });
+    } catch (e) {
+        console.error(e);
+        return res.status(500).json({ success: false, error: 'Failed to accept booking' });
+    }
+};
+
+module.exports.rejectBooking = async (req, res) => {
+    try {
+        const { bookingId } = req.params;
+        const { reason } = req.body;
+        const booking = await Booking.findById(bookingId);
+        
+        if (!booking) return res.status(404).json({ success: false, error: 'Booking not found' });
+        if (booking.ownerId.toString() !== req.user._id.toString()) {
+            return res.status(403).json({ success: false, error: 'Unauthorized' });
+        }
+        
+        booking.bookingStatus = 'REJECTED';
+        booking.cancellationReason = reason || 'Owner rejected request';
+        booking.bookingUpdatedAt = Date.now();
+        await booking.save();
+        
+        return res.json({ success: true, message: 'Booking rejected successfully' });
+    } catch (e) {
+        console.error(e);
+        return res.status(500).json({ success: false, error: 'Failed to reject booking' });
+    }
+};
+
+module.exports.sendCounterOffer = async (req, res) => {
+    try {
+        const { bookingId } = req.params;
+        const { baseFare, totalFare, message } = req.body;
+        
+        const booking = await Booking.findById(bookingId);
+        if (!booking) return res.status(404).json({ success: false, error: 'Booking not found' });
+        if (booking.ownerId.toString() !== req.user._id.toString()) {
+            return res.status(403).json({ success: false, error: 'Unauthorized' });
+        }
+        
+        booking.bookingStatus = 'COUNTER_OFFERED';
+        booking.counterOffer = {
+            baseFare: Number(baseFare),
+            totalFare: Number(totalFare),
+            message: message || '',
+            status: 'PENDING'
+        };
+        booking.bookingUpdatedAt = Date.now();
+        await booking.save();
+        
+        return res.json({ success: true, message: 'Counter offer sent to customer' });
+    } catch (e) {
+        console.error(e);
+        return res.status(500).json({ success: false, error: 'Failed to send counter offer' });
+    }
+};
+
+module.exports.respondToCounterOffer = async (req, res) => {
+    try {
+        const { bookingId } = req.params;
+        const { action } = req.body; // 'accept' or 'reject'
+        
+        const booking = await Booking.findById(bookingId);
+        if (!booking) return res.status(404).json({ success: false, error: 'Booking not found' });
+        
+        // Ensure customer is caller
+        if (booking.customerId.toString() !== req.user._id.toString()) {
+            return res.status(403).json({ success: false, error: 'Unauthorized' });
+        }
+        
+        if (booking.bookingStatus !== 'COUNTER_OFFERED') {
+            return res.status(400).json({ success: false, error: 'No pending counter offer' });
+        }
+        
+        if (action === 'accept') {
+            booking.counterOffer.status = 'ACCEPTED';
+            booking.basePrice = booking.counterOffer.baseFare;
+            booking.totalPrice = booking.counterOffer.totalFare;
+            booking.estimatedFare = booking.counterOffer.totalFare;
+            booking.bookingStatus = 'CONFIRMED';
+        } else if (action === 'reject') {
+            booking.counterOffer.status = 'REJECTED';
+            booking.bookingStatus = 'REJECTED';
+            booking.cancellationReason = 'Customer rejected counter offer';
+        } else {
+            return res.status(400).json({ success: false, error: 'Invalid action' });
+        }
+        
+        booking.bookingUpdatedAt = Date.now();
+        await booking.save();
+        
+        return res.json({ success: true, message: `Counter offer ${action}ed` });
+    } catch (e) {
+        console.error(e);
+        return res.status(500).json({ success: false, error: 'Failed to respond to counter offer' });
+    }
+};

@@ -101,3 +101,15 @@ module.exports.validateReview = (req, res, next) => {
     }
     next();
 };
+
+const { bookingRequestSchema } = require("../schema.js");
+module.exports.validateBookingRequest = (req, res, next) => {
+    let { error } = bookingRequestSchema.validate(req.body);
+    if (error) {
+        let errMsg = error.details.map((el) => el.message).join(",");
+        console.error("Booking validation error:", errMsg);
+        return res.status(400).json({ success: false, error: errMsg });
+    } else {
+        next();
+    }
+};

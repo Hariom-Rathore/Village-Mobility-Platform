@@ -114,25 +114,225 @@
         <b>Owner:</b>
         <%= listing.owner?.username || "Unknown Owner" %>
       </p>
-      <% if (listing.whatsappNumber) { %>
-      <p class="show-line">
-        <b>WhatsApp:</b>
-        <%= listing.whatsappNumber %>
-      </p>
-      <% } %>
-        <p class="show-line">&#8377; <%= listing.price !=null ? listing.price.toLocaleString("en-IN")
-          : "Price not available" %>
-          /day
-      </p>
-        <% if(listing.ratePerKm != null && listing.ratePerKm !== '') { %>
-          <p class="show-line">Rate: &#8377; <%= listing.ratePerKm %> /km</p>
+      
+      <!-- Phone number hidden until booking confirmed (contact privacy) -->
+      <% if (currUser && listing.owner && listing.owner._id && listing.owner._id.equals(currUser._id)) { %>
+        <% if (listing.whatsappNumber) { %>
+        <p class="show-line">
+          <b>WhatsApp:</b>
+          <%= listing.whatsappNumber %>
+        </p>
         <% } %>
-      <p class="show-line">
-        <%= listing.location %>
-      </p>
-      <p class="show-line">
-        <%= listing.country %>
-      </p>
+      <% } else { %>
+        <p class="show-line text-muted">
+          <i class="fas fa-lock"></i> Contact information will be visible after booking confirmation
+        </p>
+      <% } %>
+      
+      <!-- New Pricing Structure -->
+      <% if (listing.baseFare || listing.pricePerKm) { %>
+        <div class="pricing-section mb-3 p-3 bg-light rounded">
+          <h6 class="mb-2">Pricing</h6>
+          <% if (listing.baseFare) { %>
+            <p class="show-line mb-1">Base Fare: &#8377; <%= listing.baseFare.toLocaleString("en-IN") %></p>
+          <% } %>
+          <% if (listing.pricePerKm) { %>
+            <p class="show-line mb-1">Price Per KM: &#8377; <%= listing.pricePerKm %></p>
+          <% } %>
+          <% if (listing.minimumTripFare) { %>
+            <p class="show-line mb-1">Minimum Trip Fare: &#8377; <%= listing.minimumTripFare.toLocaleString("en-IN") %></p>
+          <% } %>
+          <% if (listing.nightCharge) { %>
+            <p class="show-line mb-1">Night Charge: &#8377; <%= listing.nightCharge.toLocaleString("en-IN") %></p>
+          <% } %>
+        </div>
+      <% } %>
+      
+      <!-- Legacy Pricing (for backward compatibility) -->
+      <% if (!listing.baseFare && !listing.pricePerKm && listing.price) { %>
+        <p class="show-line">&#8377; <%= listing.price.toLocaleString("en-IN") %>/day</p>
+      <% } %>
+      <% if (!listing.pricePerKm && listing.ratePerKm != null && listing.ratePerKm !== '') { %>
+        <p class="show-line">Rate: &#8377; <%= listing.ratePerKm %> /km</p>
+      <% } %>
+      
+      <!-- Location Information -->
+      <div class="location-section mb-3 p-3 bg-light rounded">
+        <h6 class="mb-2">Location</h6>
+        <p class="show-line mb-1">
+          <%= listing.location %>
+        </p>
+        <% if (listing.city) { %>
+          <p class="show-line mb-1"><%= listing.city %>, <%= listing.state || '' %></p>
+        <% } %>
+        <% if (listing.serviceRadius) { %>
+          <p class="show-line mb-1">Service Radius: <%= listing.serviceRadius === null ? 'Anywhere' : listing.serviceRadius + ' KM' %></p>
+        <% } %>
+      </div>
+      
+      <!-- Vehicle Details -->
+      <% if (listing.vehicleName || listing.brand || listing.model || listing.year || listing.vehicleNumber || listing.fuelType || listing.transmission || listing.seats || listing.acAvailable || listing.musicSystem || listing.luggageCapacity) { %>
+        <div class="vehicle-details-section mb-3 p-3 bg-light rounded">
+          <h6 class="mb-2">Vehicle Details</h6>
+          <div class="row">
+            <% if (listing.vehicleName) { %>
+              <div class="col-md-6 mb-1">
+                <small><strong>Vehicle:</strong> <%= listing.vehicleName %></small>
+              </div>
+            <% } %>
+            <% if (listing.brand && listing.model) { %>
+              <div class="col-md-6 mb-1">
+                <small><strong>Brand/Model:</strong> <%= listing.brand %> <%= listing.model %></small>
+              </div>
+            <% } %>
+            <% if (listing.year) { %>
+              <div class="col-md-6 mb-1">
+                <small><strong>Year:</strong> <%= listing.year %></small>
+              </div>
+            <% } %>
+            <% if (listing.vehicleNumber) { %>
+              <div class="col-md-6 mb-1">
+                <small><strong>Vehicle Number:</strong> <%= listing.vehicleNumber %></small>
+              </div>
+            <% } %>
+            <% if (listing.fuelType) { %>
+              <div class="col-md-6 mb-1">
+                <small><strong>Fuel Type:</strong> <%= listing.fuelType.charAt(0).toUpperCase() + listing.fuelType.slice(1) %></small>
+              </div>
+            <% } %>
+            <% if (listing.transmission) { %>
+              <div class="col-md-6 mb-1">
+                <small><strong>Transmission:</strong> <%= listing.transmission.charAt(0).toUpperCase() + listing.transmission.slice(1) %></small>
+              </div>
+            <% } %>
+            <% if (listing.seats) { %>
+              <div class="col-md-6 mb-1">
+                <small><strong>Seating:</strong> <%= listing.seats %> Seater</small>
+              </div>
+            <% } %>
+            <% if (listing.acAvailable !== undefined) { %>
+              <div class="col-md-6 mb-1">
+                <small><strong>AC:</strong> <%= listing.acAvailable ? 'Yes' : 'No' %></small>
+              </div>
+            <% } %>
+            <% if (listing.musicSystem !== undefined) { %>
+              <div class="col-md-6 mb-1">
+                <small><strong>Music System:</strong> <%= listing.musicSystem ? 'Yes' : 'No' %></small>
+              </div>
+            <% } %>
+            <% if (listing.luggageCapacity) { %>
+              <div class="col-md-6 mb-1">
+                <small><strong>Luggage:</strong> <%= listing.luggageCapacity.charAt(0).toUpperCase() + listing.luggageCapacity.slice(1) %></small>
+              </div>
+            <% } %>
+          </div>
+        </div>
+      <% } %>
+      
+      <!-- Driver Information -->
+      <% if (listing.driverType) { %>
+        <div class="driver-section mb-3 p-3 bg-light rounded">
+          <h6 class="mb-2">Driver Information</h6>
+          <p class="show-line mb-1">
+            <strong>Driver:</strong> <%= listing.driverType === 'owner' ? 'Owner' : 'Dedicated Driver' %>
+          </p>
+          <% if (listing.driverType === 'dedicated-driver') { %>
+            <% if (listing.driverName) { %>
+              <p class="show-line mb-1"><small><strong>Name:</strong> <%= listing.driverName %></small></p>
+            <% } %>
+            <% if (listing.driverExperience) { %>
+              <p class="show-line mb-1"><small><strong>Experience:</strong> <%= listing.driverExperience %> years</small></p>
+            <% } %>
+          <% } %>
+        </div>
+      <% } %>
+      
+      <!-- Available Trip Types -->
+      <% if (listing.availableTripTypes && listing.availableTripTypes.length > 0) { %>
+        <div class="trip-types-section mb-3 p-3 bg-light rounded">
+          <h6 class="mb-2">Available For</h6>
+          <div class="d-flex flex-wrap gap-2">
+            <% listing.availableTripTypes.forEach(tripType => { %>
+              <span class="badge bg-info"><%= tripType.charAt(0).toUpperCase() + tripType.slice(1).replace('-', ' ') %></span>
+            <% }) %>
+          </div>
+        </div>
+      <% } %>
+      
+      <!-- Booking Rules -->
+      <% if (listing.bookingRules) { %>
+        <div class="booking-rules-section mb-3 p-3 bg-light rounded">
+          <h6 class="mb-2">Booking Rules</h6>
+          <div class="row">
+            <% if (listing.bookingRules.minimumBookingAmount) { %>
+              <div class="col-md-6 mb-1">
+                <small><strong>Min Booking:</strong> &#8377; <%= listing.bookingRules.minimumBookingAmount %></small>
+              </div>
+            <% } %>
+            <% if (listing.bookingRules.maximumPassengers) { %>
+              <div class="col-md-6 mb-1">
+                <small><strong>Max Passengers:</strong> <%= listing.bookingRules.maximumPassengers %></small>
+              </div>
+            <% } %>
+            <% if (listing.bookingRules.smokingAllowed !== undefined) { %>
+              <div class="col-md-6 mb-1">
+                <small><strong>Smoking:</strong> <%= listing.bookingRules.smokingAllowed ? 'Allowed' : 'Not Allowed' %></small>
+              </div>
+            <% } %>
+            <% if (listing.bookingRules.petsAllowed !== undefined) { %>
+              <div class="col-md-6 mb-1">
+                <small><strong>Pets:</strong> <%= listing.bookingRules.petsAllowed ? 'Allowed' : 'Not Allowed' %></small>
+              </div>
+            <% } %>
+            <% if (listing.bookingRules.luggageAllowed !== undefined) { %>
+              <div class="col-md-6 mb-1">
+                <small><strong>Luggage:</strong> <%= listing.bookingRules.luggageAllowed ? 'Allowed' : 'Not Allowed' %></small>
+              </div>
+            <% } %>
+            <% if (listing.bookingRules.nightDriving !== undefined) { %>
+              <div class="col-md-6 mb-1">
+                <small><strong>Night Driving:</strong> <%= listing.bookingRules.nightDriving ? 'Available' : 'Not Available' %></small>
+              </div>
+            <% } %>
+          </div>
+        </div>
+      <% } %>
+      
+      <!-- Payment Methods -->
+      <% if (listing.paymentMethods && listing.paymentMethods.length > 0) { %>
+        <div class="payment-methods-section mb-3 p-3 bg-light rounded">
+          <h6 class="mb-2">Payment Methods</h6>
+          <div class="d-flex flex-wrap gap-2">
+            <% listing.paymentMethods.forEach(method => { %>
+              <span class="badge bg-success"><%= method.charAt(0).toUpperCase() + method.slice(1) %></span>
+            <% }) %>
+          </div>
+        </div>
+      <% } %>
+      
+      <!-- Multiple Images Gallery -->
+      <% if (listing.images && listing.images.length > 0) { %>
+        <div class="images-gallery-section mb-3 p-3 bg-light rounded">
+          <h6 class="mb-2">Vehicle Photos</h6>
+          <div class="row">
+            <% listing.images.forEach((img, index) => { %>
+              <% let imgUrl = "https://images.pexels.com/photos/11129937/pexels-photo-11129937.jpeg"; %>
+              <% if (img.url) { %>
+                <% imgUrl = img.url; %>
+                <% if (imgUrl.includes('cloudinary.com')) { %>
+                  <% imgUrl = imgUrl.replace('/upload/', '/upload/q_auto,f_auto,w_300,h_200,c_limit/'); %>
+                <% } %>
+              <% } %>
+              <div class="col-md-4 col-sm-6 mb-2">
+                <img src="<%= imgUrl %>" class="img-fluid rounded" alt="<%= img.type || 'Vehicle image' %>" style="max-height: 200px; width: 100%; object-fit: cover;">
+                <% if (img.type) { %>
+                  <small class="text-muted d-block text-center mt-1"><%= img.type.charAt(0).toUpperCase() + img.type.slice(1) %></small>
+                <% } %>
+              </div>
+            <% }) %>
+          </div>
+        </div>
+      <% } %>
       
       <!-- Rating Display -->
       <% if (listing.averageRating && listing.totalReviews > 0) { %>

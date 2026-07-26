@@ -7,11 +7,50 @@ const emptyListing = {
     title: "",
     description: "",
     image: { url: "", filename: "listingimage" },
+    images: [],
     price: "",
     country: "",
     location: "",
     ratePerKm: "",
     whatsappNumber: "",
+    // New fields
+    baseFare: 0,
+    pricePerKm: 0,
+    minimumTripFare: 0,
+    nightCharge: 0,
+    locationCoordinates: { type: "Point", coordinates: [0, 0] },
+    village: "",
+    area: "",
+    city: "",
+    district: "",
+    state: "",
+    serviceRadius: null,
+    vehicleName: "",
+    brand: "",
+    model: "",
+    year: "",
+    vehicleNumber: "",
+    vehicleType: "",
+    fuelType: "other",
+    transmission: "manual",
+    acAvailable: true,
+    musicSystem: false,
+    luggageCapacity: "medium",
+    driverType: "owner",
+    driverName: "",
+    driverExperience: "",
+    driverPhoneNumber: "",
+    driverLicenseNumber: "",
+    availableTripTypes: [],
+    bookingRules: {
+        minimumBookingAmount: 0,
+        maximumPassengers: 4,
+        smokingAllowed: false,
+        petsAllowed: false,
+        luggageAllowed: true,
+        nightDriving: true,
+    },
+    paymentMethods: [],
 };
 
 const buildListingData = (incomingListing = {}) => ({
@@ -90,15 +129,24 @@ module.exports.renderNewForm = (req, res) => {
     });
 };
 
+module.exports.renderNewStepForm = (req, res) => {
+    res.render("listings/new-step.ejs", {
+        listing: emptyListing,
+        errorMsg: null,
+    });
+};
+
 module.exports.createListing = async (req, res) => {
     console.log("Creating listing with data:", req.body.listing);
     console.log("File upload:", req.file);
+    console.log("Multiple files:", req.files);
 
     const listingData = buildListingData(req.body.listing);
     listingData.category = listingData.category || "trending";
     listingData.whatsappNumber = (listingData.whatsappNumber || DEFAULT_OWNER_WHATSAPP_NUMBER || "").trim();
     listingData.websiteSource = "car-rental";
 
+    // Handle single image upload (legacy support)
     if (req.file) {
         listingData.image = {
             url: req.file.path,
@@ -107,9 +155,113 @@ module.exports.createListing = async (req, res) => {
         console.log("Image set from upload:", listingData.image);
     }
 
+    // Handle multiple image uploads
+    if (req.files) {
+        const images = [];
+        const fieldMapping = {
+            'frontImage': 'front',
+            'rearImage': 'rear', 
+            'leftImage': 'left',
+            'rightImage': 'right',
+            'interiorImage': 'interior',
+            'dashboardImage': 'dashboard'
+        };
+        
+        Object.keys(req.files).forEach(fieldName => {
+            if (req.files[fieldName] && req.files[fieldName].length > 0) {
+                const file = req.files[fieldName][0];
+                // Check if this is a vehicle image or document
+                if (fieldMapping[fieldName]) {
+                    images.push({
+                        url: file.path,
+                        filename: file.filename,
+                        type: fieldMapping[fieldName]
+                    });
+                }
+            }
+        });
+        
+        if (images.length > 0) {
+            listingData.images = images;
+            console.log("Multiple images set from upload:", listingData.images);
+        }
+        
+        // Handle document uploads
+        const documentMapping = {
+            'vehicleRC': 'vehicleRC',
+            'insurance': 'insurance',
+            'pollutionCertificate': 'pollutionCertificate',
+            'fitnessCertificate': 'fitnessCertificate',
+            'ownerDrivingLicense': 'ownerDrivingLicense',
+            'driverDrivingLicense': 'driverDrivingLicense',
+            'aadhaar': 'aadhaar'
+        };
+        
+        if (!listingData.documents) {
+            listingData.documents = {};
+        }
+        
+        Object.keys(req.files).forEach(fieldName => {
+            if (req.files[fieldName] && req.files[fieldName].length > 0 && documentMapping[fieldName]) {
+                const file = req.files[fieldName][0];
+                listingData.documents[documentMapping[fieldName]] = {
+                    url: file.path,
+                    filename: file.filename,
+                    verificationStatus: 'pending'
+                };
+            }
+        });
+        
+        console.log("Documents set from upload:", listingData.documents);
+        
+        // Handle driver photo upload
+        if (req.files['driverPhoto'] && req.files['driverPhoto'].length > 0) {
+            const driverPhoto = req.files['driverPhoto'][0];
+            listingData.driverPhoto = {
+                url: driverPhoto.path,
+                filename: driverPhoto.filename
+            };
+            console.log("Driver photo set from upload:", listingData.driverPhoto);
+        }
+    }
+
+    // Parse location coordinates if provided
+    if (req.body.listing.locationCoordinates) {
+        try {
+            const coords = JSON.parse(req.body.listing.locationCoordinates);
+            listingData.locationCoordinates = coords;
+        } catch (e) {
+            console.error("Error parsing location coordinates:", e);
+        }
+    }
+
+    // Parse booking rules if provided
+    if (req.body.listing.bookingRules) {
+        try {
+            if (typeof req.body.listing.bookingRules === 'string') {
+                listingData.bookingRules = JSON.parse(req.body.listing.bookingRules);
+            }
+        } catch (e) {
+            console.error("Error parsing booking rules:", e);
+        }
+    }
+
+    // Parse trip types if provided as string
+    if (req.body.listing.availableTripTypes) {
+        if (typeof req.body.listing.availableTripTypes === 'string') {
+            listingData.availableTripTypes = req.body.listing.availableTripTypes.split(',').map(t => t.trim());
+        }
+    }
+
+    // Parse payment methods if provided as string
+    if (req.body.listing.paymentMethods) {
+        if (typeof req.body.listing.paymentMethods === 'string') {
+            listingData.paymentMethods = req.body.listing.paymentMethods.split(',').map(m => m.trim());
+        }
+    }
+
     const listing = new Listing(listingData);
     listing.owner = req.user._id;
-    // if a file was uploaded, `listingData.image` was set above; do not overwrite with undefined vars
 
     console.log("Listing before save:", listing);
     await listing.save();
@@ -158,11 +310,113 @@ module.exports.updateListing = async (req, res) => {
     const listingData = buildListingData(req.body.listing);
     listingData.whatsappNumber = (listingData.whatsappNumber || DEFAULT_OWNER_WHATSAPP_NUMBER || "").trim();
 
+    // Handle single image upload (legacy support)
     if (req.file) {
         listingData.image = {
-             url: req.file.path,
+            url: req.file.path,
             filename: req.file.filename,
         };
+    }
+
+    // Handle multiple image uploads
+    if (req.files) {
+        const images = [];
+        const fieldMapping = {
+            'frontImage': 'front',
+            'rearImage': 'rear', 
+            'leftImage': 'left',
+            'rightImage': 'right',
+            'interiorImage': 'interior',
+            'dashboardImage': 'dashboard'
+        };
+        
+        Object.keys(req.files).forEach(fieldName => {
+            if (req.files[fieldName] && req.files[fieldName].length > 0) {
+                const file = req.files[fieldName][0];
+                // Check if this is a vehicle image or document
+                if (fieldMapping[fieldName]) {
+                    images.push({
+                        url: file.path,
+                        filename: file.filename,
+                        type: fieldMapping[fieldName]
+                    });
+                }
+            }
+        });
+        
+        if (images.length > 0) {
+            listingData.images = images;
+        }
+        
+        // Handle document uploads
+        const documentMapping = {
+            'vehicleRC': 'vehicleRC',
+            'insurance': 'insurance',
+            'pollutionCertificate': 'pollutionCertificate',
+            'fitnessCertificate': 'fitnessCertificate',
+            'ownerDrivingLicense': 'ownerDrivingLicense',
+            'driverDrivingLicense': 'driverDrivingLicense',
+            'aadhaar': 'aadhaar'
+        };
+        
+        if (!listingData.documents) {
+            listingData.documents = {};
+        }
+        
+        Object.keys(req.files).forEach(fieldName => {
+            if (req.files[fieldName] && req.files[fieldName].length > 0 && documentMapping[fieldName]) {
+                const file = req.files[fieldName][0];
+                listingData.documents[documentMapping[fieldName]] = {
+                    url: file.path,
+                    filename: file.filename,
+                    verificationStatus: 'pending'
+                };
+            }
+        });
+        
+        // Handle driver photo upload
+        if (req.files['driverPhoto'] && req.files['driverPhoto'].length > 0) {
+            const driverPhoto = req.files['driverPhoto'][0];
+            listingData.driverPhoto = {
+                url: driverPhoto.path,
+                filename: driverPhoto.filename
+            };
+        }
+    }
+
+    // Parse location coordinates if provided
+    if (req.body.listing.locationCoordinates) {
+        try {
+            const coords = JSON.parse(req.body.listing.locationCoordinates);
+            listingData.locationCoordinates = coords;
+        } catch (e) {
+            console.error("Error parsing location coordinates:", e);
+        }
+    }
+
+    // Parse booking rules if provided
+    if (req.body.listing.bookingRules) {
+        try {
+            if (typeof req.body.listing.bookingRules === 'string') {
+                listingData.bookingRules = JSON.parse(req.body.listing.bookingRules);
+            }
+        } catch (e) {
+            console.error("Error parsing booking rules:", e);
+        }
+    }
+
+    // Parse trip types if provided as string
+    if (req.body.listing.availableTripTypes) {
+        if (typeof req.body.listing.availableTripTypes === 'string') {
+            listingData.availableTripTypes = req.body.listing.availableTripTypes.split(',').map(t => t.trim());
+        }
+    }
+
+    // Parse payment methods if provided as string
+    if (req.body.listing.paymentMethods) {
+        if (typeof req.body.listing.paymentMethods === 'string') {
+            listingData.paymentMethods = req.body.listing.paymentMethods.split(',').map(m => m.trim());
+        }
     }
 
     const listing = await Listing.findOneAndUpdate({ _id: id, websiteSource: "car-rental" }, listingData, {

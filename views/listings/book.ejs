@@ -1,944 +1,662 @@
 <% layout('/listings/layouts/boilerplate') %>
 
-<h2>Book: <%= listing.title %></h2>
-
-<div class="row">
-  <div class="col-md-6">
-    <div id="map" style="height:400px;width:100%"></div>
-  </div>
-  <div class="col-md-6">
-    <form id="bookingForm">
-      <div id="geoMsg" class="mb-2 text-muted" style="font-size:0.9rem"></div>
-      
-      <!-- Date/Time Selection -->
-      <div class="row mb-3">
-        <div class="col-md-6">
-          <label class="form-label">Pickup Date</label>
-          <input type="date" id="pickupDate" class="form-control" required />
-        </div>
-        <div class="col-md-6">
-          <label class="form-label">Pickup Time</label>
-          <input type="time" id="pickupTime" class="form-control" required />
-        </div>
-      </div>
-      
-      <div class="row mb-3">
-        <div class="col-md-6">
-          <label class="form-label">Return Date</label>
-          <input type="date" id="returnDate" class="form-control" required />
-        </div>
-        <div class="col-md-6">
-          <label class="form-label">Return Time</label>
-          <input type="time" id="returnTime" class="form-control" required />
-        </div>
-      </div>
-
-      <!-- Price Breakdown -->
-      <div class="card mb-3">
-        <div class="card-header bg-light">
-          <h6 class="mb-0">Booking Summary</h6>
-        </div>
-        <div class="card-body">
-          <div class="d-flex justify-content-between mb-2">
-            <span>Duration:</span>
-            <span id="durationDisplay">0 Days</span>
-          </div>
-          <div class="d-flex justify-content-between mb-2">
-            <span>Daily Rate:</span>
-            <span id="dailyRateDisplay">₹<%= listing.price %>/day</span>
-          </div>
-          <div class="d-flex justify-content-between mb-2">
-            <span>Base Price:</span>
-            <span id="basePriceDisplay">₹0</span>
-          </div>
-          <div class="d-flex justify-content-between mb-2">
-            <span>Platform Fee (5%):</span>
-            <span id="platformFeeDisplay">₹0</span>
-          </div>
-          <div class="d-flex justify-content-between mb-2">
-            <span>Tax (18%):</span>
-            <span id="taxDisplay">₹0</span>
-          </div>
-          <hr>
-          <div class="d-flex justify-content-between fw-bold">
-            <span>Total:</span>
-            <span id="totalPriceDisplay">₹0</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- Location Selection (Optional) -->
-      <div class="mb-3">
-        <label class="form-label">From (Pickup Location)</label>
-        <div class="input-group">
-          <input id="pickup" class="form-control" autocomplete="off" placeholder="From: address or lat,lng (e.g., Andheri, Mumbai or 19.1190,72.8466)" />
-          <button id="detectBtn" type="button" class="btn btn-outline-secondary">Detect</button>
-        </div>
-        <div id="pickupSuggestions" class="autocomplete-suggestions"></div>
-      </div>
-      <div class="mb-3">
-        <label class="form-label">To (Destination)</label>
-        <div class="input-group">
-          <input id="destination" class="form-control" autocomplete="off" placeholder="To: address (e.g., Gateway of India)" />
-        </div>
-        <div id="destSuggestions" class="autocomplete-suggestions"></div>
-      </div>
-      <div class="mb-3">
-        <label class="form-label">Purpose / Event</label>
-        <input id="purpose" class="form-control" placeholder="Kis event ke liye? (e.g., shaadi, picnic, airport pickup)" />
-      </div>
-      <div class="mb-3">
-        <label class="form-label">Distance</label>
-        <input id="distance" class="form-control" readonly />
-      </div>
-      <div class="mb-3">
-        <label class="form-label">Estimated Travel Time</label>
-        <input id="duration" class="form-control" readonly />
-      </div>
-      <div class="mb-3">
-        <label class="form-label">Toll Taxes</label>
-        <input id="tollTaxes" type="number" min="0" step="1" class="form-control" placeholder="Enter total toll tax amount" value="0" />
-      </div>
-      
-      <div class="mb-3">
-        <label class="form-label">Payment Method</label>
-        <select id="paymentMethod" class="form-select">
-          <option value="razorpay">Pay Online (Razorpay)</option>
-          <option value="cod">Cash on Delivery</option>
-        </select>
-      </div>
-      <button id="payBtn" class="btn btn-primary" type="button">Book Now</button>
-    </form>
-  </div>
-</div>
-
-<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
-<script type="application/json" id="listing-data"><%- JSON.stringify(listing) %></script>
-<script type="application/json" id="current-user-data"><%- JSON.stringify(currUser ? { id: currUser._id, username: currUser.username, email: currUser.email } : null) %></script>
-<script type="application/json" id="booking-config"><%- JSON.stringify({ razorpayKey, orsKey: typeof orsKey !== 'undefined' ? orsKey : '', ownerWhatsappNumber: typeof ownerWhatsappNumber !== 'undefined' ? ownerWhatsappNumber : '' }) %></script>
-
-<script>
-const listing = JSON.parse(document.getElementById('listing-data').textContent);
-const currentUser = JSON.parse(document.getElementById('current-user-data').textContent);
-const bookingConfig = JSON.parse(document.getElementById('booking-config').textContent);
-const razorpayKey = bookingConfig.razorpayKey || '';
-const orsKey = bookingConfig.orsKey || '';
-const ownerWhatsappNumber = bookingConfig.ownerWhatsappNumber || '';
-const maxBookingAmountInr = 500000;
-
-let map;
-let pickupMarker;
-let destMarker;
-let routeLine;
-let pickupCoords = null;
-let destCoords = null;
-let pickupDebounceTimer = null;
-let destDebounceTimer = null;
-let lastRouteDistanceKm = 0;
-let lastRouteDurationSeconds = 0;
-const geocodeCache = new Map();
-
-// Price calculation variables
-let currentTotalDays = 1;
-let currentBasePrice = 0;
-let currentPlatformFee = 0;
-let currentTax = 0;
-let currentTotalPrice = 0;
-
-// Set minimum date to today
-function setMinDates() {
-  const today = new Date().toISOString().split('T')[0];
-  const pickupDateInput = document.getElementById('pickupDate');
-  const returnDateInput = document.getElementById('returnDate');
-  
-  if (pickupDateInput) pickupDateInput.min = today;
-  if (returnDateInput) returnDateInput.min = today;
-}
-
-// Calculate price based on dates
-function calculatePrice() {
-  const pickupDate = document.getElementById('pickupDate').value;
-  const returnDate = document.getElementById('returnDate').value;
-  const distanceKm = parseFloat(document.getElementById('distance').value) || 0;
-  
-  if (!pickupDate || !returnDate) {
-    updatePriceDisplay(0, 0, 0, 0, 0);
-    return;
-  }
-  
-  const pickup = new Date(pickupDate);
-  const returnD = new Date(returnDate);
-  
-  // Calculate days
-  const daysDiff = Math.ceil((returnD - pickup) / (1000 * 60 * 60 * 24)) || 1;
-  currentTotalDays = daysDiff;
-  
-  // Calculate base price
-  const dailyRate = Number(listing.price) || 0;
-  const ratePerKm = Number(listing.ratePerKm) || 0;
-  
-  const dailyCharge = dailyRate * daysDiff;
-  const distanceCharge = distanceKm * ratePerKm;
-  const baseTotal = Math.ceil(dailyCharge + distanceCharge);
-  
-  // Platform fee (5% of base total, minimum ₹50)
-  const platformFee = Math.max(50, Math.ceil(baseTotal * 0.05));
-  
-  // Tax (18% GST on base total + platform fee)
-  const taxableAmount = baseTotal + platformFee;
-  const tax = Math.ceil(taxableAmount * 0.18);
-  
-  // Grand total
-  const grandTotal = baseTotal + platformFee + tax;
-  
-  currentBasePrice = baseTotal;
-  currentPlatformFee = platformFee;
-  currentTax = tax;
-  currentTotalPrice = grandTotal;
-  
-  updatePriceDisplay(daysDiff, baseTotal, platformFee, tax, grandTotal);
-}
-
-// Update price display
-function updatePriceDisplay(days, basePrice, platformFee, tax, totalPrice) {
-  const durationDisplay = document.getElementById('durationDisplay');
-  const basePriceDisplay = document.getElementById('basePriceDisplay');
-  const platformFeeDisplay = document.getElementById('platformFeeDisplay');
-  const taxDisplay = document.getElementById('taxDisplay');
-  const totalPriceDisplay = document.getElementById('totalPriceDisplay');
-  const payBtn = document.getElementById('payBtn');
-  
-  if (durationDisplay) durationDisplay.textContent = `${days} Day${days !== 1 ? 's' : ''}`;
-  if (basePriceDisplay) basePriceDisplay.textContent = `₹${basePrice}`;
-  if (platformFeeDisplay) platformFeeDisplay.textContent = `₹${platformFee}`;
-  if (taxDisplay) taxDisplay.textContent = `₹${tax}`;
-  if (totalPriceDisplay) totalPriceDisplay.textContent = `₹${totalPrice}`;
-  if (payBtn) payBtn.dataset.amount = totalPrice;
-}
-
-function initMap() {
-  map = L.map('map').setView([20.5937, 78.9629], 5);
-
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    maxZoom: 19,
-    attribution: '&copy; OpenStreetMap contributors'
-  }).addTo(map);
-
-  map.on('click', async (event) => {
-    pickupCoords = [event.latlng.lat, event.latlng.lng];
-    const pickupInput = document.getElementById('pickup');
-    setPickupMarker(pickupCoords);
-
-    setStatus('Pickup selected on the map. Resolving address...');
-
-    const address = await reverseGeocode(pickupCoords);
-    if (pickupInput) {
-      pickupInput.value = address || `${pickupCoords[0].toFixed(6)}, ${pickupCoords[1].toFixed(6)}`;
-    }
-
-    setStatus(address ? 'Pickup address selected from the map.' : 'Pickup selected on the map. Enter destination to calculate the route.');
-    maybeCalculateRoute();
-  });
-
-  tryAutoPickup();
-}
-
-async function tryAutoPickup() {
-  if (!navigator.geolocation) return;
-
-  navigator.geolocation.getCurrentPosition(
-    (pos) => {
-      pickupCoords = [pos.coords.latitude, pos.coords.longitude];
-      const pickupInput = document.getElementById('pickup');
-      if (pickupInput && !pickupInput.value.trim()) {
-        pickupInput.value = `${pickupCoords[0].toFixed(6)}, ${pickupCoords[1].toFixed(6)}`;
-      }
-
-      map.setView(pickupCoords, 12);
-      setPickupMarker(pickupCoords);
-
-      setStatus('Current location detected. Enter destination to calculate route.');
-      maybeCalculateRoute();
-    },
-    () => setStatus('Location permission was not granted. You can still type pickup and destination manually.')
-  );
-}
-
-function setStatus(message) {
-  const geoMsgEl = document.getElementById('geoMsg');
-  if (geoMsgEl) geoMsgEl.textContent = message;
-}
-
-function setPickupMarker(latlng) {
-  if (pickupMarker) pickupMarker.remove();
-  pickupMarker = L.marker(latlng).addTo(map).bindPopup('Pickup').openPopup();
-}
-
-function setDestMarker(latlng) {
-  if (destMarker) destMarker.remove();
-  destMarker = L.marker(latlng).addTo(map).bindPopup('Destination').openPopup();
-}
-
-async function reverseGeocode(latlng) {
-  try {
-    const response = await fetch(`/cars/reverse-geocode?lat=${encodeURIComponent(latlng[0])}&lon=${encodeURIComponent(latlng[1])}`, {
-      headers: {
-        'Accept': 'application/json'
-      }
-    });
-
-    if (!response.ok) return '';
-
-    const data = await response.json();
-    return data.display_name || '';
-  } catch (error) {
-    console.error(error);
-    return '';
-  }
-}
-
-function drawRoutePolyline(coords) {
-  if (routeLine) routeLine.remove();
-  routeLine = L.polyline(coords, {
-    color: '#0d6efd',
-    weight: 5,
-    opacity: 0.85
-  }).addTo(map);
-
-  map.fitBounds(routeLine.getBounds(), { padding: [40, 40] });
-}
-
-function isCoords(str) {
-  return /^\s*-?\d+(?:\.\d+)?\s*,\s*-?\d+(?:\.\d+)?\s*$/.test(str);
-}
-
-function toLatLngPairFromText(str) {
-  return str.split(',').map((part) => Number(part.trim()));
-}
-
-function haversineDistance([lat1, lon1], [lat2, lon2]) {
-  function toRad(value) {
-    return (value * Math.PI) / 180;
-  }
-
-  const earthRadiusKm = 6371;
-  const dLat = toRad(lat2 - lat1);
-  const dLon = toRad(lon2 - lon1);
-
-  const a =
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
-    Math.sin(dLon / 2) * Math.sin(dLon / 2);
-
-  return earthRadiusKm * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)));
-}
-
-function formatDuration(seconds) {
-  if (!seconds || seconds <= 0) return 'N/A';
-
-  const hours = Math.floor(seconds / 3600);
-  const minutes = Math.round((seconds % 3600) / 60);
-
-  if (hours > 0) return `${hours}h ${minutes}m`;
-  return `${minutes}m`;
-}
-
-async function nominatimSearch(query) {
-  const cacheKey = query.trim().toLowerCase();
-  if (geocodeCache.has(cacheKey)) {
-    return geocodeCache.get(cacheKey);
-  }
-
-  const url = `/cars/geocode?q=${encodeURIComponent(query)}`;
-  const request = fetch(url, {
-    headers: {
-      'Accept': 'application/json'
-    }
-  })
-    .then((res) => {
-      if (!res.ok) return [];
-      return res.json();
-    })
-    .catch((error) => {
-      geocodeCache.delete(cacheKey);
-      throw error;
-    });
-
-  geocodeCache.set(cacheKey, request);
-  return request;
-}
-
-function clearSuggestions(containerId) {
-  const container = document.getElementById(containerId);
-  if (!container) return;
-
-  container.innerHTML = '';
-  container.style.display = 'none';
-}
-
-function renderSuggestions(containerId, items, onSelect) {
-  const container = document.getElementById(containerId);
-  if (!container) return;
-
-  container.innerHTML = '';
-
-  if (!items.length) {
-    container.style.display = 'none';
-    return;
-  }
-
-  items.forEach((item) => {
-    const button = document.createElement('button');
-    button.type = 'button';
-    button.className = 'autocomplete-item';
-    button.textContent = item.display_name;
-    button.addEventListener('click', () => onSelect(item));
-    container.appendChild(button);
-  });
-
-  container.style.display = 'block';
-}
-
-async function searchLocation(inputValue, type) {
-  const containerId = type === 'pickup' ? 'pickupSuggestions' : 'destSuggestions';
-  const query = inputValue.trim();
-
-  if (!query) {
-    clearSuggestions(containerId);
-    return;
-  }
-
-  if (isCoords(query)) {
-    clearSuggestions(containerId);
-    return;
-  }
-
-  let results = [];
-
-  try {
-    results = await nominatimSearch(query);
-  } catch (error) {
-    console.error(error);
-    setStatus('Location search is temporarily unavailable. Please type a full address or lat,lng.');
-    clearSuggestions(containerId);
-    return;
-  }
-
-  renderSuggestions(containerId, results, (item) => {
-    const coords = [Number(item.lat), Number(item.lon)];
-
-    if (type === 'pickup') {
-      pickupCoords = coords;
-      document.getElementById('pickup').value = item.display_name;
-      setPickupMarker(coords);
-      map.setView(coords, 12);
-      clearSuggestions(containerId);
-    } else {
-      destCoords = coords;
-      document.getElementById('destination').value = item.display_name;
-      setDestMarker(coords);
-      clearSuggestions(containerId);
-    }
-
-    maybeCalculateRoute();
-  });
-}
-
-async function geocodeSingleLocation(text) {
-  if (isCoords(text)) {
-    return toLatLngPairFromText(text);
-  }
-
-  let results = [];
-
-  try {
-    results = await nominatimSearch(text);
-  } catch (error) {
-    console.error(error);
-    return null;
-  }
-
-  if (!results.length) return null;
-
-  return [Number(results[0].lat), Number(results[0].lon)];
-}
-
-async function maybeCalculateRoute() {
-  const pickupText = document.getElementById('pickup').value.trim();
-  const destinationText = document.getElementById('destination').value.trim();
-
-  if (!pickupText || !destinationText) return;
-
-  const pickup = pickupCoords || await geocodeSingleLocation(pickupText);
-  const destination = destCoords || await geocodeSingleLocation(destinationText);
-
-  if (!pickup || !destination) {
-    setStatus('Could not find one of the locations. Please choose from the suggestions or enter lat,lng.');
-    return;
-  }
-
-  pickupCoords = pickup;
-  destCoords = destination;
-
-  setPickupMarker(pickupCoords);
-  setDestMarker(destCoords);
-
-  try {
-    await drawRouteAndUpdateFare(pickupCoords, destCoords);
-    setStatus('Route calculated successfully.');
-  } catch (error) {
-    console.error(error);
-    setStatus('Route service failed. Showing straight-line estimate instead.');
-    fallbackDistanceAndCost(pickupCoords, destCoords);
-  }
-}
-
-async function drawRouteAndUpdateFare(pickup, destination) {
-  const distanceBox = document.getElementById('distance');
-  const durationBox = document.getElementById('duration');
-  const totalCostBox = document.getElementById('totalCost');
-  const tollTaxesBox = document.getElementById('tollTaxes');
-
-  let routeDistanceKm = 0;
-  let routeDurationSeconds = 0;
-  let routeCoordinates = null;
-
-  if (orsKey) {
-    const orsResponse = await fetch('https://api.openrouteservice.org/v2/directions/driving-car/geojson', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': orsKey
-      },
-      body: JSON.stringify({
-        coordinates: [
-          [pickup[1], pickup[0]],
-          [destination[1], destination[0]]
-        ]
-      })
-    });
-
-    if (orsResponse.ok) {
-      const orsData = await orsResponse.json();
-      const feature = orsData.features && orsData.features[0];
-
-      if (feature) {
-        routeCoordinates = feature.geometry.coordinates.map(([lng, lat]) => [lat, lng]);
-        routeDistanceKm = (feature.properties.summary.distance / 1000);
-        routeDurationSeconds = feature.properties.summary.duration;
-      }
-    }
-  }
-
-  if (!routeCoordinates) {
-    const osrmUrl = `https://router.project-osrm.org/route/v1/driving/${pickup[1]},${pickup[0]};${destination[1]},${destination[0]}?overview=full&geometries=geojson`;
-    const osrmResponse = await fetch(osrmUrl);
-    if (!osrmResponse.ok) throw new Error('OSRM route request failed');
-
-    const osrmData = await osrmResponse.json();
-    const firstRoute = osrmData.routes && osrmData.routes[0];
-    if (!firstRoute) throw new Error('No route found');
-
-    routeCoordinates = firstRoute.geometry.coordinates.map(([lng, lat]) => [lat, lng]);
-    routeDistanceKm = firstRoute.distance / 1000;
-    routeDurationSeconds = firstRoute.duration;
-  }
-
-  drawRoutePolyline(routeCoordinates);
-
-  lastRouteDistanceKm = routeDistanceKm;
-  lastRouteDurationSeconds = routeDurationSeconds;
-  updateFareFields();
-}
-
-function fallbackDistanceAndCost(pickup, destination) {
-  const distanceKm = haversineDistance(pickup, destination);
-  const estimatedTravelTime = 'N/A';
-
-  document.getElementById('distance').value = `${distanceKm.toFixed(2)} km`;
-  document.getElementById('duration').value = estimatedTravelTime;
-
-  lastRouteDistanceKm = distanceKm;
-  lastRouteDurationSeconds = 0;
-  updateFareFields();
-
-  drawRoutePolyline([pickup, destination]);
-}
-
-function updateFareFields() {
-  const totalCostBox = document.getElementById('totalCost');
-  const tollTaxesBox = document.getElementById('tollTaxes');
-  const distanceBox = document.getElementById('distance');
-  const durationBox = document.getElementById('duration');
-
-  const ratePerKm = Number(listing.ratePerKm || 0);
-  const basePrice = Number(listing.price || 0);
-  const tollTaxes = Number(tollTaxesBox?.value || 0);
-  const distanceCharge = Math.ceil(lastRouteDistanceKm * ratePerKm);
-  const total = Math.max(0, Math.ceil(basePrice + distanceCharge + tollTaxes));
-
-  if (distanceBox && lastRouteDistanceKm > 0) {
-    distanceBox.value = `${lastRouteDistanceKm.toFixed(2)} km`;
-  }
-
-  if (durationBox && lastRouteDurationSeconds >= 0) {
-    durationBox.value = lastRouteDurationSeconds > 0 ? formatDuration(lastRouteDurationSeconds) : durationBox.value;
-  }
-
-  if (totalCostBox) totalCostBox.value = `₹${total}`;
-  const payBtn = document.getElementById('payBtn');
-  if (payBtn) payBtn.dataset.amount = total;
-}
-
-document.addEventListener('DOMContentLoaded', () => {
-  setMinDates();
-  initMap();
-
-  const pickupInput = document.getElementById('pickup');
-  const destinationInput = document.getElementById('destination');
-  const detectBtn = document.getElementById('detectBtn');
-  const payBtn = document.getElementById('payBtn');
-  const tollTaxesInput = document.getElementById('tollTaxes');
-  const pickupDateInput = document.getElementById('pickupDate');
-  const returnDateInput = document.getElementById('returnDate');
-  const pickupTimeInput = document.getElementById('pickupTime');
-  const returnTimeInput = document.getElementById('returnTime');
-
-  const pickupSuggestions = document.getElementById('pickupSuggestions');
-  const destSuggestions = document.getElementById('destSuggestions');
-
-  // Add event listeners for date/time inputs
-  if (pickupDateInput) {
-    pickupDateInput.addEventListener('change', () => {
-      // Update return date minimum to be after pickup date
-      if (returnDateInput) {
-        returnDateInput.min = pickupDateInput.value;
-      }
-      calculatePrice();
-    });
-  }
-
-  if (returnDateInput) {
-    returnDateInput.addEventListener('change', calculatePrice);
-  }
-
-  if (pickupTimeInput) {
-    pickupTimeInput.addEventListener('change', calculatePrice);
-  }
-
-  if (returnTimeInput) {
-    returnTimeInput.addEventListener('change', calculatePrice);
-  }
-
-  if (pickupInput) {
-    pickupInput.addEventListener('input', () => {
-      clearTimeout(pickupDebounceTimer);
-      pickupDebounceTimer = setTimeout(() => searchLocation(pickupInput.value, 'pickup'), 300);
-      pickupCoords = null;
-    });
-  }
-
-  if (destinationInput) {
-    destinationInput.addEventListener('input', () => {
-      clearTimeout(destDebounceTimer);
-      destDebounceTimer = setTimeout(() => searchLocation(destinationInput.value, 'destination'), 300);
-      destCoords = null;
-    });
-  }
-
-  document.addEventListener('click', (event) => {
-    if (pickupSuggestions && !pickupSuggestions.contains(event.target) && event.target !== pickupInput) {
-      pickupSuggestions.style.display = 'none';
-    }
-    if (destSuggestions && !destSuggestions.contains(event.target) && event.target !== destinationInput) {
-      destSuggestions.style.display = 'none';
-    }
-  });
-
-  if (detectBtn) {
-    detectBtn.addEventListener('click', tryAutoPickup);
-  }
-
-  if (tollTaxesInput) {
-    tollTaxesInput.addEventListener('input', () => {
-      updateFareFields();
-      calculatePrice();
-    });
-  }
-
-  // removed preview button; route now auto-calculates when inputs change or selection is made
-
-  if (payBtn) {
-    payBtn.addEventListener('click', async () => {
-      try {
-        if (!currentUser) {
-          window.location.href = '/login';
-          return;
-        }
-
-        // Validate date/time inputs
-        const pickupDate = pickupDateInput?.value;
-        const returnDate = returnDateInput?.value;
-        const pickupTime = pickupTimeInput?.value;
-        const returnTime = returnTimeInput?.value;
-
-        if (!pickupDate || !returnDate || !pickupTime || !returnTime) {
-          alert('Please select pickup and return dates and times.');
-          return;
-        }
-
-        const amount = Number(payBtn.dataset.amount || 0);
-        if (!amount || amount <= 0) {
-          alert('Please select valid dates to calculate the booking amount.');
-          return;
-        }
-
-        if (amount > maxBookingAmountInr) {
-          alert(`Total amount is too high for payment. Please keep it up to Rs ${maxBookingAmountInr.toLocaleString('en-IN')}.`);
-          return;
-        }
-
-        const purpose = document.getElementById('purpose').value || '';
-        if (!purpose.trim() && !confirm('Purpose is empty. Continue?')) return;
-
-        const paymentMethod = document.getElementById('paymentMethod').value;
-
-        // Handle Cash on Delivery
-        if (paymentMethod === 'cod') {
-          const payload = {
-            pickup: pickupInput.value,
-            destination: destinationInput.value,
-            purpose: purpose,
-            distanceKm: parseFloat(document.getElementById('distance').value) || 0,
-            amount: amount,
-            paymentMethod: 'cod',
-            pickupDate: pickupDate,
-            returnDate: returnDate,
-            pickupTime: pickupTime,
-            returnTime: returnTime
-          };
-
-          const confRes = await fetch(`/cars/book/${listing._id}/confirm`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload),
-            credentials: 'same-origin'
-          });
-
-          const confContentType = confRes.headers.get('content-type') || '';
-          if (!confRes.ok || !confContentType.includes('application/json')) {
-            if (confRes.status === 401 || confRes.redirected) {
-              window.location.href = '/login';
-              return;
-            }
-            alert('Booking failed');
-            return;
-          }
-
-          const conf = await confRes.json();
-          if (!conf.success) {
-            alert(conf.error || 'Booking failed');
-            return;
-          }
-
-          if (conf.whatsappSent) {
-            alert('Booking confirmed with Cash on Delivery. Owner has been notified on WhatsApp.');
-            window.location.href = '/cars/' + listing._id;
-            return;
-          }
-
-          if (conf.whatsappReason === 'missing-recipient-number') {
-            alert('Booking saved, but owner WhatsApp number is missing in this car listing. Please ask owner to update car details.');
-            window.location.href = '/cars/' + listing._id;
-            return;
-          }
-
-          if (conf.whatsappUrl) {
-            const shouldOpenWhatsApp = confirm('Booking confirmed with Cash on Delivery. Open WhatsApp now to send booking details to owner?');
-            if (shouldOpenWhatsApp) {
-              window.location.href = conf.whatsappUrl;
-              return;
-            }
-
-            window.location.href = '/cars/' + listing._id;
-            return;
-          }
-
-          alert('Booking confirmed with Cash on Delivery.');
-          window.location.href = '/cars/' + listing._id;
-          return;
-        }
-
-        // Handle Razorpay payment
-        if (typeof Razorpay === 'undefined') {
-          alert('Payment library is still loading. Please try again in a moment.');
-          return;
-        }
-
-        const res = await fetch(`/cars/book/${listing._id}/order`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ amount }),
-          credentials: 'same-origin'
-        });
-
-        const contentType = res.headers.get('content-type') || '';
-        if (!res.ok || !contentType.includes('application/json')) {
-          if (res.status === 401 || res.redirected) {
-            window.location.href = '/login';
-            return;
-          }
-          alert('Payment initialization failed');
-          return;
-        }
-
-        const data = await res.json();
-        if (!data.success) {
-          alert(data.error || 'Payment initialization failed');
-          return;
-        }
-
-        if (!razorpayKey) {
-          alert('Payment not configured on server.');
-          return;
-        }
-
-        const order = data.order;
-        const options = {
-          key: razorpayKey,
-          amount: order.amount,
-          currency: order.currency,
-          name: listing.title,
-          description: 'Car booking',
-          order_id: order.id,
-          handler: async function (response) {
-            try {
-              const payload = {
-                razorpay_order_id: response.razorpay_order_id,
-                razorpay_payment_id: response.razorpay_payment_id,
-                razorpay_signature: response.razorpay_signature,
-                pickup: pickupInput.value,
-                destination: destinationInput.value,
-                purpose: purpose,
-                distanceKm: parseFloat(document.getElementById('distance').value) || 0,
-                amount: amount,
-                paymentMethod: 'razorpay',
-                pickupDate: pickupDate,
-                returnDate: returnDate,
-                pickupTime: pickupTime,
-                returnTime: returnTime
-              };
-
-              const confRes = await fetch(`/cars/book/${listing._id}/confirm`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload),
-                credentials: 'same-origin'
-              });
-
-              const confContentType = confRes.headers.get('content-type') || '';
-              if (!confRes.ok || !confContentType.includes('application/json')) {
-                if (confRes.status === 401 || confRes.redirected) {
-                  window.location.href = '/login';
-                  return;
-                }
-                alert('Payment succeeded but saving booking failed');
-                return;
-              }
-
-              const conf = await confRes.json();
-              if (!conf.success) {
-                alert(conf.error || 'Payment succeeded but saving booking failed');
-                return;
-              }
-
-              if (conf.whatsappSent) {
-                alert('Payment successful. Booking confirmed and owner has been notified on WhatsApp.');
-                window.location.href = '/cars/' + listing._id;
-                return;
-              }
-
-              if (conf.whatsappReason === 'missing-recipient-number') {
-                alert('Payment successful and booking saved, but owner WhatsApp number is missing in this car listing. Please ask owner to update car details.');
-                window.location.href = '/cars/' + listing._id;
-                return;
-              }
-
-              if (conf.whatsappUrl) {
-                const shouldOpenWhatsApp = confirm('Payment successful and booking saved. Auto WhatsApp notify is not configured yet. Open WhatsApp now to send booking details to owner?');
-                if (shouldOpenWhatsApp) {
-                  window.location.href = conf.whatsappUrl;
-                  return;
-                }
-
-                window.location.href = '/cars/' + listing._id;
-                return;
-              }
-
-              alert('Payment successful and booking saved.');
-              window.location.href = '/cars/' + listing._id;
-            } catch (error) {
-              console.error(error);
-              alert('Unexpected error while confirming booking');
-            }
-          }
-        };
-
-        const rzp = new Razorpay(options);
-        rzp.open();
-      } catch (error) {
-        console.error(error);
-        alert('Unexpected error while starting payment');
-      }
-    });
-  }
-});
-</script>
+<!-- Leaflet CSS & JS for Map -->
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
 
+
 <style>
-  .autocomplete-suggestions {
-    display: none;
-    border: 1px solid #ddd;
-    border-radius: 0.75rem;
-    background: #fff;
-    margin-top: 0.35rem;
+/* Modern 3-Step Booking UI Styles */
+.booking-container {
+    max-width: 900px;
+    margin: 2rem auto;
+    background: #ffffff;
+    border-radius: 20px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.08);
     overflow: hidden;
-    box-shadow: 0 12px 30px rgba(0,0,0,0.08);
-    max-height: 220px;
-    overflow-y: auto;
-  }
+}
 
-  .autocomplete-item {
-    display: block;
-    width: 100%;
-    border: 0;
-    background: #fff;
-    text-align: left;
-    padding: 0.75rem 0.9rem;
-    font-size: 0.95rem;
-    line-height: 1.3;
-    border-bottom: 1px solid #f0f0f0;
-  }
-
-  .autocomplete-item:hover {
+.step-indicator {
+    display: flex;
+    justify-content: space-between;
+    padding: 2rem 3rem;
     background: #f8f9fa;
-  }
+    border-bottom: 1px solid #eee;
+}
 
-  .autocomplete-item:last-child {
-    border-bottom: 0;
-  }
+.step {
+    flex: 1;
+    text-align: center;
+    position: relative;
+    color: #adb5bd;
+    font-weight: 600;
+}
 
-  #map {
-    border-radius: 1rem;
-    border: 1px solid #e9ecef;
+.step:not(:last-child)::after {
+    content: '';
+    position: absolute;
+    top: 15px;
+    left: 60%;
+    right: -40%;
+    height: 3px;
+    background: #e9ecef;
+    z-index: 1;
+}
+
+.step.active {
+    color: #0d6efd;
+}
+
+.step.completed {
+    color: #198754;
+}
+
+.step.completed:not(:last-child)::after {
+    background: #198754;
+}
+
+.step-icon {
+    width: 35px;
+    height: 35px;
+    background: #fff;
+    border: 2px solid #e9ecef;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 10px;
+    position: relative;
+    z-index: 2;
+    font-weight: bold;
+}
+
+.step.active .step-icon {
+    border-color: #0d6efd;
+    background: #0d6efd;
+    color: #fff;
+    box-shadow: 0 0 0 4px rgba(13, 110, 253, 0.2);
+}
+
+.step.completed .step-icon {
+    border-color: #198754;
+    background: #198754;
+    color: #fff;
+}
+
+.step-content {
+    display: none;
+    padding: 2rem 3rem;
+    animation: fadeIn 0.4s ease;
+}
+
+.step-content.active {
+    display: block;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.form-floating > label {
+    color: #6c757d;
+}
+
+.map-container {
+    height: 300px;
+    border-radius: 12px;
     overflow: hidden;
-  }
+    margin-bottom: 1.5rem;
+    border: 1px solid #dee2e6;
+}
 
-  @media (max-width: 767.98px) {
-    #map {
-      margin-bottom: 1rem;
+.price-card {
+    background: #f8f9fa;
+    border-radius: 12px;
+    padding: 1.5rem;
+    border: 1px solid #e9ecef;
+}
+
+.price-row {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 0.5rem;
+    color: #495057;
+}
+
+.price-total {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 2px dashed #dee2e6;
+    font-weight: 700;
+    font-size: 1.2rem;
+    color: #212529;
+}
+
+.btn-navigation {
+    padding: 0.75rem 2rem;
+    font-weight: 600;
+    border-radius: 50rem;
+    transition: all 0.2s;
+}
+
+.autocomplete-suggestions {
+    position: absolute;
+    z-index: 1000;
+    background: white;
+    width: 100%;
+    max-height: 200px;
+    overflow-y: auto;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    border-radius: 0 0 8px 8px;
+    display: none;
+}
+.autocomplete-item {
+    padding: 10px;
+    cursor: pointer;
+    border-bottom: 1px solid #eee;
+}
+.autocomplete-item:hover {
+    background: #f8f9fa;
+}
+
+@media (max-width: 768px) {
+    .step-indicator, .step-content {
+        padding: 1rem;
     }
-  }
+    .step-title {
+        font-size: 0.8rem;
+    }
+}
 </style>
+
+<div class="container mb-5">
+    <div class="booking-container">
+        <!-- Progress Indicator -->
+        <div class="step-indicator">
+            <div class="step active" id="step1-ind">
+                <div class="step-icon">1</div>
+                <div class="step-title">Trip Details</div>
+            </div>
+            <div class="step" id="step2-ind">
+                <div class="step-icon">2</div>
+                <div class="step-title">Route & Price</div>
+            </div>
+            <div class="step" id="step3-ind">
+                <div class="step-icon">3</div>
+                <div class="step-title">Confirm</div>
+            </div>
+        </div>
+
+        <form id="tripBookingForm">
+            <!-- STEP 1: Trip Details -->
+            <div class="step-content active" id="step1-content">
+                <h4 class="mb-4 fw-bold">Where are you heading?</h4>
+                
+                <div class="row g-3">
+                    <div class="col-md-6 position-relative">
+                        <label class="form-label fw-bold">Pickup Location <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control form-control-lg" id="pickupLocation" required placeholder="Search pickup area..." autocomplete="off">
+                        <div id="pickupSuggestions" class="autocomplete-suggestions"></div>
+                    </div>
+                    
+                    <div class="col-md-6 position-relative">
+                        <label class="form-label fw-bold">Destination <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control form-control-lg" id="destinationLocation" required placeholder="Search destination..." autocomplete="off">
+                        <div id="destSuggestions" class="autocomplete-suggestions"></div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold">Pickup Date <span class="text-danger">*</span></label>
+                        <input type="date" class="form-control form-control-lg" id="pickupDate" required>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold">Pickup Time <span class="text-danger">*</span></label>
+                        <input type="time" class="form-control form-control-lg" id="pickupTime" required>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold">Number of Passengers <span class="text-danger">*</span></label>
+                        <input type="number" class="form-control form-control-lg" id="passengers" min="1" max="<%= listing.seats || 7 %>" required placeholder="e.g. 4">
+                        <small class="text-muted">Max capacity: <%= listing.seats || 7 %> seats</small>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold">Trip Type <span class="text-danger">*</span></label>
+                        <select class="form-select form-control-lg" id="tripType" required>
+                            <option value="" disabled selected>Select trip type...</option>
+                            <option value="local">Local Trip</option>
+                            <option value="outstation">Outstation</option>
+                            <option value="airport-pickup">Airport Pickup</option>
+                            <option value="railway-pickup">Railway Pickup</option>
+                            <option value="wedding">Wedding</option>
+                            <option value="family-function">Family Function</option>
+                            <option value="temple-visit">Temple Visit</option>
+                            <option value="tourism">Tourism</option>
+                            <option value="corporate">Corporate</option>
+                            <option value="other">Other</option>
+                        </select>
+                    </div>
+
+                    <div class="col-12">
+                        <label class="form-label fw-bold">Special Instructions (Optional)</label>
+                        <textarea class="form-control" id="specialInstructions" rows="2" placeholder="e.g. Need extra luggage space, senior citizens travelling..."></textarea>
+                    </div>
+                </div>
+
+                <div class="d-flex justify-content-end mt-4">
+                    <button type="button" class="btn btn-primary btn-navigation" onclick="nextStep(2)">Calculate Route & Price &rarr;</button>
+                </div>
+            </div>
+
+            <!-- STEP 2: Distance & Price -->
+            <div class="step-content" id="step2-content">
+                <h4 class="mb-4 fw-bold">Route & Estimated Fare</h4>
+                
+                <div class="row">
+                    <div class="col-lg-7">
+                        <div class="map-container" id="map"></div>
+                        
+                        <div class="alert alert-info d-flex align-items-center" role="alert">
+                            <i class="fa-solid fa-circle-info me-2"></i>
+                            <div>
+                                Toll, Parking and State Tax (if applicable) will be charged separately unless included by the vehicle owner.
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-lg-5">
+                        <div class="price-card">
+                            <h5 class="fw-bold mb-3">Fare Breakdown</h5>
+                            
+                            <div class="price-row">
+                                <span><i class="fa-solid fa-route me-2"></i>Distance</span>
+                                <span id="displayDistance" class="fw-bold">0 km</span>
+                            </div>
+                            
+                            <div class="price-row">
+                                <span><i class="fa-regular fa-clock me-2"></i>Est. Duration</span>
+                                <span id="displayDuration" class="fw-bold">0 mins</span>
+                            </div>
+                            
+                            <hr>
+                            
+                            <div class="price-row">
+                                <span>Base Fare</span>
+                                <span id="displayBaseFare">₹<%= listing.baseFare || listing.price || 0 %></span>
+                            </div>
+                            
+                            <div class="price-row">
+                                <span>Per KM Rate</span>
+                                <span id="displayPerKm">₹<%= listing.pricePerKm || listing.ratePerKm || 0 %> / km</span>
+                            </div>
+                            
+                            <div class="price-total">
+                                <span>Estimated Total</span>
+                                <span id="displayTotalFare" class="text-primary fs-3">₹0</span>
+                            </div>
+                            <small class="text-muted text-end d-block mt-2">Subject to owner approval</small>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="d-flex justify-content-between mt-4">
+                    <button type="button" class="btn btn-outline-secondary btn-navigation" onclick="prevStep(1)">&larr; Back</button>
+                    <button type="button" class="btn btn-primary btn-navigation" onclick="nextStep(3)">Continue to Details &rarr;</button>
+                </div>
+            </div>
+
+            <!-- STEP 3: Customer Information & Summary -->
+            <div class="step-content" id="step3-content">
+                <h4 class="mb-4 fw-bold">Booking Summary & Details</h4>
+                
+                <div class="row">
+                    <div class="col-md-5 order-md-2 mb-4">
+                        <div class="card border-0 shadow-sm rounded-4">
+                            <% if(listing.image && listing.image.url) { %>
+                            <img src="<%= listing.image.url %>" class="card-img-top rounded-top-4" style="height: 150px; object-fit: cover;" alt="<%= listing.title %>">
+                            <% } %>
+                            <div class="card-body">
+                                <h5 class="card-title fw-bold"><%= listing.title %></h5>
+                                <p class="text-muted mb-3"><i class="fa-solid fa-user-tie me-2"></i>Driven by: <span class="fw-bold text-dark"><%= listing.driverType === 'owner' ? 'Vehicle Owner' : 'Dedicated Driver' %></span></p>
+                                
+                                <ul class="list-unstyled mb-0 small">
+                                    <li class="mb-2"><strong>Pickup:</strong> <span id="sumPickup"></span></li>
+                                    <li class="mb-2"><strong>Destination:</strong> <span id="sumDestination"></span></li>
+                                    <li class="mb-2"><strong>Date & Time:</strong> <span id="sumDateTime"></span></li>
+                                    <li class="mb-2"><strong>Passengers:</strong> <span id="sumPassengers"></span></li>
+                                    <li class="mb-2 text-primary fw-bold border-top pt-2 mt-2">Est. Fare: <span id="sumFare" class="fs-5"></span></li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-7 order-md-1">
+                        <div class="mb-4">
+                            <h5 class="fw-bold mb-3">Your Details</h5>
+                            <div class="row g-3">
+                                <div class="col-12">
+                                    <label class="form-label">Full Name <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control" id="customerName" value="<%= currUser ? currUser.username : '' %>" required>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Phone Number <span class="text-danger">*</span></label>
+                                    <input type="tel" class="form-control" id="customerPhone" value="<%= currUser ? currUser.phone : '' %>" required>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Email (Optional)</label>
+                                    <input type="email" class="form-control" id="customerEmail" value="<%= currUser ? currUser.email : '' %>">
+                                </div>
+                                <div class="col-12">
+                                    <label class="form-label">Emergency Contact (Optional)</label>
+                                    <input type="tel" class="form-control" id="emergencyContact">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-4">
+                            <h5 class="fw-bold mb-3">Payment Preference</h5>
+                            <p class="text-muted small mb-2">No payment will be collected now. The owner will confirm the booking first.</p>
+                            <select class="form-select form-control-lg" id="paymentMethod">
+                                <option value="cash">Cash to Driver</option>
+                                <option value="upi">UPI (GPay, PhonePe, Paytm)</option>
+                                <option value="online">Online Payment Link</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="d-flex justify-content-between mt-4">
+                    <button type="button" class="btn btn-outline-secondary btn-navigation" onclick="prevStep(2)">&larr; Back</button>
+                    <button type="submit" class="btn btn-success btn-navigation fs-5" id="submitBtn">
+                        <i class="fa-solid fa-paper-plane me-2"></i> Send Trip Request
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script type="application/json" id="listing-data"><%- JSON.stringify(listing) %></script>
+<script type="application/json" id="booking-config"><%- JSON.stringify({ orsKey: typeof orsKey !== 'undefined' ? orsKey : '' }) %></script>
+
+<script>
+// Data Setup
+const listing = JSON.parse(document.getElementById('listing-data').textContent);
+const bookingConfig = JSON.parse(document.getElementById('booking-config').textContent);
+const orsKey = bookingConfig.orsKey || '';
+
+let map;
+let pickupMarker, destMarker, routeLine;
+let pickupCoords = null, destCoords = null;
+let routeDistanceKm = 0, routeDurationSeconds = 0, estimatedTotalFare = 0;
+
+// Min Date Setup
+document.getElementById('pickupDate').min = new Date().toISOString().split('T')[0];
+
+// Step Navigation Logic
+function nextStep(step) {
+    if(step === 2) {
+        if(!validateStep1()) return;
+        renderMapAndCalculateRoute();
+    }
+    if(step === 3) {
+        updateSummary();
+    }
+    showStep(step);
+}
+
+function prevStep(step) {
+    showStep(step);
+}
+
+function showStep(step) {
+    document.querySelectorAll('.step-content').forEach(el => el.classList.remove('active'));
+    document.getElementById(`step${step}-content`).classList.add('active');
+    
+    document.querySelectorAll('.step').forEach((el, index) => {
+        el.classList.remove('active', 'completed');
+        if(index + 1 < step) el.classList.add('completed');
+        if(index + 1 === step) el.classList.add('active');
+    });
+
+    if(step === 2 && map) {
+        setTimeout(() => { map.invalidateSize(); }, 300); // Fix map render issue in hidden div
+    }
+}
+
+function validateStep1() {
+    const pLoc = document.getElementById('pickupLocation').value;
+    const dLoc = document.getElementById('destinationLocation').value;
+    const pDate = document.getElementById('pickupDate').value;
+    const pTime = document.getElementById('pickupTime').value;
+    const pass = document.getElementById('passengers').value;
+    const tType = document.getElementById('tripType').value;
+    
+    if(!pLoc || !dLoc || !pDate || !pTime || !pass || !tType) {
+        alert("Please fill all required fields in Step 1.");
+        return false;
+    }
+    if(pLoc.toLowerCase() === dLoc.toLowerCase()) {
+        alert("Pickup and Destination cannot be the same.");
+        return false;
+    }
+    const maxSeats = listing.seats || 7;
+    if(parseInt(pass) > maxSeats) {
+        alert(`Maximum passenger capacity is ${maxSeats}.`);
+        return false;
+    }
+    return true;
+}
+
+// Location Autocomplete (Nominatim)
+let pTimer, dTimer;
+document.getElementById('pickupLocation').addEventListener('input', function() {
+    clearTimeout(pTimer);
+    pTimer = setTimeout(() => searchLocation(this.value, 'pickupSuggestions', (item) => {
+        pickupCoords = [parseFloat(item.lat), parseFloat(item.lon)];
+        this.value = item.display_name;
+        document.getElementById('pickupSuggestions').style.display = 'none';
+    }), 400);
+});
+document.getElementById('destinationLocation').addEventListener('input', function() {
+    clearTimeout(dTimer);
+    dTimer = setTimeout(() => searchLocation(this.value, 'destSuggestions', (item) => {
+        destCoords = [parseFloat(item.lat), parseFloat(item.lon)];
+        this.value = item.display_name;
+        document.getElementById('destSuggestions').style.display = 'none';
+    }), 400);
+});
+
+async function searchLocation(query, containerId, onSelect) {
+    const container = document.getElementById(containerId);
+    if(!query || query.length < 3) { container.style.display = 'none'; return; }
+    
+    try {
+        const res = await fetch(`/cars/geocode?q=${encodeURIComponent(query)}`, {headers:{'Accept':'application/json'}});
+        const data = await res.json();
+        container.innerHTML = '';
+        if(data.length) {
+            data.forEach(item => {
+                const div = document.createElement('div');
+                div.className = 'autocomplete-item';
+                div.innerText = item.display_name;
+                div.onclick = () => onSelect(item);
+                container.appendChild(div);
+            });
+            container.style.display = 'block';
+        } else {
+            container.style.display = 'none';
+        }
+    } catch(e) { console.error(e); }
+}
+
+// Hide autocomplete when clicking outside
+document.addEventListener('click', (e) => {
+    if(!e.target.closest('.position-relative')) {
+        document.getElementById('pickupSuggestions').style.display = 'none';
+        document.getElementById('destSuggestions').style.display = 'none';
+    }
+});
+
+// Map & Routing
+function initMap() {
+    if(map) return;
+    map = L.map('map').setView([20.5937, 78.9629], 5);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19, attribution: '&copy; OpenStreetMap'
+    }).addTo(map);
+}
+
+async function renderMapAndCalculateRoute() {
+    initMap();
+    if(!pickupCoords || !destCoords) {
+        // Fallback geocode if user didn't select from dropdown
+        if(!pickupCoords) pickupCoords = await fetchGeocode(document.getElementById('pickupLocation').value);
+        if(!destCoords) destCoords = await fetchGeocode(document.getElementById('destinationLocation').value);
+    }
+    
+    if(!pickupCoords || !destCoords) {
+        alert("Could not find coordinates for locations. Please select from dropdown.");
+        return prevStep(1);
+    }
+
+    if(pickupMarker) pickupMarker.remove();
+    if(destMarker) destMarker.remove();
+    if(routeLine) routeLine.remove();
+
+    pickupMarker = L.marker(pickupCoords).addTo(map).bindPopup('Pickup');
+    destMarker = L.marker(destCoords).addTo(map).bindPopup('Destination');
+
+    // Fetch Route
+    try {
+        const osrmUrl = `https://router.project-osrm.org/route/v1/driving/${pickupCoords[1]},${pickupCoords[0]};${destCoords[1]},${destCoords[0]}?overview=full&geometries=geojson`;
+        const res = await fetch(osrmUrl);
+        const data = await res.json();
+        const route = data.routes[0];
+        
+        routeDistanceKm = route.distance / 1000;
+        routeDurationSeconds = route.duration;
+        
+        const coords = route.geometry.coordinates.map(([lng, lat]) => [lat, lng]);
+        routeLine = L.polyline(coords, {color: '#0d6efd', weight: 5}).addTo(map);
+        map.fitBounds(routeLine.getBounds(), {padding: [30,30]});
+        
+    } catch(e) {
+        // Fallback straight line
+        routeDistanceKm = getHaversine(pickupCoords, destCoords);
+        routeDurationSeconds = 0;
+        routeLine = L.polyline([pickupCoords, destCoords], {color: 'red', weight: 5, dashArray: '5, 10'}).addTo(map);
+        map.fitBounds(routeLine.getBounds());
+    }
+
+    calculateFare();
+}
+
+async function fetchGeocode(query) {
+    try {
+        const res = await fetch(`/cars/geocode?q=${encodeURIComponent(query)}`);
+        const data = await res.json();
+        return data.length ? [parseFloat(data[0].lat), parseFloat(data[0].lon)] : null;
+    } catch(e) { return null; }
+}
+
+function getHaversine([lat1, lon1], [lat2, lon2]) {
+    const R = 6371;
+    const dLat = (lat2-lat1)*Math.PI/180;
+    const dLon = (lon2-lon1)*Math.PI/180;
+    const a = Math.sin(dLat/2)*Math.sin(dLat/2) + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)*Math.sin(dLon/2);
+    return R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)));
+}
+
+function formatTime(secs) {
+    if(!secs) return 'N/A';
+    const h = Math.floor(secs/3600);
+    const m = Math.round((secs%3600)/60);
+    return h > 0 ? `${h}h ${m}m` : `${m}m`;
+}
+
+function calculateFare() {
+    const baseFare = Number(listing.baseFare || listing.price || 0);
+    const ratePerKm = Number(listing.pricePerKm || listing.ratePerKm || 0);
+    
+    document.getElementById('displayDistance').innerText = `${routeDistanceKm.toFixed(1)} km`;
+    document.getElementById('displayDuration').innerText = formatTime(routeDurationSeconds);
+    
+    // Total = Base + (Distance * Rate)
+    const distanceCost = routeDistanceKm * ratePerKm;
+    estimatedTotalFare = Math.ceil(baseFare + distanceCost);
+    
+    document.getElementById('displayTotalFare').innerText = `₹${estimatedTotalFare.toLocaleString('en-IN')}`;
+}
+
+function updateSummary() {
+    document.getElementById('sumPickup').innerText = document.getElementById('pickupLocation').value;
+    document.getElementById('sumDestination').innerText = document.getElementById('destinationLocation').value;
+    document.getElementById('sumDateTime').innerText = `${document.getElementById('pickupDate').value} at ${document.getElementById('pickupTime').value}`;
+    document.getElementById('sumPassengers').innerText = document.getElementById('passengers').value;
+    document.getElementById('sumFare').innerText = `₹${estimatedTotalFare.toLocaleString('en-IN')}`;
+}
+
+// Submission
+document.getElementById('tripBookingForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const btn = document.getElementById('submitBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span> Sending...';
+    
+    const payload = {
+        booking: {
+            pickupLocation: document.getElementById('pickupLocation').value,
+            pickupCoordinates: [pickupCoords[1], pickupCoords[0]], // store as [lng, lat]
+            destination: document.getElementById('destinationLocation').value,
+            destinationCoordinates: [destCoords[1], destCoords[0]],
+            pickupDate: document.getElementById('pickupDate').value,
+            pickupTime: document.getElementById('pickupTime').value,
+            passengers: parseInt(document.getElementById('passengers').value),
+            tripType: document.getElementById('tripType').value,
+            specialInstructions: document.getElementById('specialInstructions').value,
+            
+            distanceKm: routeDistanceKm,
+            estimatedDuration: formatTime(routeDurationSeconds),
+            basePrice: Number(listing.baseFare || listing.price || 0),
+            pricePerKM: Number(listing.pricePerKm || listing.ratePerKm || 0),
+            estimatedFare: estimatedTotalFare,
+            
+            customerName: document.getElementById('customerName').value,
+            customerPhone: document.getElementById('customerPhone').value,
+            customerEmail: document.getElementById('customerEmail').value,
+            emergencyContact: document.getElementById('emergencyContact').value,
+            paymentMethod: document.getElementById('paymentMethod').value,
+            driverType: listing.driverType || 'dedicated-driver'
+        }
+    };
+    
+    try {
+        const res = await fetch(`/cars/book/${listing._id}/request`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        
+        if(data.success) {
+            // SweetAlert or native alert
+            alert(data.message || 'Trip request sent successfully!');
+            window.location.href = `/dashboard`; // redirect to user dashboard
+        } else {
+            alert(data.error || 'Failed to submit request');
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fa-solid fa-paper-plane me-2"></i> Send Trip Request';
+        }
+    } catch(err) {
+        console.error(err);
+        alert('An error occurred. Please try again.');
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa-solid fa-paper-plane me-2"></i> Send Trip Request';
+    }
+});
+</script>
