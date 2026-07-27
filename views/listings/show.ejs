@@ -1,587 +1,303 @@
 <% layout("/listings/layouts/boilerplate") %>
-<% 
-  let listingImageUrl = "https://images.pexels.com/photos/11129937/pexels-photo-11129937.jpeg";
-  if (listing.image && listing.image.url) {
-    listingImageUrl = listing.image.url;
-    // Add Cloudinary optimization parameters if it's a Cloudinary URL
-    if (listingImageUrl.includes('cloudinary.com')) {
-      listingImageUrl = listingImageUrl.replace('/upload/', '/upload/q_auto,f_auto,w_1200,h_800,c_limit/');
-    }
-    // Add Unsplash optimization parameters if it's an Unsplash URL
-    else if (listingImageUrl.includes('unsplash.com')) {
-      if (!listingImageUrl.includes('?')) {
-        listingImageUrl += '?auto=format&fit=crop&w=1200&q=80';
-      }
-    }
-  } else if (typeof listing.image === "string") {
-    listingImageUrl = listing.image;
-    // Add Unsplash optimization if needed
-    if (listingImageUrl.includes('unsplash.com') && !listingImageUrl.includes('?')) {
-      listingImageUrl += '?auto=format&fit=crop&w=1200&q=80';
-    }
-  }
-%>
-
 <%
-  const availabilityStatus = listing.availabilityStatus || 'AVAILABLE';
-  const statusColors = {
-    'AVAILABLE': 'success',
-    'BOOKED': 'danger',
-    'RESERVED': 'warning',
-    'UNDER_MAINTENANCE': 'secondary',
-    'HIDDEN': 'dark'
+  const setupImageUrl = (url, w) => {
+    if (!url) return "https://images.pexels.com/photos/11129937/pexels-photo-11129937.jpeg";
+    let u = url;
+    if (u.includes('cloudinary.com')) u = u.replace('/upload/', `/upload/q_auto,f_auto,w_${w},h_${w*0.7|0},c_limit/`);
+    else if (u.includes('unsplash.com') && !u.includes('?')) u += `?auto=format&fit=crop&w=${w}&q=80`;
+    return u;
   };
-  const badgeColor = statusColors[availabilityStatus] || 'secondary';
-  
-  let availabilityText = 'Available Now';
-  if (availabilityStatus === 'BOOKED' && listing.nextAvailableAt) {
-    const nextDate = new Date(listing.nextAvailableAt);
-    const now = new Date();
-    const diffTime = nextDate - now;
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    if (diffDays <= 0) {
-      availabilityText = 'Available Soon';
-    } else if (diffDays === 1) {
-      availabilityText = 'Available Tomorrow';
-    } else {
-      availabilityText = `Available in ${diffDays} days`;
-    }
-  } else if (availabilityStatus === 'UNDER_MAINTENANCE') {
-    availabilityText = 'Under Maintenance';
-  } else if (availabilityStatus === 'RESERVED') {
-    availabilityText = 'Reserved';
-  } else if (availabilityStatus === 'HIDDEN') {
-    availabilityText = 'Not Available';
-  }
+  const imgUrl = setupImageUrl(listing.image?.url || (typeof listing.image === 'string' ? listing.image : null), 1200);
+  const av = listing.availabilityStatus || 'AVAILABLE';
+  const badgeMap = { AVAILABLE: ['success','Available Now'], BOOKED: ['danger','Booked'], RESERVED: ['warning','Reserved'], UNDER_MAINTENANCE: ['secondary','Maintenance'], HIDDEN: ['secondary','Not Available'] };
+  const [badgeColor, badgeText] = badgeMap[av] || ['secondary','Unknown'];
+  const isOwner = currUser && listing.owner?._id?.equals(currUser._id);
 %>
 
-  <div class="card mt-3 show-card listing-card">
-    <div class="d-flex justify-content-between align-items-start">
-      <h3 class="show-title-top mb-0">
-        <%= listing.title %>
-      </h3>
-      <span class="badge bg-<%= badgeColor %> fs-6"><%= availabilityText %></span>
-    </div>
-    <img
-      src="<%= listingImageUrl %>"
-      class="card-img-top show-img" 
-      alt="<%= listing.title %>" 
-      loading="lazy" 
-      decoding="async"
-      onerror="this.onerror=null;this.src='https://images.pexels.com/photos/11129937/pexels-photo-11129937.jpeg';">
-    <div class="card-body show-body">
+<div class="vehicle-detail fade-in">
+  <div class="detail-layout">
+    <!-- Left: Image + Info -->
+    <div class="detail-main">
+      <img src="<%= imgUrl %>" alt="<%= listing.title %>" class="detail-hero" onerror="this.src='https://images.pexels.com/photos/11129937/pexels-photo-11129937.jpeg'">
 
-      <p class="show-line">
-        <%= listing.description %>
-      </p>
-      
-      <!-- Availability Section -->
-      <div class="availability-section mb-3 p-3 bg-light rounded">
-        <h6 class="mb-2">Availability Status</h6>
-        <div class="d-flex align-items-center mb-2">
-          <span class="badge bg-<%= badgeColor %> me-2"><%= availabilityText %></span>
-          <% if (listing.nextAvailableAt) { %>
-            <small class="text-muted">Next available: <%= new Date(listing.nextAvailableAt).toLocaleDateString() %></small>
-          <% } %>
-        </div>
-        <% if (listing.totalBookings > 0) { %>
-          <div class="mt-2">
-            <small class="text-muted">
-              <i class="fas fa-car"></i> <%= listing.totalBookings %> bookings | 
-              <i class="fas fa-rupee-sign"></i> ₹<%= listing.totalRevenue.toLocaleString('en-IN') %> total revenue
-            </small>
+      <div class="detail-section">
+        <div class="detail-header">
+          <div>
+            <h1><%= listing.title %></h1>
+            <p class="detail-location"><i class="fas fa-map-pin"></i> <%= listing.location %><% if (listing.city) { %>, <%= listing.city %><% } %></p>
           </div>
-        <% } %>
+          <span class="badge badge-lg badge-<%= badgeColor %>"><%= badgeText %></span>
+        </div>
+        <p class="detail-desc"><%= listing.description %></p>
       </div>
 
-      <!-- Booking Calendar -->
-      <div class="calendar-section mb-3 p-3 bg-light rounded">
-        <h6 class="mb-2">Booking Calendar</h6>
-        <div id="calendar-container">
-          <div class="calendar-legend mb-2">
-            <span class="badge bg-success me-1">Available</span>
-            <span class="badge bg-danger">Booked</span>
-          </div>
-          <div id="availability-calendar" class="availability-calendar"></div>
-          <div id="calendar-loading" class="text-center">
-            <small class="text-muted">Loading calendar...</small>
-          </div>
+      <!-- Pricing -->
+      <div class="detail-section">
+        <h3>Pricing</h3>
+        <div class="pricing-grid">
+          <% if (listing.baseFare) { %><div class="price-item"><span>Base Fare</span><strong>&#8377; <%= listing.baseFare.toLocaleString("en-IN") %></strong></div><% } %>
+          <% if (listing.pricePerKm) { %><div class="price-item"><span>Per KM</span><strong>&#8377; <%= listing.pricePerKm %></strong></div><% } %>
+          <% if (listing.minimumTripFare) { %><div class="price-item"><span>Minimum Fare</span><strong>&#8377; <%= listing.minimumTripFare.toLocaleString("en-IN") %></strong></div><% } %>
+          <% if (listing.nightCharge) { %><div class="price-item"><span>Night Charge</span><strong>&#8377; <%= listing.nightCharge.toLocaleString("en-IN") %></strong></div><% } %>
+          <% if (listing.price) { %><div class="price-item"><span>Day Rate</span><strong>&#8377; <%= listing.price.toLocaleString("en-IN") %></strong></div><% } %>
+          <% if (listing.ratePerKm) { %><div class="price-item"><span>Rate/KM</span><strong>&#8377; <%= listing.ratePerKm %></strong></div><% } %>
         </div>
+        <p class="text-secondary mt-sm" style="font-size:13px"><i class="fas fa-info-circle"></i> +18% GST applicable</p>
       </div>
 
-      <!-- Change note: owner username is now shown from populated listing.owner -->
-      <p class="show-line">
-        <b>Owner:</b>
-        <%= listing.owner?.username || "Unknown Owner" %>
-      </p>
-      
-      <!-- Phone number hidden until booking confirmed (contact privacy) -->
-      <% if (currUser && listing.owner && listing.owner._id && listing.owner._id.equals(currUser._id)) { %>
-        <% if (listing.whatsappNumber) { %>
-        <p class="show-line">
-          <b>WhatsApp:</b>
-          <%= listing.whatsappNumber %>
-        </p>
-        <% } %>
-      <% } else { %>
-        <p class="show-line text-muted">
-          <i class="fas fa-lock"></i> Contact information will be visible after booking confirmation
-        </p>
-      <% } %>
-      
-      <!-- New Pricing Structure -->
-      <% if (listing.baseFare || listing.pricePerKm) { %>
-        <div class="pricing-section mb-3 p-3 bg-light rounded">
-          <h6 class="mb-2">Pricing</h6>
-          <% if (listing.baseFare) { %>
-            <p class="show-line mb-1">Base Fare: &#8377; <%= listing.baseFare.toLocaleString("en-IN") %></p>
-          <% } %>
-          <% if (listing.pricePerKm) { %>
-            <p class="show-line mb-1">Price Per KM: &#8377; <%= listing.pricePerKm %></p>
-          <% } %>
-          <% if (listing.minimumTripFare) { %>
-            <p class="show-line mb-1">Minimum Trip Fare: &#8377; <%= listing.minimumTripFare.toLocaleString("en-IN") %></p>
-          <% } %>
-          <% if (listing.nightCharge) { %>
-            <p class="show-line mb-1">Night Charge: &#8377; <%= listing.nightCharge.toLocaleString("en-IN") %></p>
-          <% } %>
-        </div>
-      <% } %>
-      
-      <!-- Legacy Pricing (for backward compatibility) -->
-      <% if (!listing.baseFare && !listing.pricePerKm && listing.price) { %>
-        <p class="show-line">&#8377; <%= listing.price.toLocaleString("en-IN") %>/day</p>
-      <% } %>
-      <% if (!listing.pricePerKm && listing.ratePerKm != null && listing.ratePerKm !== '') { %>
-        <p class="show-line">Rate: &#8377; <%= listing.ratePerKm %> /km</p>
-      <% } %>
-      
-      <!-- Location Information -->
-      <div class="location-section mb-3 p-3 bg-light rounded">
-        <h6 class="mb-2">Location</h6>
-        <p class="show-line mb-1">
-          <%= listing.location %>
-        </p>
-        <% if (listing.city) { %>
-          <p class="show-line mb-1"><%= listing.city %>, <%= listing.state || '' %></p>
-        <% } %>
-        <% if (listing.serviceRadius) { %>
-          <p class="show-line mb-1">Service Radius: <%= listing.serviceRadius === null ? 'Anywhere' : listing.serviceRadius + ' KM' %></p>
-        <% } %>
-      </div>
-      
       <!-- Vehicle Details -->
-      <% if (listing.vehicleName || listing.brand || listing.model || listing.year || listing.vehicleNumber || listing.fuelType || listing.transmission || listing.seats || listing.acAvailable || listing.musicSystem || listing.luggageCapacity) { %>
-        <div class="vehicle-details-section mb-3 p-3 bg-light rounded">
-          <h6 class="mb-2">Vehicle Details</h6>
-          <div class="row">
-            <% if (listing.vehicleName) { %>
-              <div class="col-md-6 mb-1">
-                <small><strong>Vehicle:</strong> <%= listing.vehicleName %></small>
-              </div>
-            <% } %>
-            <% if (listing.brand && listing.model) { %>
-              <div class="col-md-6 mb-1">
-                <small><strong>Brand/Model:</strong> <%= listing.brand %> <%= listing.model %></small>
-              </div>
-            <% } %>
-            <% if (listing.year) { %>
-              <div class="col-md-6 mb-1">
-                <small><strong>Year:</strong> <%= listing.year %></small>
-              </div>
-            <% } %>
-            <% if (listing.vehicleNumber) { %>
-              <div class="col-md-6 mb-1">
-                <small><strong>Vehicle Number:</strong> <%= listing.vehicleNumber %></small>
-              </div>
-            <% } %>
-            <% if (listing.fuelType) { %>
-              <div class="col-md-6 mb-1">
-                <small><strong>Fuel Type:</strong> <%= listing.fuelType.charAt(0).toUpperCase() + listing.fuelType.slice(1) %></small>
-              </div>
-            <% } %>
-            <% if (listing.transmission) { %>
-              <div class="col-md-6 mb-1">
-                <small><strong>Transmission:</strong> <%= listing.transmission.charAt(0).toUpperCase() + listing.transmission.slice(1) %></small>
-              </div>
-            <% } %>
-            <% if (listing.seats) { %>
-              <div class="col-md-6 mb-1">
-                <small><strong>Seating:</strong> <%= listing.seats %> Seater</small>
-              </div>
-            <% } %>
-            <% if (listing.acAvailable !== undefined) { %>
-              <div class="col-md-6 mb-1">
-                <small><strong>AC:</strong> <%= listing.acAvailable ? 'Yes' : 'No' %></small>
-              </div>
-            <% } %>
-            <% if (listing.musicSystem !== undefined) { %>
-              <div class="col-md-6 mb-1">
-                <small><strong>Music System:</strong> <%= listing.musicSystem ? 'Yes' : 'No' %></small>
-              </div>
-            <% } %>
-            <% if (listing.luggageCapacity) { %>
-              <div class="col-md-6 mb-1">
-                <small><strong>Luggage:</strong> <%= listing.luggageCapacity.charAt(0).toUpperCase() + listing.luggageCapacity.slice(1) %></small>
-              </div>
-            <% } %>
-          </div>
+      <% if (listing.vehicleName || listing.brand || listing.model || listing.year || listing.vehicleNumber || listing.fuelType || listing.transmission || listing.seats || listing.acAvailable !== undefined || listing.musicSystem !== undefined || listing.luggageCapacity) { %>
+      <div class="detail-section">
+        <h3>Vehicle Details</h3>
+        <div class="detail-grid">
+          <% if (listing.vehicleName) { %><div class="detail-item"><span>Vehicle</span><strong><%= listing.vehicleName %></strong></div><% } %>
+          <% if (listing.brand && listing.model) { %><div class="detail-item"><span>Brand/Model</span><strong><%= listing.brand %> <%= listing.model %></strong></div><% } %>
+          <% if (listing.year) { %><div class="detail-item"><span>Year</span><strong><%= listing.year %></strong></div><% } %>
+          <% if (listing.vehicleNumber) { %><div class="detail-item"><span>Number</span><strong><%= listing.vehicleNumber %></strong></div><% } %>
+          <% if (listing.fuelType) { %><div class="detail-item"><span>Fuel</span><strong><%= listing.fuelType.charAt(0).toUpperCase() + listing.fuelType.slice(1) %></strong></div><% } %>
+          <% if (listing.transmission) { %><div class="detail-item"><span>Transmission</span><strong><%= listing.transmission.charAt(0).toUpperCase() + listing.transmission.slice(1) %></strong></div><% } %>
+          <% if (listing.seats) { %><div class="detail-item"><span>Seating</span><strong><%= listing.seats %> Seater</strong></div><% } %>
+          <% if (listing.acAvailable !== undefined) { %><div class="detail-item"><span>AC</span><strong><%= listing.acAvailable ? 'Yes' : 'No' %></strong></div><% } %>
+          <% if (listing.musicSystem !== undefined) { %><div class="detail-item"><span>Music System</span><strong><%= listing.musicSystem ? 'Yes' : 'No' %></strong></div><% } %>
+          <% if (listing.luggageCapacity) { %><div class="detail-item"><span>Luggage</span><strong><%= listing.luggageCapacity %></strong></div><% } %>
         </div>
+      </div>
       <% } %>
-      
-      <!-- Driver Information -->
+
+      <!-- Driver -->
       <% if (listing.driverType) { %>
-        <div class="driver-section mb-3 p-3 bg-light rounded">
-          <h6 class="mb-2">Driver Information</h6>
-          <p class="show-line mb-1">
-            <strong>Driver:</strong> <%= listing.driverType === 'owner' ? 'Owner' : 'Dedicated Driver' %>
-          </p>
-          <% if (listing.driverType === 'dedicated-driver') { %>
-            <% if (listing.driverName) { %>
-              <p class="show-line mb-1"><small><strong>Name:</strong> <%= listing.driverName %></small></p>
-            <% } %>
-            <% if (listing.driverExperience) { %>
-              <p class="show-line mb-1"><small><strong>Experience:</strong> <%= listing.driverExperience %> years</small></p>
-            <% } %>
-          <% } %>
+      <div class="detail-section">
+        <h3>Driver Information</h3>
+        <div class="detail-grid">
+          <div class="detail-item"><span>Driver</span><strong><%= listing.driverType === 'owner' ? 'Owner drives' : 'Dedicated Driver' %></strong></div>
+          <% if (listing.driverType === 'dedicated-driver' && listing.driverName) { %><div class="detail-item"><span>Name</span><strong><%= listing.driverName %></strong></div><% } %>
+          <% if (listing.driverExperience) { %><div class="detail-item"><span>Experience</span><strong><%= listing.driverExperience %> years</strong></div><% } %>
         </div>
+      </div>
       <% } %>
-      
-      <!-- Available Trip Types -->
-      <% if (listing.availableTripTypes && listing.availableTripTypes.length > 0) { %>
-        <div class="trip-types-section mb-3 p-3 bg-light rounded">
-          <h6 class="mb-2">Available For</h6>
-          <div class="d-flex flex-wrap gap-2">
-            <% listing.availableTripTypes.forEach(tripType => { %>
-              <span class="badge bg-info"><%= tripType.charAt(0).toUpperCase() + tripType.slice(1).replace('-', ' ') %></span>
-            <% }) %>
-          </div>
-        </div>
-      <% } %>
-      
+
       <!-- Booking Rules -->
       <% if (listing.bookingRules) { %>
-        <div class="booking-rules-section mb-3 p-3 bg-light rounded">
-          <h6 class="mb-2">Booking Rules</h6>
-          <div class="row">
-            <% if (listing.bookingRules.minimumBookingAmount) { %>
-              <div class="col-md-6 mb-1">
-                <small><strong>Min Booking:</strong> &#8377; <%= listing.bookingRules.minimumBookingAmount %></small>
-              </div>
-            <% } %>
-            <% if (listing.bookingRules.maximumPassengers) { %>
-              <div class="col-md-6 mb-1">
-                <small><strong>Max Passengers:</strong> <%= listing.bookingRules.maximumPassengers %></small>
-              </div>
-            <% } %>
-            <% if (listing.bookingRules.smokingAllowed !== undefined) { %>
-              <div class="col-md-6 mb-1">
-                <small><strong>Smoking:</strong> <%= listing.bookingRules.smokingAllowed ? 'Allowed' : 'Not Allowed' %></small>
-              </div>
-            <% } %>
-            <% if (listing.bookingRules.petsAllowed !== undefined) { %>
-              <div class="col-md-6 mb-1">
-                <small><strong>Pets:</strong> <%= listing.bookingRules.petsAllowed ? 'Allowed' : 'Not Allowed' %></small>
-              </div>
-            <% } %>
-            <% if (listing.bookingRules.luggageAllowed !== undefined) { %>
-              <div class="col-md-6 mb-1">
-                <small><strong>Luggage:</strong> <%= listing.bookingRules.luggageAllowed ? 'Allowed' : 'Not Allowed' %></small>
-              </div>
-            <% } %>
-            <% if (listing.bookingRules.nightDriving !== undefined) { %>
-              <div class="col-md-6 mb-1">
-                <small><strong>Night Driving:</strong> <%= listing.bookingRules.nightDriving ? 'Available' : 'Not Available' %></small>
-              </div>
-            <% } %>
-          </div>
+      <div class="detail-section">
+        <h3>Booking Rules</h3>
+        <div class="detail-grid">
+          <% if (listing.bookingRules.minimumBookingAmount) { %><div class="detail-item"><span>Min Booking</span><strong>&#8377; <%= listing.bookingRules.minimumBookingAmount %></strong></div><% } %>
+          <% if (listing.bookingRules.maximumPassengers) { %><div class="detail-item"><span>Max Passengers</span><strong><%= listing.bookingRules.maximumPassengers %></strong></div><% } %>
+          <% if (listing.bookingRules.smokingAllowed !== undefined) { %><div class="detail-item"><span>Smoking</span><strong><%= listing.bookingRules.smokingAllowed ? 'Allowed' : 'Not Allowed' %></strong></div><% } %>
+          <% if (listing.bookingRules.petsAllowed !== undefined) { %><div class="detail-item"><span>Pets</span><strong><%= listing.bookingRules.petsAllowed ? 'Allowed' : 'Not Allowed' %></strong></div><% } %>
+          <% if (listing.bookingRules.nightDriving !== undefined) { %><div class="detail-item"><span>Night Driving</span><strong><%= listing.bookingRules.nightDriving ? 'Available' : 'Not Available' %></strong></div><% } %>
         </div>
+      </div>
       <% } %>
-      
-      <!-- Payment Methods -->
-      <% if (listing.paymentMethods && listing.paymentMethods.length > 0) { %>
-        <div class="payment-methods-section mb-3 p-3 bg-light rounded">
-          <h6 class="mb-2">Payment Methods</h6>
-          <div class="d-flex flex-wrap gap-2">
-            <% listing.paymentMethods.forEach(method => { %>
-              <span class="badge bg-success"><%= method.charAt(0).toUpperCase() + method.slice(1) %></span>
-            <% }) %>
-          </div>
+
+      <!-- Trip Types -->
+      <% if (listing.availableTripTypes && listing.availableTripTypes.length > 0) { %>
+      <div class="detail-section">
+        <h3>Available For</h3>
+        <div class="flex gap-sm" style="flex-wrap:wrap">
+          <% listing.availableTripTypes.forEach(t => { %>
+            <span class="badge badge-info"><%= t.charAt(0).toUpperCase() + t.slice(1).replace('-',' ') %></span>
+          <% }) %>
         </div>
+      </div>
       <% } %>
-      
-      <!-- Multiple Images Gallery -->
+
+      <!-- Gallery -->
       <% if (listing.images && listing.images.length > 0) { %>
-        <div class="images-gallery-section mb-3 p-3 bg-light rounded">
-          <h6 class="mb-2">Vehicle Photos</h6>
-          <div class="row">
-            <% listing.images.forEach((img, index) => { %>
-              <% let imgUrl = "https://images.pexels.com/photos/11129937/pexels-photo-11129937.jpeg"; %>
-              <% if (img.url) { %>
-                <% imgUrl = img.url; %>
-                <% if (imgUrl.includes('cloudinary.com')) { %>
-                  <% imgUrl = imgUrl.replace('/upload/', '/upload/q_auto,f_auto,w_300,h_200,c_limit/'); %>
-                <% } %>
-              <% } %>
-              <div class="col-md-4 col-sm-6 mb-2">
-                <img src="<%= imgUrl %>" class="img-fluid rounded" alt="<%= img.type || 'Vehicle image' %>" style="max-height: 200px; width: 100%; object-fit: cover;">
-                <% if (img.type) { %>
-                  <small class="text-muted d-block text-center mt-1"><%= img.type.charAt(0).toUpperCase() + img.type.slice(1) %></small>
-                <% } %>
-              </div>
-            <% }) %>
-          </div>
+      <div class="detail-section">
+        <h3>Photos</h3>
+        <div class="gallery-grid">
+          <% listing.images.forEach(img => { %>
+            <img src="<%= setupImageUrl(img.url, 400) %>" alt="<%= img.type || 'Photo' %>" loading="lazy" onerror="this.style.display='none'">
+          <% }) %>
         </div>
+      </div>
       <% } %>
-      
-      <!-- Rating Display -->
-      <% if (listing.averageRating && listing.totalReviews > 0) { %>
-        <div class="rating-section mt-3 p-3 bg-light rounded">
-          <h6 class="mb-2">Rating</h6>
-          <div class="d-flex align-items-center">
-            <span class="text-warning fs-5 me-2">
-              <%= listing.averageRating.toFixed(1) %>
-            </span>
-            <div class="text-warning">
-              <% for(let i = 0; i < 5; i++) { %>
-                <% if (i < Math.floor(listing.averageRating)) { %>
-                  <i class="fas fa-star"></i>
-                <% } else if (i < listing.averageRating) { %>
-                  <i class="fas fa-star-half-alt"></i>
-                <% } else { %>
-                  <i class="far fa-star"></i>
-                <% } %>
+
+      <!-- Calendar -->
+      <div class="detail-section">
+        <h3>Availability Calendar</h3>
+        <div class="calendar-legend">
+          <span class="chip chip-success"><span class="dot dot-success"></span> Available</span>
+          <span class="chip chip-danger"><span class="dot dot-danger"></span> Booked</span>
+        </div>
+        <div id="calendar-loading" class="text-secondary" style="font-size:14px;padding:10px 0">Loading calendar...</div>
+        <div id="availability-calendar" class="calendar-grid"></div>
+      </div>
+
+      <!-- Booking Stats -->
+      <% if (listing.totalBookings > 0) { %>
+      <div class="detail-section">
+        <div class="flex gap-md">
+          <div class="stat-card"><div class="stat-value"><%= listing.totalBookings %></div><div class="stat-label">Bookings</div></div>
+          <div class="stat-card"><div class="stat-value">&#8377;<%= (listing.totalRevenue || 0).toLocaleString('en-IN') %></div><div class="stat-label">Revenue</div></div>
+        </div>
+      </div>
+      <% } %>
+    </div>
+
+    <!-- Right: Sidebar -->
+    <div class="detail-sidebar">
+      <div class="card sidebar-card">
+        <div class="card-body">
+          <div class="owner-info">
+            <div class="owner-avatar"><%= (listing.owner?.username || 'U').charAt(0).toUpperCase() %></div>
+            <div>
+              <strong><%= listing.owner?.username || "Vehicle Owner" %></strong>
+              <% if (listing.owner?.averageRating) { %>
+                <div style="font-size:12px;color:#f59e0b"><%= '★'.repeat(Math.round(listing.owner.averageRating)) %> <%= listing.owner.averageRating.toFixed(1) %></div>
               <% } %>
             </div>
-            <small class="text-muted ms-2">(<%= listing.totalReviews %> reviews)</small>
+          </div>
+          <% if (isOwner) { %>
+            <div class="sidebar-actions">
+              <a href="/cars/<%= listing._id %>/edit" class="btn btn-primary btn-block"><i class="fas fa-edit"></i> Edit</a>
+              <form method="post" action="/cars/<%= listing._id %>?_method=DELETE" onsubmit="return confirm('Delete this vehicle?')">
+                <button class="btn btn-danger btn-block"><i class="fas fa-trash"></i> Delete</button>
+              </form>
+            </div>
+          <% } else if (av === 'AVAILABLE' || av === 'RESERVED') { %>
+            <div class="sidebar-actions">
+              <a href="/cars/book/<%= listing._id %>" class="btn btn-primary btn-block btn-lg"><i class="fas fa-calendar-check"></i> Book Now</a>
+            </div>
+          <% } else { %>
+            <button class="btn btn-secondary btn-block btn-lg" disabled><i class="fas fa-ban"></i> Not Available</button>
+          <% } %>
+          <div class="sidebar-meta">
+            <div><i class="fas fa-tag"></i> <%= listing.category || 'General' %></div>
+            <div><i class="fas fa-route"></i> <%= listing.serviceRadius ? listing.serviceRadius + ' KM' : 'Anywhere' %></div>
+            <% if (!isOwner) { %>
+              <div class="text-secondary" style="font-size:12px"><i class="fas fa-lock"></i> Contact info after booking</div>
+            <% } %>
           </div>
         </div>
-      <% } %>
+      </div>
     </div>
   </div>
-  </br>
-  <% if(currUser && listing.owner && listing.owner._id && listing.owner._id.equals(currUser._id)){%>
-    <div class="show-actions">
 
-      <a href="/cars/<%= listing._id %>/edit" class="btn btn-dark">Edit</a>
-      <form method="post" action="/cars/<%= listing._id %>?_method=DELETE" class="show-delete-form">
-        <button class="btn btn-danger">Delete</button>
+  <!-- Reviews -->
+  <div class="reviews-section">
+    <hr>
+    <% if(currUser && !isOwner) { %>
+      <h3>Leave a Review</h3>
+      <form action="/cars/<%= listing.id %>/reviews" method="POST">
+        <div class="star-rating">
+          <input type="radio" id="s5" name="review[rating]" value="5" checked><label for="s5">★</label>
+          <input type="radio" id="s4" name="review[rating]" value="4"><label for="s4">★</label>
+          <input type="radio" id="s3" name="review[rating]" value="3"><label for="s3">★</label>
+          <input type="radio" id="s2" name="review[rating]" value="2"><label for="s2">★</label>
+          <input type="radio" id="s1" name="review[rating]" value="1"><label for="s1">★</label>
+        </div>
+        <div class="input-group mt-sm">
+          <textarea class="input-field" name="review[comment]" rows="4" placeholder="Share your experience..." required></textarea>
+        </div>
+        <button class="btn btn-primary mt-sm">Submit Review</button>
       </form>
-    </div>
-
     <% } %>
 
-    <% if (availabilityStatus === 'AVAILABLE' || availabilityStatus === 'RESERVED') { %>
-      <div class="mt-3">
-         <a href="/cars/book/<%= listing._id %>" class="btn btn-success">Book Now</a>
-      </div>
+    <h3 style="margin-top:32px">Reviews (<%= listing.reviews?.length || 0 %>)</h3>
+    <% if (listing.reviews && listing.reviews.length > 0) { %>
+      <% for(review of listing.reviews){ %>
+        <div class="review-card">
+          <div class="review-header">
+            <div class="review-avatar"><%= (review.author?.username || 'U').charAt(0).toUpperCase() %></div>
+            <div>
+              <strong><%= review.author?.username || 'Anonymous' %></strong>
+              <div class="review-stars"><% for(let i=1;i<=5;i++){ %><span class="<%= i <= review.rating ? 'on' : '' %>">★</span><% } %></div>
+            </div>
+            <% if(currUser && review.author?._id?.equals(currUser._id)) { %>
+              <form method="POST" action="/cars/<%= listing._id %>/reviews/<%=review._id%>?_method=DELETE" style="margin-left:auto">
+                <button class="btn btn-sm btn-ghost" style="color:var(--danger)"><i class="fas fa-trash"></i></button>
+              </form>
+            <% } %>
+          </div>
+          <p><%= review.comment %></p>
+        </div>
+      <% } %>
     <% } else { %>
-      <div class="mt-3">
-         <button class="btn btn-secondary" disabled>Not Available for Booking</button>
-      </div>
+      <p class="text-secondary">No reviews yet.</p>
     <% } %>
-
-
-      <div class="reviews-section">
-        <hr>
-        <% if(currUser) {%>
-          <h4>Leave a Review</h4>
-          <form action="/cars/<%= listing.id%>/reviews" method="POST" class="mb-3 needs-validation" novalidate>
-
-            <div class="star-wrap">
-            <fieldset class="starability-slot">
-              <legend>Rating</legend>
-              <input type="radio" id="first-rate1" name="review[rating]" value="1" />
-              <label for="first- rate1" title="Terrible">1 star</label>
-              <input type="radio" id="first-rate2" name="review[rating]" value="2" />
-              <label for="first-rate2" title="Not good">2 stars</label>
-              <input type="radio" id="first-rate3" name="review[rating]" value="3" />
-              <label for="first-rate3" title="Average">3 stars</label>
-              <input type="radio" id="first-rate4" name="review[rating]" value="4" />
-              <label for="first-rate4" title="Very good">4 stars</label>
-              <input type="radio" id="first-rate5" name="review[rating]" value="5" checked />
-              <label for="first-rate5" title="Amazing">5 stars</label>
-            </fieldset>
-            </div>
-            <div class="mb-3 mt-3">
-              <label for="comment" class="form-label">Comments</label>
-              <textarea name="review[comment]" id="comment" cols="30" rows="5" class="form-control" required></textarea>
-              <div class="invalid-feedback">Please add comments for review</div>
-            </div>
-            <button class="btn btn-outline-dark">Submit</button>
-          </form>
-          <hr>
-          <%}%>
-
-
-            <p><b>All Reviews</b></p>
-            <% for(review of listing.reviews){%>
-              <div class="card review-card mb-3">
-                <div class="card-body">
-                  <h5 class="card-title">
-                    <%=review.author.username%>
-                  </h5>
-                  <p class="card-text">
-                    <%=review.comment%>
-                  </p>
-                
-
-                  <p class="starability-result card-text" data-rating="<%= review.rating || 0 %>">
-                  </p>
-                  <% if(currUser && review.author && review.author._id.equals(currUser._id)) { %>
-                    <form class="mb-3" method="POST"
-                      action="/cars/<%= listing._id %>/reviews/<%=review._id%>?_method=DELETE">
-                      <button class="btn btn-sm btn-dark">Delete</button>
-                    </form>
-                    <% } %>
-                </div>
-              </div>
-              <%}%>
-      </div>
+  </div>
+</div>
 
 <script>
 const listingId = '<%= listing._id %>';
-
-async function loadBookingCalendar() {
-  const calendarContainer = document.getElementById('availability-calendar');
-  const loadingDiv = document.getElementById('calendar-loading');
-  
-  if (!calendarContainer) return;
-  
+async function loadCalendar() {
+  const cont = document.getElementById('availability-calendar');
+  const load = document.getElementById('calendar-loading');
+  if (!cont) return;
   try {
-    const startDate = new Date();
-    const endDate = new Date();
-    endDate.setDate(endDate.getDate() + 30); // Show 30 days
-    
-    const response = await fetch(`/cars/${listingId}/calendar?startDate=${startDate.toISOString()}&endDate=${endDate.toISOString()}`);
-    const data = await response.json();
-    
-    if (data.success && data.calendar) {
-      loadingDiv.style.display = 'none';
-      renderCalendar(data.calendar);
-    } else {
-      loadingDiv.innerHTML = '<small class="text-danger">Failed to load calendar</small>';
-    }
-  } catch (error) {
-    console.error('Error loading calendar:', error);
-    loadingDiv.innerHTML = '<small class="text-danger">Error loading calendar</small>';
-  }
+    const s = new Date(), e = new Date(); e.setDate(e.getDate()+30);
+    const r = await fetch(`/cars/${listingId}/calendar?startDate=${s.toISOString()}&endDate=${e.toISOString()}`);
+    const d = await r.json();
+    if (d.success && d.calendar) {
+      load.style.display = 'none';
+      let h = '<div class="calendar-header">Sun</div><div class="calendar-header">Mon</div><div class="calendar-header">Tue</div><div class="calendar-header">Wed</div><div class="calendar-header">Thu</div><div class="calendar-header">Fri</div><div class="calendar-header">Sat</div>';
+      d.calendar.forEach(day => {
+        const cls = day.available ? 'cal-avail' : 'cal-booked';
+        h += `<div class="cal-day ${cls}"><span>${new Date(day.date).getDate()}</span></div>`;
+      });
+      cont.innerHTML = h;
+    } else load.innerHTML = 'Failed to load calendar';
+  } catch(e) { load.innerHTML = 'Error loading calendar'; }
 }
-
-function renderCalendar(calendarData) {
-  const calendarContainer = document.getElementById('availability-calendar');
-  if (!calendarContainer) return;
-  
-  // Group by week
-  const weeks = [];
-  let currentWeek = [];
-  
-  calendarData.forEach((day, index) => {
-    currentWeek.push(day);
-    if (currentWeek.length === 7 || index === calendarData.length - 1) {
-      weeks.push([...currentWeek]);
-      currentWeek = [];
-    }
-  });
-  
-  // Render calendar
-  let html = '<div class="calendar-grid">';
-  
-  // Add day headers
-  html += '<div class="calendar-header">Sun</div>';
-  html += '<div class="calendar-header">Mon</div>';
-  html += '<div class="calendar-header">Tue</div>';
-  html += '<div class="calendar-header">Wed</div>';
-  html += '<div class="calendar-header">Thu</div>';
-  html += '<div class="calendar-header">Fri</div>';
-  html += '<div class="calendar-header">Sat</div>';
-  
-  // Add days
-  weeks.forEach(week => {
-    week.forEach(day => {
-      const date = new Date(day.date);
-      const dayNum = date.getDate();
-      const statusClass = day.available ? 'available' : 'booked';
-      const statusText = day.available ? 'Available' : 'Booked';
-      
-      html += `<div class="calendar-day ${statusClass}" title="${day.date}: ${statusText}">
-        <span class="day-number">${dayNum}</span>
-      </div>`;
-    });
-  });
-  
-  html += '</div>';
-  calendarContainer.innerHTML = html;
-}
-
-// Load calendar when page loads
-document.addEventListener('DOMContentLoaded', loadBookingCalendar);
+document.addEventListener('DOMContentLoaded', loadCalendar);
 </script>
 
 <style>
-.calendar-section {
-  margin-top: 1rem;
-}
+.vehicle-detail { max-width: var(--max-width); margin: 0 auto; padding: 24px; }
+.detail-layout { display: grid; grid-template-columns: 1fr 340px; gap: 32px; }
+.detail-main { min-width: 0; }
+.detail-hero { width: 100%; border-radius: var(--radius-xl); max-height: 450px; object-fit: cover; margin-bottom: 24px; }
+.detail-section { background: var(--card); border: 1px solid var(--border-light); border-radius: var(--radius-lg); padding: 24px; margin-bottom: 16px; }
+.detail-section h3 { font-size: 16px; font-weight: 700; margin-bottom: 14px; }
+.detail-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; margin-bottom: 12px; flex-wrap: wrap; }
+.detail-header h1 { font-size: 26px; font-weight: 800; line-height: 1.2; }
+.detail-location { color: var(--text-secondary); font-size: 14px; margin-top: 4px; }
+.detail-location i { margin-right: 4px; }
+.detail-desc { font-size: 15px; line-height: 1.7; color: var(--text-secondary); }
+.pricing-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px,1fr)); gap: 12px; }
+.price-item { background: var(--surface); border-radius: var(--radius-md); padding: 14px; }
+.price-item span { display: block; font-size: 12px; color: var(--text-secondary); margin-bottom: 2px; }
+.price-item strong { font-size: 18px; color: var(--primary); }
 
-.calendar-legend {
-  display: flex;
-  gap: 0.5rem;
-}
+/* Gallery */
+.gallery-grid { display: grid; grid-template-columns: repeat(auto-fill,minmax(200px,1fr)); gap: 12px; }
+.gallery-grid img { width: 100%; height: 160px; object-fit: cover; border-radius: var(--radius-md); }
 
-.calendar-grid {
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  gap: 2px;
-  margin-top: 0.5rem;
-}
+/* Calendar */
+.calendar-legend { display: flex; gap: 16px; margin-bottom: 10px; }
+.calendar-grid { display: grid; grid-template-columns: repeat(7,1fr); gap: 4px; }
+.calendar-header { text-align: center; font-weight: 600; font-size: 12px; color: var(--text-secondary); padding: 6px 0; }
+.cal-day { text-align: center; padding: 8px 4px; border-radius: var(--radius-sm); font-size: 14px; font-weight: 600; }
+.cal-day span { display: block; }
+.cal-avail { background: #dcfce7; color: #166534; }
+.cal-booked { background: #fee2e2; color: #991b1b; cursor: not-allowed; }
 
-.calendar-header {
-  text-align: center;
-  font-weight: bold;
-  font-size: 0.8rem;
-  padding: 0.25rem;
-  background: #f8f9fa;
-}
+/* Sidebar */
+.sidebar-card { position: sticky; top: 96px; }
+.owner-info { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+.owner-avatar { width: 48px; height: 48px; border-radius: 50%; background: var(--gradient); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 700; }
+.sidebar-actions { display: flex; flex-direction: column; gap: 10px; }
+.sidebar-meta { margin-top: 20px; display: flex; flex-direction: column; gap: 8px; font-size: 14px; color: var(--text-secondary); }
+.sidebar-meta i { width: 20px; color: var(--primary); }
 
-.calendar-day {
-  text-align: center;
-  padding: 0.5rem;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: all 0.2s;
-}
+/* Reviews */
+.reviews-section { max-width: 760px; }
+.star-rating { direction: rtl; display: inline-flex; gap: 2px; }
+.star-rating input { display: none; }
+.star-rating label { font-size: 28px; color: #d1d5db; cursor: pointer; transition: color 0.15s; }
+.star-rating input:checked ~ label, .star-rating label:hover, .star-rating label:hover ~ label { color: #f59e0b; }
+.review-card { background: var(--card); border: 1px solid var(--border-light); border-radius: var(--radius-lg); padding: 18px; margin-bottom: 12px; }
+.review-header { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
+.review-avatar { width: 36px; height: 36px; border-radius: 50%; background: var(--primary-50); color: var(--primary); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px; }
+.review-stars { font-size: 14px; }
+.review-stars span { color: #d1d5db; }
+.review-stars span.on { color: #f59e0b; }
 
-.calendar-day.available {
-  background: #d4edda;
-  color: #155724;
-}
-
-.calendar-day.booked {
-  background: #f8d7da;
-  color: #721c24;
-  cursor: not-allowed;
-}
-
-.calendar-day:hover:not(.booked) {
-  transform: scale(1.1);
-}
-
-.day-number {
-  font-weight: bold;
-  font-size: 0.9rem;
-}
-
-@media (max-width: 576px) {
-  .calendar-header {
-    font-size: 0.7rem;
-  }
-  
-  .calendar-day {
-    padding: 0.25rem;
-  }
-  
-  .day-number {
-    font-size: 0.8rem;
-  }
+@media (max-width: 900px) {
+  .detail-layout { grid-template-columns: 1fr; }
+  .detail-sidebar { order: -1; }
+  .sidebar-card { position: static; }
 }
 </style>

@@ -1,4 +1,4 @@
-<% layout("../layouts/boilerplate") %>
+<% layout("/listings/layouts/boilerplate") %>
 
 <style>
 .notifications-page {
@@ -439,12 +439,20 @@ function createNotificationCard(notification) {
 
 function getNotificationTypeClass(type) {
     const typeMap = {
+        'NEW_BOOKING_REQUEST': 'booking-submitted',
         'BOOKING_SUBMITTED': 'booking-submitted',
         'BOOKING_ACCEPTED': 'booking-accepted',
         'BOOKING_REJECTED': 'booking-rejected',
+        'COUNTER_OFFER_SENT': 'counter-offer',
+        'COUNTER_OFFER_ACCEPTED': 'booking-accepted',
+        'COUNTER_OFFER_REJECTED': 'booking-rejected',
+        'BOOKING_CANCELLED': 'booking-rejected',
         'COUNTER_OFFER': 'counter-offer',
         'TRIP_REMINDER': 'trip-reminder',
-        'TRIP_COMPLETED': 'trip-completed'
+        'TRIP_COMPLETED': 'trip-completed',
+        'TRIP_STARTED': 'trip-reminder',
+        'PAYMENT_RECEIVED': 'booking-accepted',
+        'VEHICLE_AVAILABLE': 'booking-accepted'
     };
     return typeMap[type] || '';
 }

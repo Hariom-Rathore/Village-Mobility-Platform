@@ -1,16 +1,10 @@
 <% layout('/listings/layouts/boilerplate') %>
-<style>
-.error-page { min-height: 60vh; display: flex; align-items: center; justify-content: center; padding: 20px; text-align: center; }
-.error-card h1 { font-size: 72px; font-weight: 800; color: #2563eb; margin-bottom: 8px; }
-.error-card h2 { font-size: 20px; font-weight: 600; margin-bottom: 8px; }
-.error-card p { color: #64748b; margin-bottom: 24px; }
-.error-card .btn { background: #2563eb; color: white; border: none; border-radius: 12px; padding: 12px 24px; font-weight: 600; text-decoration: none; }
-</style>
-<div class="error-page">
-  <div class="error-card">
-    <h1><%= statusCode %></h1>
-    <h2>Oops! Something went wrong</h2>
-    <p><%= errorMsg %></p>
-    <a href="/" class="btn"><i class="fas fa-home me-2"></i>Go Home</a>
+<div class="error-page fade-in">
+  <div class="card" style="text-align:center;padding:60px 40px;max-width:480px;margin:0 auto">
+    <h1 style="font-size:72px;font-weight:800;color:var(--primary);margin-bottom:8px;line-height:1"><%= statusCode %></h1>
+    <h2 style="font-size:20px;font-weight:700;margin-bottom:8px">Oops! Something went wrong</h2>
+    <p class="text-secondary"><%= errorMsg %></p>
+    <a href="/" class="btn btn-primary btn-lg" style="margin-top:20px;display:inline-flex"><i class="fas fa-home"></i> Go Home</a>
   </div>
 </div>
+<style>.error-page{min-height:60vh;display:flex;align-items:center;justify-content:center;padding:20px;}</style>

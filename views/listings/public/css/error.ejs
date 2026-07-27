@@ -1,4 +1,8 @@
-<% layout("/layouts/boilerplate")%>
-<div class="alert alert-danger col-6 offset-3" role="alert">
-  <h4><%=message></h4>
+<% layout("/listings/layouts/boilerplate") %>
+<div class="container" style="padding:60px 24px;max-width:640px;margin:0 auto">
+  <div class="alert alert-error">
+    <i class="fas fa-exclamation-triangle"></i>
+    <span><%= typeof message !== 'undefined' ? message : 'An error occurred' %></span>
+  </div>
+  <a href="/" class="btn btn-primary mt-md">Go Home</a>
 </div>

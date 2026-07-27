@@ -1,9 +1,91 @@
-<footer class="bg-white border-top py-4 mt-auto">
-  <div class="container text-center">
-    <p class="mb-1 small text-muted">&copy; 2024 RideLocal. All rights reserved.</p>
-    <p class="mb-0 small text-muted">
-      <a href="/privacy" class="text-decoration-none text-muted me-3">Privacy</a>
-      <a href="/terms" class="text-decoration-none text-muted">Terms</a>
-    </p>
+<footer class="app-footer">
+  <div class="container">
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <div class="footer-logo">
+          <span class="brand-icon"><i class="fa-solid fa-car"></i></span>
+          RideLocal
+        </div>
+        <p>RideLocal connects you with verified local vehicle owners and professional drivers for safe, transparent, and affordable trips.</p>
+        <div class="footer-social">
+          <a href="#" aria-label="Facebook"><i class="fab fa-facebook-f"></i></a>
+          <a href="#" aria-label="Twitter"><i class="fab fa-twitter"></i></a>
+          <a href="#" aria-label="Instagram"><i class="fab fa-instagram"></i></a>
+          <a href="#" aria-label="LinkedIn"><i class="fab fa-linkedin-in"></i></a>
+        </div>
+      </div>
+      <div class="footer-col">
+        <h4>Company</h4>
+        <a href="#">About Us</a>
+        <a href="#">Careers</a>
+        <a href="#">Blog</a>
+        <a href="#">Press</a>
+      </div>
+      <div class="footer-col">
+        <h4>Support</h4>
+        <a href="#">Help Center</a>
+        <a href="#">Safety</a>
+        <a href="#">Cancellation</a>
+        <a href="#">Contact</a>
+      </div>
+      <div class="footer-col">
+        <h4>Legal</h4>
+        <a href="#">Privacy Policy</a>
+        <a href="#">Terms of Service</a>
+        <a href="#">Cookie Policy</a>
+        <a href="#">Insurance</a>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>&copy; <%= new Date().getFullYear() %> RideLocal. All rights reserved.</span>
+      <span>Made with <i class="fas fa-heart" style="color:#ef4444"></i> in India</span>
+    </div>
   </div>
 </footer>
+
+<style>
+.app-footer {
+  background: #0f172a; color: rgba(255,255,255,0.7);
+  padding: 60px 0 32px; margin-top: auto;
+}
+.app-footer .footer-grid { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 40px; }
+.app-footer .footer-logo {
+  display: flex; align-items: center; gap: 10px;
+  font-weight: 800; font-size: 18px; color: #fff; margin-bottom: 14px;
+}
+.app-footer .footer-logo .brand-icon {
+  width: 32px; height: 32px; background: var(--gradient);
+  border-radius: 8px; display: flex; align-items: center;
+  justify-content: center; color: #fff; font-size: 14px;
+}
+.app-footer .footer-brand p { font-size: 14px; line-height: 1.7; max-width: 340px; }
+.app-footer .footer-social { display: flex; gap: 10px; margin-top: 20px; }
+.app-footer .footer-social a {
+  width: 36px; height: 36px; border-radius: 50%;
+  border: 1px solid rgba(255,255,255,0.1);
+  display: flex; align-items: center; justify-content: center;
+  color: rgba(255,255,255,0.5); transition: all 0.2s; font-size: 14px;
+}
+.app-footer .footer-social a:hover { border-color: var(--primary); color: #fff; background: rgba(37,99,235,0.2); }
+.app-footer .footer-col h4 {
+  font-size: 13px; font-weight: 700; color: #fff;
+  margin-bottom: 16px; text-transform: uppercase; letter-spacing: 0.5px;
+}
+.app-footer .footer-col a {
+  display: block; font-size: 14px; color: rgba(255,255,255,0.5);
+  margin-bottom: 10px; transition: color 0.2s; text-decoration: none;
+}
+.app-footer .footer-col a:hover { color: #fff; }
+.app-footer .footer-bottom {
+  margin-top: 48px; padding-top: 20px;
+  border-top: 1px solid rgba(255,255,255,0.08);
+  display: flex; justify-content: space-between; align-items: center;
+  font-size: 13px; color: rgba(255,255,255,0.4); flex-wrap: wrap; gap: 12px;
+}
+@media (max-width: 1024px) { .app-footer .footer-grid { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 640px) {
+  .app-footer { padding: 40px 0 24px; }
+  .app-footer .footer-grid { grid-template-columns: 1fr; gap: 24px; }
+  .app-footer .footer-bottom { flex-direction: column; text-align: center; }
+}
+</style>

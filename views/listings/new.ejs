@@ -1,89 +1,77 @@
 <% layout("/listings/layouts/boilerplate") %>
-
-<h2>Add a New Car</h2>
-
-<% if (errorMsg) { %>
-    <div class="alert alert-danger" role="alert"><%= errorMsg %></div>
-<% } %>
-
-<form method="POST" action="/cars" novalidate class="needs-validation" enctype="multipart/form-data">
-    <div class="row">
-        <div class="col-8 offset-2">
-            <div class="mb-3">
-                <label for="title" class="form-label">Car Title</label>
-                <input id="title" name="listing[title]" placeholder="Add car name (e.g. Turbo Red Sports Car)" type="text" class="form-control" required value="<%= listing && listing.title ? listing.title : "" %>">
-                <div class="invalid-feedback">Please enter a title.</div>
-            </div>
-
-            <div class="mb-3">
-                <label for="description" class="form-label">Car Description</label>
-                <input id="description" name="listing[description]" placeholder="Enter car details" type="text" class="form-control" required value="<%= listing && listing.description ? listing.description : "" %>">
-                <div class="invalid-feedback">Please enter a description.</div>
-            </div>
-
-
-
-             <div class="mb-3">
-                <label for="image" class="form-label">Upload Car Image</label>
-                <input id="image" name="listing[image]" placeholder="Image url" type="file" class="form-control">
-                required
-                
-            </div> 
-
-            <div class="row">
-                <div class="mb-3 col-md-4">
-                    <label for="price" class="form-label">Price Per Day</label>
-                    <input id="price" name="listing[price]" placeholder="Enter integer price (e.g. 5000)" type="text" class="form-control" required value="<%= listing && listing.price !== undefined && listing.price !== null ? listing.price : "" %>">
-                    <div class="invalid-feedback">Please enter a valid price.</div>
-                </div>
-
-                <div class="mb-3 col-md-4">
-                    <label for="ratePerKm" class="form-label">Rate Per Km</label>
-                    <input id="ratePerKm" name="listing[ratePerKm]" placeholder="Enter rate per km (e.g. 20)" type="number" class="form-control" value="<%= listing && listing.ratePerKm !== undefined && listing.ratePerKm !== null ? listing.ratePerKm : "" %>">
-                </div>
-
-                <div class="mb-3 col-md-8">
-                    <label for="country" class="form-label">Country</label>
-                    <input id="country" name="listing[country]" placeholder="India" type="text" class="form-control" required value="<%= listing && listing.country ? listing.country : "" %>">
-                    <div class="invalid-feedback">Please enter a country.</div>
-                </div>
-            </div>
-
-            <div class="mb-3">
-                <label for="carType" class="form-label">Car Type</label>
-                <select id="carType" name="listing[carType]" class="form-select">
-                    <option value="other" <%= listing && listing.carType === 'other' ? 'selected' : '' %>>Other</option>
-                    <option value="electric" <%= listing && listing.carType === 'electric' ? 'selected' : '' %>>Electric</option>
-                    <option value="petrol" <%= listing && listing.carType === 'petrol' ? 'selected' : '' %>>Petrol</option>
-                    <option value="diesel" <%= listing && listing.carType === 'diesel' ? 'selected' : '' %>>Diesel</option>
-                    <option value="hybrid" <%= listing && listing.carType === 'hybrid' ? 'selected' : '' %>>Hybrid</option>
-                </select>
-            </div>
-
-            <div class="mb-3">
-                <label for="seats" class="form-label">Seating Capacity</label>
-                <select id="seats" name="listing[seats]" class="form-select">
-                    <option value="4" <%= listing && Number(listing.seats) === 4 ? 'selected' : '' %>>4 Seater</option>
-                    <option value="6" <%= listing && Number(listing.seats) === 6 ? 'selected' : '' %>>6 Seater</option>
-                    <option value="10" <%= listing && Number(listing.seats) === 10 ? 'selected' : '' %>>10 Seater</option>
-                </select>
-            </div>
-
-            <div class="mb-3">
-                <label for="location" class="form-label">Location</label>
-                <input id="location" name="listing[location]" placeholder="Enter location" type="text" class="form-control" required value="<%= listing && listing.location ? listing.location : "" %>">
-                <div class="invalid-feedback">Please enter a location.</div>
-            </div>
-
-            <div class="mb-3">
-                <label for="whatsappNumber" class="form-label">Owner WhatsApp Number</label>
-                <input id="whatsappNumber" name="listing[whatsappNumber]" placeholder="Enter WhatsApp number with country code, e.g. 919876543210" type="text" class="form-control" required value="<%= listing && listing.whatsappNumber ? listing.whatsappNumber : "" %>">
-                <div class="invalid-feedback">Please enter a WhatsApp number.</div>
-            </div>
-
-            <button class="btn btn-dark">Add Car</button>
+<div class="form-page">
+  <div class="form-card fade-in">
+    <a href="/cars" class="back-link"><i class="fas fa-arrow-left"></i> Back to Vehicles</a>
+    <h2>Add a New Vehicle</h2>
+    <% if (errorMsg) { %>
+      <div class="alert alert-error"><i class="fas fa-exclamation-circle"></i><span><%= errorMsg %></span></div>
+    <% } %>
+    <form method="POST" action="/cars" enctype="multipart/form-data">
+      <div class="input-group">
+        <label>Vehicle Title</label>
+        <input class="input-field" name="listing[title]" placeholder="e.g. Toyota Innova Crysta" value="<%= listing?.title || '' %>" required>
+      </div>
+      <div class="input-group">
+        <label>Description</label>
+        <textarea class="input-field" name="listing[description]" placeholder="Describe your vehicle" rows="3" required><%= listing?.description || '' %></textarea>
+      </div>
+      <div class="form-row2">
+        <div class="input-group">
+          <label>Price Per Day (₹)</label>
+          <input class="input-field" name="listing[price]" placeholder="e.g. 5000" value="<%= listing?.price ?? '' %>">
         </div>
-    </div>
-</form>
+        <div class="input-group">
+          <label>Rate Per Km (₹)</label>
+          <input class="input-field" name="listing[ratePerKm]" placeholder="e.g. 20" value="<%= listing?.ratePerKm ?? '' %>">
+        </div>
+      </div>
+      <div class="input-group">
+        <label>Car Type</label>
+        <select class="input-field" name="listing[carType]">
+          <option value="other" <%= listing?.carType === 'other' ? 'selected' : '' %>>Other</option>
+          <option value="electric" <%= listing?.carType === 'electric' ? 'selected' : '' %>>Electric</option>
+          <option value="petrol" <%= listing?.carType === 'petrol' ? 'selected' : '' %>>Petrol</option>
+          <option value="diesel" <%= listing?.carType === 'diesel' ? 'selected' : '' %>>Diesel</option>
+          <option value="hybrid" <%= listing?.carType === 'hybrid' ? 'selected' : '' %>>Hybrid</option>
+        </select>
+      </div>
+      <div class="form-row2">
+        <div class="input-group">
+          <label>Seating Capacity</label>
+          <select class="input-field" name="listing[seats]">
+            <option value="4" <%= Number(listing?.seats) === 4 ? 'selected' : '' %>>4 Seater</option>
+            <option value="6" <%= Number(listing?.seats) === 6 ? 'selected' : '' %>>6 Seater</option>
+            <option value="10" <%= Number(listing?.seats) === 10 ? 'selected' : '' %>>10 Seater</option>
+          </select>
+        </div>
+        <div class="input-group">
+          <label>Country</label>
+          <input class="input-field" name="listing[country]" placeholder="India" value="<%= listing?.country || 'India' %>" required>
+        </div>
+      </div>
+      <div class="input-group">
+        <label>Location</label>
+        <input class="input-field" name="listing[location]" placeholder="Enter location" value="<%= listing?.location || '' %>" required>
+      </div>
+      <div class="input-group">
+        <label>WhatsApp Number</label>
+        <input class="input-field" name="listing[whatsappNumber]" placeholder="919876543210" value="<%= listing?.whatsappNumber || '' %>" required>
+      </div>
+      <div class="input-group">
+        <label>Upload Image</label>
+        <input class="input-field" type="file" name="listing[image]" accept="image/*">
+      </div>
+      <button type="submit" class="btn btn-primary btn-lg btn-block">Add Vehicle</button>
+    </form>
+  </div>
+</div>
 
-<br>
+<style>
+.form-page { max-width: 640px; margin: 0 auto; padding: 32px 20px; }
+.form-card { background: var(--card); border: 1px solid var(--border-light); border-radius: var(--radius-xl); padding: 36px; box-shadow: var(--shadow-md); }
+.form-card h2 { font-size: 24px; font-weight: 800; margin-bottom: 24px; }
+.back-link { display: inline-flex; align-items: center; gap: 6px; font-size: 14px; color: var(--text-secondary); text-decoration: none; margin-bottom: 16px; }
+.back-link:hover { color: var(--text); }
+.form-row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+@media (max-width: 640px) { .form-row2 { grid-template-columns: 1fr; } }
+</style>

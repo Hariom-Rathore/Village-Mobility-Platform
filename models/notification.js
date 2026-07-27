@@ -10,46 +10,31 @@ const NotificationSchema = new Schema({
   type: {
     type: String,
     enum: [
-      'BOOKING_SUBMITTED',
+      'NEW_BOOKING_REQUEST',
       'BOOKING_ACCEPTED',
       'BOOKING_REJECTED',
-      'COUNTER_OFFER',
-      'TRIP_REMINDER',
-      'TRIP_COMPLETED',
+      'COUNTER_OFFER_SENT',
+      'COUNTER_OFFER_ACCEPTED',
+      'COUNTER_OFFER_REJECTED',
       'BOOKING_CANCELLED',
-      'BOOKING_COMPLETED',
-      'VEHICLE_AVAILABLE',
+      'TRIP_STARTED',
+      'TRIP_COMPLETED',
+      'PAYMENT_RECEIVED',
       'REVIEW_RECEIVED',
-      'PAYMENT_RECEIVED'
+      'VEHICLE_AVAILABLE'
     ],
     required: true
   },
-  title: {
-    type: String,
-    required: true
-  },
-  message: {
-    type: String,
-    required: true
-  },
-  relatedBooking: {
-    type: Schema.Types.ObjectId,
-    ref: 'Booking'
-  },
-  relatedVehicle: {
-    type: Schema.Types.ObjectId,
-    ref: 'Listing'
-  },
-  isRead: {
-    type: Boolean,
-    default: false
-  },
-  createdAt: {
-    type: Date,
-    default: Date.now
-  }
+  title: { type: String, required: true },
+  message: { type: String, required: true },
+  relatedBooking: { type: Schema.Types.ObjectId, ref: 'Booking' },
+  relatedVehicle: { type: Schema.Types.ObjectId, ref: 'Listing' },
+  isRead: { type: Boolean, default: false },
+  data: { type: Schema.Types.Mixed },
+  createdAt: { type: Date, default: Date.now }
 });
 
 NotificationSchema.index({ recipient: 1, isRead: 1, createdAt: -1 });
+NotificationSchema.index({ recipient: 1, createdAt: -1 });
 
 module.exports = mongoose.model('Notification', NotificationSchema);

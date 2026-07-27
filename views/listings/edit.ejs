@@ -1,91 +1,80 @@
 <% layout("/listings/layouts/boilerplate") %>
-<body>
-    <h2>Edit Your Car</h2>
-    <form method="POST" action="/cars/<%= listing._id %>?_method=PUT" novalidate class="needs-validation" enctype="multipart/form-data">
-        <div class="row">
-            <div class="col-8 offset-2">
-                <div>
-                    <label for="title" class="form-label">Car Title</label>
-                    <input name="listing[title]" value="<%= listing.title %>" type="text" class="form-control" required>
-                    <div class="invalid-feedback">Please enter a title.</div>
-                </div>
-
-                <div>
-                    <label for="description" class="form-label">Car Description</label>
-                    <input name="listing[description]" value="<%= listing.description %>" type="text" class="form-control" required>
-                      <div class="invalid-feedback">Please enter a description.</div>
-                </div>
-
-                <div class="mb-3">
-                    <label class="form-label">Previous Car Image</label>
-                    <div>
-                        <img src="<%=originalImageUrl%>" alt="Previous car image" style="height: 150px; object-fit: cover; border-radius: 5px;" onerror="this.onerror=null;this.src='https://images.pexels.com/photos/11129937/pexels-photo-11129937.jpeg';">
-                    </div>
-                </div>
-
-                <div>
-                    <label for="image" class="form-label">Upload New Car Image</label>
-                    <input name="listing[image]" type="file" class="form-control"/>
-                       
-                </div>
-
-                <div class="row">
-                    <div class="mb-3 col-md-4">
-                        <label for="price" class="form-label">Price Per Day</label>
-                        <input name="listing[price]" value="<%= listing.price %>" type="number" class="form-control" required>
-                         <div class="invalid-feedback">Please enter a valid price.</div>
-                    </div>
-
-                    <div class="mb-3 col-md-4">
-                        <label for="ratePerKm" class="form-label">Rate Per Km</label>
-                        <input name="listing[ratePerKm]" value="<%= listing.ratePerKm %>" type="number" class="form-control">
-                    </div>
-
-                    <div class="mb-3 col-md-8">
-                        <label for="country" class="form-label">country</label>
-                        <input name="listing[country]" value="<%= listing.country %>" type="text" class="form-control" required>
-                        <div class="invalid-feedback">Please enter a country.</div>
-                    </div>
-                </div>
-
-                <div>
-                    <label for="location" class="form-label">location</label>
-                    <input name="listing[location]" value="<%= listing.location %>" type="text" class="form-control" required>
-                      <div class="invalid-feedback">Please enter a location.</div>
-                </div>
-
-                <div class="mb-3">
-                    <label for="whatsappNumber" class="form-label">Owner WhatsApp Number</label>
-                    <input name="listing[whatsappNumber]" value="<%= listing.whatsappNumber || '' %>" type="text" class="form-control" required>
-                    <div class="invalid-feedback">Please enter a WhatsApp number.</div>
-                </div>
-                
-                <div class="mb-3">
-                    <label for="carType" class="form-label">Car Type</label>
-                    <select id="carType" name="listing[carType]" class="form-select">
-                        <option value="other" <%= listing.carType === 'other' ? 'selected' : '' %>>Other</option>
-                        <option value="electric" <%= listing.carType === 'electric' ? 'selected' : '' %>>Electric</option>
-                        <option value="petrol" <%= listing.carType === 'petrol' ? 'selected' : '' %>>Petrol</option>
-                        <option value="diesel" <%= listing.carType === 'diesel' ? 'selected' : '' %>>Diesel</option>
-                        <option value="hybrid" <%= listing.carType === 'hybrid' ? 'selected' : '' %>>Hybrid</option>
-                    </select>
-                </div>
-                <div class="mb-3">
-                    <label for="seats" class="form-label">Seating Capacity</label>
-                    <select id="seats" name="listing[seats]" class="form-select">
-                        <option value="4" <%= Number(listing.seats) === 4 ? 'selected' : '' %>>4 Seater</option>
-                        <option value="6" <%= Number(listing.seats) === 6 ? 'selected' : '' %>>6 Seater</option>
-                        <option value="10" <%= Number(listing.seats) === 10 ? 'selected' : '' %>>10 Seater</option>
-                    </select>
-                </div>
-                <br>
-                <button class="btn btn-dark edit-btn">Update Car</button>
-            </div>
+<div class="form-page">
+  <div class="form-card fade-in">
+    <a href="/cars/<%= listing._id %>" class="back-link"><i class="fas fa-arrow-left"></i> Back to Vehicle</a>
+    <h2>Edit Vehicle</h2>
+    <form method="POST" action="/cars/<%= listing._id %>?_method=PUT" enctype="multipart/form-data">
+      <div class="input-group">
+        <label>Vehicle Title</label>
+        <input class="input-field" name="listing[title]" value="<%= listing.title %>" required>
+      </div>
+      <div class="input-group">
+        <label>Description</label>
+        <textarea class="input-field" name="listing[description]" rows="3" required><%= listing.description %></textarea>
+      </div>
+      <% if (typeof originalImageUrl !== 'undefined') { %>
+      <div class="input-group">
+        <label>Current Image</label>
+        <img src="<%= originalImageUrl %>" style="height:120px;object-fit:cover;border-radius:var(--radius-md)" onerror="this.style.display='none'">
+      </div>
+      <% } %>
+      <div class="input-group">
+        <label>Upload New Image</label>
+        <input class="input-field" type="file" name="listing[image]" accept="image/*">
+      </div>
+      <div class="form-row2">
+        <div class="input-group">
+          <label>Price Per Day (₹)</label>
+          <input class="input-field" name="listing[price]" value="<%= listing.price %>" required>
         </div>
+        <div class="input-group">
+          <label>Rate Per Km (₹)</label>
+          <input class="input-field" name="listing[ratePerKm]" value="<%= listing.ratePerKm || '' %>">
+        </div>
+      </div>
+      <div class="input-group">
+        <label>Car Type</label>
+        <select class="input-field" name="listing[carType]">
+          <option value="other" <%= listing.carType === 'other' ? 'selected' : '' %>>Other</option>
+          <option value="electric" <%= listing.carType === 'electric' ? 'selected' : '' %>>Electric</option>
+          <option value="petrol" <%= listing.carType === 'petrol' ? 'selected' : '' %>>Petrol</option>
+          <option value="diesel" <%= listing.carType === 'diesel' ? 'selected' : '' %>>Diesel</option>
+          <option value="hybrid" <%= listing.carType === 'hybrid' ? 'selected' : '' %>>Hybrid</option>
+        </select>
+      </div>
+      <div class="form-row2">
+        <div class="input-group">
+          <label>Seating Capacity</label>
+          <select class="input-field" name="listing[seats]">
+            <option value="4" <%= Number(listing.seats) === 4 ? 'selected' : '' %>>4 Seater</option>
+            <option value="6" <%= Number(listing.seats) === 6 ? 'selected' : '' %>>6 Seater</option>
+            <option value="10" <%= Number(listing.seats) === 10 ? 'selected' : '' %>>10 Seater</option>
+          </select>
+        </div>
+        <div class="input-group">
+          <label>Country</label>
+          <input class="input-field" name="listing[country]" value="<%= listing.country || 'India' %>" required>
+        </div>
+      </div>
+      <div class="input-group">
+        <label>Location</label>
+        <input class="input-field" name="listing[location]" value="<%= listing.location %>" required>
+      </div>
+      <div class="input-group">
+        <label>WhatsApp Number</label>
+        <input class="input-field" name="listing[whatsappNumber]" value="<%= listing.whatsappNumber || '' %>" required>
+      </div>
+      <button type="submit" class="btn btn-primary btn-lg btn-block">Update Vehicle</button>
     </form>
-    <br>
+  </div>
+</div>
 
-   
-</body>
-
-
+<style>
+.form-page { max-width: 640px; margin: 0 auto; padding: 32px 20px; }
+.form-card { background: var(--card); border: 1px solid var(--border-light); border-radius: var(--radius-xl); padding: 36px; box-shadow: var(--shadow-md); }
+.form-card h2 { font-size: 24px; font-weight: 800; margin-bottom: 24px; }
+.back-link { display: inline-flex; align-items: center; gap: 6px; font-size: 14px; color: var(--text-secondary); text-decoration: none; margin-bottom: 16px; }
+.back-link:hover { color: var(--text); }
+.form-row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+@media (max-width: 640px) { .form-row2 { grid-template-columns: 1fr; } }
+</style>

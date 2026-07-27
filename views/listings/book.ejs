@@ -1,268 +1,198 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
-<title>Book - RideLocal</title>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"/>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-<style>
-:root{--primary:#2563eb;--primary-dark:#1d4ed8;--primary-light:#dbeafe;--bg:#f0f4f9;--card:#fff;--text:#0f172a;--text2:#475569;--text3:#94a3b8;--border:#e2e8f0;--success:#10b981;--warning:#f59e0b;--radius:16px;}
-*{margin:0;padding:0;box-sizing:border-box;}
-body{font-family:'Inter',-apple-system,sans-serif;background:var(--bg);color:var(--text);-webkit-font-smoothing:antialiased;}
-.app{max-width:480px;margin:0 auto;min-height:100vh;background:var(--card);}
+<% layout("/listings/layouts/boilerplate") %>
+<%
+  const vImg = listing.images?.[0]?.url || listing.image?.url || 'https://images.pexels.com/photos/11129937/pexels-photo-11129937.jpeg';
+  const fare = searchParams?.fare || Math.ceil((listing.baseFare || listing.price || 0) + ((searchParams?.distance || 0) * (listing.pricePerKm || listing.ratePerKm || 0)));
+%>
+<div class="booking-page fade-in">
+  <div class="booking-layout">
+    <!-- Left side: Form -->
+    <div class="booking-main">
+      <a href="/cars/<%= listing._id %>" class="back-link"><i class="fas fa-arrow-left"></i> Back</a>
+      <h1>Book Your Ride</h1>
 
-/* Header */
-.top-bar{display:flex;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--card);z-index:10;}
-.top-bar .back{width:36px;height:36px;border:none;border-radius:50%;background:var(--bg);display:flex;align-items:center;justify-content:center;color:var(--text2);font-size:14px;cursor:pointer;transition:all .15s;text-decoration:none;}
-.top-bar .back:active{transform:scale(0.9);}
-.top-bar h1{font-size:17px;font-weight:700;flex:1;}
-
-/* Content */
-.content{padding:16px;}
-
-/* Vehicle Hero Card */
-.v-hero{background:linear-gradient(135deg,#f8fafc,#fff);border-radius:20px;padding:16px;display:flex;gap:14px;margin-bottom:16px;border:1px solid var(--border);}
-.v-hero img{width:100px;height:76px;border-radius:12px;object-fit:cover;background:var(--bg);flex-shrink:0;}
-.v-hero-body{flex:1;min-width:0;}
-.v-hero-body h2{font-size:16px;font-weight:700;}
-.v-hero-body .meta{font-size:12px;color:var(--text3);margin:2px 0 4px;display:flex;gap:8px;flex-wrap:wrap;}
-.v-hero-body .meta span{display:flex;align-items:center;gap:3px;}
-.v-hero-body .price-badge{display:inline-block;background:var(--primary-light);color:var(--primary);padding:4px 12px;border-radius:20px;font-size:13px;font-weight:700;}
-
-/* Section Card */
-.section-card{background:var(--card);border-radius:var(--radius);padding:16px;margin-bottom:12px;border:1px solid var(--border);}
-.section-card h3{font-size:13px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:0.3px;margin-bottom:12px;display:flex;align-items:center;gap:6px;}
-.section-card h3 i{color:var(--primary);}
-
-.info-row{display:flex;align-items:flex-start;gap:10px;padding:8px 0;}
-.info-row:not(:last-child){border-bottom:1px solid var(--border);}
-.info-row .i-icon{width:32px;height:32px;border-radius:10px;background:var(--bg);display:flex;align-items:center;justify-content:center;color:var(--text2);font-size:13px;flex-shrink:0;}
-.info-row .i-icon.green{background:#d1fae5;color:#059669;}
-.info-row .i-icon.red{background:#fee2e2;color:#dc2626;}
-.info-row .i-label{font-size:11px;color:var(--text3);}
-.info-row .i-value{font-size:13px;font-weight:600;color:var(--text);}
-
-/* Fare Breakdown */
-.fare-card{background:var(--card);border-radius:var(--radius);padding:16px;margin-bottom:16px;border:1px solid var(--border);}
-.fare-card h3{font-size:13px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:0.3px;margin-bottom:10px;display:flex;align-items:center;gap:6px;}
-.fare-card h3 i{color:var(--primary);}
-.fare-row{display:flex;justify-content:space-between;padding:5px 0;font-size:13px;color:var(--text2);}
-.fare-row .val{font-weight:600;color:var(--text);}
-.fare-divider{height:1px;background:var(--border);margin:8px 0;}
-.fare-row.total{font-size:16px;font-weight:700;color:var(--text);}
-.fare-row.total .val{color:var(--primary);font-size:18px;}
-
-/* Form */
-.form-group{margin-bottom:14px;}
-.form-group label{display:block;font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;}
-.input-wrap{display:flex;align-items:center;background:var(--bg);border:2px solid transparent;border-radius:12px;padding:0 14px;transition:all .2s;min-height:48px;}
-.input-wrap:focus-within{border-color:var(--primary);background:var(--card);box-shadow:0 0 0 4px rgba(37,99,235,0.08);}
-.input-wrap .icon{width:22px;text-align:center;flex-shrink:0;font-size:13px;color:var(--text3);}
-.input-wrap input,.input-wrap select,.input-wrap textarea{flex:1;border:none;background:transparent;padding:12px 8px;font-size:14px;outline:none;font-family:inherit;color:var(--text);}
-.input-wrap input::placeholder,.input-wrap textarea::placeholder{color:var(--text3);}
-.input-wrap textarea{resize:vertical;min-height:60px;}
-.form-row2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
-
-.btn-primary{width:100%;background:linear-gradient(135deg,var(--primary),#7c3aed);color:#fff;border:none;border-radius:14px;padding:16px;font-size:16px;font-weight:700;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:8px;}
-.btn-primary:active{transform:scale(0.97);opacity:0.9;}
-.btn-primary:disabled{opacity:0.5;cursor:not-allowed;transform:none;}
-.btn-primary i{font-size:15px;}
-
-/* Status Badge */
-.status-badge{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:20px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.3px;}
-.status-pending{background:#fef3c7;color:#92400e;}
-.status-confirmed{background:#d1fae5;color:#065f46;}
-
-/* Mobile */
-@media(max-width:400px){
-  .form-row2{grid-template-columns:1fr;}
-  .v-hero{flex-direction:column;}
-  .v-hero img{width:100%;height:160px;}
-}
-
-/* Animation */
-@keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
-.content>*{animation:fadeUp .3s ease-out both;}
-.content>*:nth-child(2){animation-delay:0.05s}
-.content>*:nth-child(3){animation-delay:0.1s}
-.content>*:nth-child(4){animation-delay:0.15s}
-</style>
-</head>
-<body>
-<div class="app">
-  <div class="top-bar">
-    <a class="back" href="/customers/home"><i class="fas fa-arrow-left"></i></a>
-    <h1>Book Your Ride</h1>
-  </div>
-
-  <div class="content">
-    <!-- Vehicle Hero -->
-    <div class="v-hero">
-      <img src="<%= listing.images?.[0]?.url || listing.image?.url || 'https://images.pexels.com/photos/11129937/pexels-photo-11129937.jpeg' %>"
-           onerror="this.src='https://images.pexels.com/photos/11129937/pexels-photo-11129937.jpeg'">
-      <div class="v-hero-body">
-        <h2><%= listing.vehicleName || listing.title %></h2>
-        <div class="meta">
-          <span><i class="fas fa-car"></i> <%= listing.vehicleType || listing.carType || 'Sedan' %></span>
-          <span><i class="fas fa-users"></i> <%= listing.seats || 4 %> seats</span>
-          <span><i class="fas fa-snowflake"></i> <%= listing.acAvailable ? 'AC' : 'Non-AC' %></span>
-          <span><i class="fas fa-gear"></i> <%= listing.transmission === 'automatic' ? 'Auto' : 'Manual' %></span>
-        </div>
-        <% if(searchParams?.fare) { %>
-          <div class="price-badge">₹<%= searchParams.fare.toLocaleString('en-IN') %> est.</div>
-        <% } %>
-      </div>
-    </div>
-
-    <!-- Trip Details -->
-    <div class="section-card">
-      <h3><i class="fas fa-route"></i> Trip Details</h3>
-      <div class="info-row">
-        <div class="i-icon green"><i class="fas fa-circle-dot"></i></div>
-        <div><div class="i-label">Pickup</div><div class="i-value"><%= searchParams?.pickup || '—' %></div></div>
-      </div>
-      <div class="info-row">
-        <div class="i-icon red"><i class="fas fa-location-dot"></i></div>
-        <div><div class="i-label">Destination</div><div class="i-value"><%= searchParams?.destination || '—' %></div></div>
-      </div>
-      <% if(searchParams?.distance) { %>
-      <div class="info-row">
-        <div class="i-icon"><i class="fas fa-road"></i></div>
-        <div><div class="i-label">Distance</div><div class="i-value"><%= searchParams.distance %> km</div></div>
-      </div>
-      <% } %>
-      <div class="info-row">
-        <div class="i-icon"><i class="fas fa-calendar"></i></div>
-        <div><div class="i-label">Date &amp; Time</div><div class="i-value"><%= searchParams?.date || 'Today' %> · <%= searchParams?.time || 'Now' %></div></div>
-      </div>
-      <div class="info-row">
-        <div class="i-icon"><i class="fas fa-users"></i></div>
-        <div><div class="i-label">Passengers</div><div class="i-value"><%= searchParams?.passengers || 1 %> person(s)</div></div>
-      </div>
-    </div>
-
-    <!-- Fare Breakdown -->
-    <div class="fare-card">
-      <h3><i class="fas fa-receipt"></i> Fare Estimate</h3>
-      <div class="fare-row">
-        <span>Base Fare</span>
-        <span class="val">₹<%= (listing.baseFare || listing.price || 0).toLocaleString('en-IN') %></span>
-      </div>
-      <div class="fare-row">
-        <span>Distance Charge (<%= searchParams?.distance || 0 %> km × ₹<%= listing.pricePerKm || listing.ratePerKm || 0 %>/km)</span>
-        <span class="val">₹<%= ((searchParams?.distance || 0) * (listing.pricePerKm || listing.ratePerKm || 0)).toLocaleString('en-IN') %></span>
-      </div>
-      <div class="fare-divider"></div>
-      <div class="fare-row total">
-        <span>Estimated Total</span>
-        <span class="val" id="totalFare">₹<%= (searchParams?.fare || Math.ceil((listing.baseFare || listing.price || 0) + ((searchParams?.distance || 0) * (listing.pricePerKm || listing.ratePerKm || 0)))).toLocaleString('en-IN') %></span>
-      </div>
-    </div>
-
-    <!-- Booking Form -->
-    <form id="bookingForm" action="/book/<%= listing._id %>/request" method="POST">
-      <div class="section-card">
-        <h3><i class="fas fa-pen"></i> Confirm Booking</h3>
-
-        <div class="form-group">
-          <label>Pickup Location</label>
-          <div class="input-wrap">
-            <span class="icon green"><i class="fas fa-circle-dot"></i></span>
-            <input type="text" name="booking[pickupLocation]" value="<%= searchParams?.pickup || '' %>" placeholder="Pickup location" required>
-          </div>
-        </div>
-
-        <div class="form-group">
-          <label>Destination</label>
-          <div class="input-wrap">
-            <span class="icon red"><i class="fas fa-location-dot"></i></span>
-            <input type="text" name="booking[destination]" value="<%= searchParams?.destination || '' %>" placeholder="Destination" required>
-          </div>
-        </div>
-
-        <div class="form-row2">
-          <div class="form-group">
-            <label>Travel Date</label>
-            <div class="input-wrap">
-              <span class="icon"><i class="fas fa-calendar"></i></span>
-              <input type="date" name="booking[pickupDate]" value="<%= searchParams?.date || '' %>" required>
+      <form id="bookingForm" action="/book/<%= listing._id %>/request" method="POST">
+        <div class="card" style="margin-bottom:16px">
+          <div class="card-body">
+            <h3 class="card-title"><i class="fas fa-route" style="color:var(--primary)"></i> Trip Details</h3>
+            <div class="form-row2">
+              <div class="input-group">
+                <label><i class="fas fa-circle-dot" style="color:#10b981"></i> Pickup Location</label>
+                <input class="input-field" type="text" id="pickupLocation" name="booking[pickupLocation]" value="<%= searchParams?.pickup || '' %>" placeholder="Pickup location" required>
+              </div>
+              <div class="input-group">
+                <label><i class="fas fa-location-dot" style="color:#ef4444"></i> Destination</label>
+                <input class="input-field" type="text" id="destination" name="booking[destination]" value="<%= searchParams?.destination || '' %>" placeholder="Destination" required>
+              </div>
             </div>
-          </div>
-          <div class="form-group">
-            <label>Pickup Time</label>
-            <div class="input-wrap">
-              <span class="icon"><i class="fas fa-clock"></i></span>
-              <input type="time" name="booking[pickupTime]" value="<%= searchParams?.time || '' %>" required>
+            <div class="form-row2">
+              <div class="input-group">
+                <label><i class="fas fa-calendar"></i> Travel Date</label>
+                <input class="input-field" type="date" name="booking[pickupDate]" value="<%= searchParams?.date || '' %>" required>
+              </div>
+              <div class="input-group">
+                <label><i class="fas fa-clock"></i> Pickup Time</label>
+                <input class="input-field" type="time" name="booking[pickupTime]" value="<%= searchParams?.time || '' %>" required>
+              </div>
+            </div>
+            <div class="form-row2">
+              <div class="input-group">
+                <label><i class="fas fa-users"></i> Passengers</label>
+                <input class="input-field" type="number" name="booking[passengers]" min="1" max="<%= listing.seats || 10 %>" value="<%= searchParams?.passengers || 1 %>" required>
+              </div>
+              <div class="input-group">
+                <label><i class="fas fa-road"></i> Distance (km)</label>
+                <input class="input-field" type="number" name="booking[distanceKm]" value="<%= searchParams?.distance || 0 %>" readonly>
+              </div>
+            </div>
+            <div class="input-group">
+              <label><i class="fas fa-pen"></i> Special Instructions</label>
+              <textarea class="input-field" name="booking[specialInstructions]" rows="3" placeholder="Any special requests..."></textarea>
             </div>
           </div>
         </div>
 
-        <div class="form-group">
-          <label>Passengers</label>
-          <div class="input-wrap">
-            <span class="icon"><i class="fas fa-users"></i></span>
-            <input type="number" name="booking[passengers]" min="1" max="<%= listing.seats || 10 %>" value="<%= searchParams?.passengers || 1 %>" required>
-          </div>
-        </div>
+        <input type="hidden" name="booking[tripType]" value="one-way">
+        <input type="hidden" name="booking[estimatedDuration]" value="">
+        <input type="hidden" name="booking[estimatedFare]" value="<%= fare %>">
+        <input type="hidden" name="booking[paymentMethod]" value="cash">
+        <% if(searchParams?.pickupLat) { %><input type="hidden" name="booking[pickupLat]" value="<%= searchParams.pickupLat %>"><% } %>
+        <% if(searchParams?.pickupLng) { %><input type="hidden" name="booking[pickupLng]" value="<%= searchParams.pickupLng %>"><% } %>
+        <% if(searchParams?.destLat) { %><input type="hidden" name="booking[destLat]" value="<%= searchParams.destLat %>"><% } %>
+        <% if(searchParams?.destLng) { %><input type="hidden" name="booking[destLng]" value="<%= searchParams.destLng %>"><% } %>
 
-        <div class="form-group">
-          <label>Special Note (Optional)</label>
-          <div class="input-wrap">
-            <span class="icon"><i class="fas fa-pen"></i></span>
-            <textarea name="booking[specialInstructions]" placeholder="Any special requests for the driver..."></textarea>
+        <button type="submit" class="btn btn-primary btn-lg btn-block" id="submitBtn">
+          <i class="fas fa-paper-plane"></i> Send Booking Request
+        </button>
+      </form>
+    </div>
+
+    <!-- Right side: Summary -->
+    <div class="booking-sidebar">
+      <div class="card">
+        <div class="card-body">
+          <img src="<%= vImg %>" alt="<%= listing.vehicleName || listing.title %>" class="booking-vehicle-img" onerror="this.src='https://images.pexels.com/photos/11129937/pexels-photo-11129937.jpeg'">
+          <h3><%= listing.vehicleName || listing.title %></h3>
+          <div class="booking-meta">
+            <span><i class="fas fa-car"></i> <%= listing.vehicleType || listing.carType || 'Sedan' %></span>
+            <span><i class="fas fa-users"></i> <%= listing.seats || 4 %> seats</span>
+            <span><i class="fas fa-snowflake"></i> <%= listing.acAvailable ? 'AC' : 'Non-AC' %></span>
+            <span><i class="fas fa-gear"></i> <%= listing.transmission === 'automatic' ? 'Auto' : 'Manual' %></span>
+          </div>
+
+          <div class="fare-summary">
+            <h4>Fare Estimate</h4>
+            <div class="fare-row"><span>Base Fare</span><span>₹<%= (listing.baseFare || listing.price || 0).toLocaleString('en-IN') %></span></div>
+            <div class="fare-row"><span>Distance (<%= searchParams?.distance || 0 %> km × ₹<%= listing.pricePerKm || listing.ratePerKm || 0 %>/km)</span><span>₹<%= ((searchParams?.distance || 0) * (listing.pricePerKm || listing.ratePerKm || 0)).toLocaleString('en-IN') %></span></div>
+            <div class="fare-divider"></div>
+            <div class="fare-row total"><span>Estimated Total</span><span>₹<%= fare.toLocaleString('en-IN') %></span></div>
+          </div>
+
+          <div class="booking-note">
+            <i class="fas fa-clock"></i> Booking stays pending until the owner confirms
           </div>
         </div>
       </div>
-
-      <input type="hidden" name="booking[tripType]" value="one-way">
-      <input type="hidden" name="booking[distanceKm]" value="<%= searchParams?.distance || 0 %>">
-      <input type="hidden" name="booking[estimatedDuration]" value="">
-      <input type="hidden" name="booking[estimatedFare]" value="<%= searchParams?.fare || Math.ceil((listing.baseFare || listing.price || 0) + ((searchParams?.distance || 0) * (listing.pricePerKm || listing.ratePerKm || 0))) %>">
-      <input type="hidden" name="booking[paymentMethod]" value="cash">
-      <% if(searchParams?.pickupLat) { %>
-      <input type="hidden" name="booking[pickupLat]" value="<%= searchParams.pickupLat %>">
-      <input type="hidden" name="booking[pickupLng]" value="<%= searchParams.pickupLng %>">
-      <% } %>
-      <% if(searchParams?.destLat) { %>
-      <input type="hidden" name="booking[destLat]" value="<%= searchParams.destLat %>">
-      <input type="hidden" name="booking[destLng]" value="<%= searchParams.destLng %>">
-      <% } %>
-
-      <button type="submit" class="btn-primary" id="submitBtn">
-        <i class="fas fa-paper-plane"></i> Send Booking Request
-      </button>
-
-      <div style="text-align:center;margin-top:10px;padding-bottom:20px;">
-        <span class="status-badge status-pending"><i class="fas fa-clock"></i> Booking stays PENDING until owner confirms</span>
-      </div>
-    </form>
+    </div>
   </div>
 </div>
 
 <script>
-// Set default date/time
 (function() {
+  const inputs = document.querySelectorAll('input[type="date"]');
   const d = new Date();
-  document.querySelectorAll('input[type="date"]').forEach(el => {
-    if (!el.value) {
-      el.value = d.toISOString().split('T')[0];
-      el.min = d.toISOString().split('T')[0];
-    }
-  });
+  inputs.forEach(el => { if (!el.value) { el.value = d.toISOString().split('T')[0]; el.min = d.toISOString().split('T')[0]; } });
   document.querySelectorAll('input[type="time"]').forEach(el => {
-    if (!el.value) {
-      el.value = String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()+30).padStart(2,'0');
-    }
+    if (!el.value) el.value = String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()+30).padStart(2,'0');
+  });
+  document.getElementById('bookingForm')?.addEventListener('submit', function(e) {
+    const btn = document.getElementById('submitBtn');
+    btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending...';
   });
 })();
 
-// Form submit
-document.getElementById('bookingForm')?.addEventListener('submit', function(e) {
-  const btn = document.getElementById('submitBtn');
-  btn.disabled = true;
-  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending Request...';
+// Autocomplete for location fields
+function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function setupAutocomplete(inputId) {
+  const input = document.getElementById(inputId);
+  if (!input) return;
+  let container = document.createElement('div');
+  container.className = 'ac-wrap';
+  input.parentNode.style.position = 'relative';
+  input.parentNode.appendChild(container);
+  let timer, curFocus = -1;
+  input.addEventListener('input', () => {
+    clearTimeout(timer);
+    const v = input.value.trim();
+    if (v.length < 2) { container.innerHTML = ''; container.classList.remove('open'); return; }
+    curFocus = -1;
+    timer = setTimeout(async () => {
+      try {
+        const r = await fetch('/cars/autocomplete?q=' + encodeURIComponent(v));
+        const d = await r.json();
+        if (!d.length) { container.innerHTML = ''; container.classList.remove('open'); return; }
+        container.innerHTML = d.map((item, i) =>
+          '<div class="ac-item" data-primary="' + esc(item.primary) + '" data-lat="' + item.lat + '" data-lon="' + item.lon + '">' +
+            '<i class="fas fa-map-marker-alt"></i>' +
+            '<div><div class="ac-primary">' + esc(item.primary) + '</div><div class="ac-secondary">' + esc(item.secondary) + '</div></div>' +
+          '</div>'
+        ).join('');
+        container.classList.add('open');
+        container.querySelectorAll('.ac-item').forEach(el => {
+          el.addEventListener('click', () => {
+            input.value = el.dataset.primary;
+            input.dataset.lat = el.dataset.lat;
+            input.dataset.lon = el.dataset.lon;
+            container.innerHTML = '';
+            container.classList.remove('open');
+          });
+        });
+      } catch(e) { container.classList.remove('open'); }
+    }, 300);
+  });
+  input.addEventListener('keydown', (e) => {
+    const items = container.querySelectorAll('.ac-item');
+    if (!items.length) return;
+    if (e.key === 'ArrowDown') { e.preventDefault(); curFocus = Math.min(curFocus + 1, items.length - 1); items.forEach(el => el.classList.remove('ac-focus')); items[curFocus].classList.add('ac-focus'); items[curFocus].scrollIntoView({ block: 'nearest' }); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); curFocus = Math.max(curFocus - 1, 0); items.forEach(el => el.classList.remove('ac-focus')); items[curFocus].classList.add('ac-focus'); items[curFocus].scrollIntoView({ block: 'nearest' }); }
+    else if (e.key === 'Enter' && curFocus >= 0) { e.preventDefault(); items[curFocus].click(); }
+    else if (e.key === 'Escape') { container.innerHTML = ''; container.classList.remove('open'); }
+  });
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('.ac-wrap') && e.target !== input) { container.innerHTML = ''; container.classList.remove('open'); }
+  });
+}
+document.addEventListener('DOMContentLoaded', () => {
+  setupAutocomplete('pickupLocation');
+  setupAutocomplete('destination');
 });
 </script>
-</body>
-</html>
+
+<style>
+.booking-page { max-width: var(--max-width); margin: 0 auto; padding: 32px 24px; }
+.booking-layout { display: grid; grid-template-columns: 1fr 360px; gap: 32px; align-items: start; }
+.booking-main h1 { font-size: 28px; font-weight: 800; margin: 12px 0 24px; }
+.back-link { display: inline-flex; align-items: center; gap: 6px; font-size: 14px; color: var(--text-secondary); text-decoration: none; }
+.back-link:hover { color: var(--text); }
+.form-row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.card-title { font-size: 15px; font-weight: 700; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+.booking-vehicle-img { width: 100%; height: 180px; object-fit: cover; border-radius: var(--radius-lg); margin-bottom: 14px; }
+.booking-sidebar h3 { font-size: 18px; font-weight: 700; }
+.booking-meta { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0 16px; font-size: 12px; color: var(--text-secondary); }
+.booking-meta span { display: flex; align-items: center; gap: 4px; }
+.fare-summary { border-top: 1px solid var(--border-light); padding-top: 14px; margin-top: 4px; }
+.fare-summary h4 { font-size: 13px; font-weight: 600; color: var(--text-secondary); margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.3px; }
+.fare-row { display: flex; justify-content: space-between; font-size: 14px; padding: 4px 0; color: var(--text-secondary); }
+.fare-row.total { font-size: 17px; font-weight: 700; color: var(--text); }
+.fare-row.total span:last-child { color: var(--primary); }
+.fare-divider { height: 1px; background: var(--border-light); margin: 6px 0; }
+.booking-note { margin-top: 16px; padding: 12px; background: var(--warning-bg, #fef3c7); border-radius: var(--radius-md); font-size: 13px; color: #92400e; display: flex; align-items: center; gap: 8px; }
+.ac-wrap { display: none; position: absolute; top: 100%; left: 0; right: 0; z-index: 100; background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; box-shadow: 0 8px 30px rgba(0,0,0,0.12); max-height: 280px; overflow-y: auto; margin-top: 4px; }
+.ac-wrap.open { display: block; }
+.ac-item { display: flex; align-items: center; gap: 10px; padding: 10px 14px; cursor: pointer; transition: background 0.1s; }
+.ac-item:hover, .ac-item.ac-focus { background: #f1f5f9; }
+.ac-item i { color: #2563eb; font-size: 14px; width: 16px; text-align: center; flex-shrink: 0; }
+.ac-primary { font-size: 14px; font-weight: 500; color: #0f172a; }
+.ac-secondary { font-size: 12px; color: #94a3b8; }
+.ac-item:not(:last-child) { border-bottom: 1px solid #f1f5f9; }
+@media (max-width: 800px) { .booking-layout { grid-template-columns: 1fr; } }
+</style>

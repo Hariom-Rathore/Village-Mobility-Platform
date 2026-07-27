@@ -1,17 +1,12 @@
 const express = require('express');
 const router = express.Router();
 const notificationController = require('../controllers/notification');
-const { isLoggedIn } = require('../utils/middleware');
+const { isApiLoggedIn } = require('../utils/middleware');
 
-// Get notifications
-router.get('/', isLoggedIn, notificationController.getUserNotifications);
-router.get('/unread-count', isLoggedIn, notificationController.getUnreadCount);
-
-// Mark notifications
-router.put('/:notificationId/read', isLoggedIn, notificationController.markAsRead);
-router.put('/mark-all-read', isLoggedIn, notificationController.markAllAsRead);
-
-// Delete notification
-router.delete('/:notificationId', isLoggedIn, notificationController.deleteNotification);
+router.get('/', isApiLoggedIn, notificationController.getUserNotifications);
+router.get('/unread-count', isApiLoggedIn, notificationController.getUnreadCount);
+router.put('/:notificationId/read', isApiLoggedIn, notificationController.markAsRead);
+router.put('/mark-all-read', isApiLoggedIn, notificationController.markAllAsRead);
+router.delete('/:notificationId', isApiLoggedIn, notificationController.deleteNotification);
 
 module.exports = router;

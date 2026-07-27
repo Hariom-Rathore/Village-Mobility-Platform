@@ -1,17 +1,9 @@
 const Notification = require('../models/notification');
 const Listing = require('../models/listing');
 const Booking = require('../models/booking');
+const { emitToUser } = require('../utils/socket');
 
-/**
- * Create a notification for a user
- * @param {string} recipientId - User ID to receive notification
- * @param {string} type - Notification type
- * @param {string} title - Notification title
- * @param {string} message - Notification message
- * @param {string} relatedBooking - Related booking ID (optional)
- * @param {string} relatedVehicle - Related vehicle ID (optional)
- */
-async function createNotification(recipientId, type, title, message, relatedBooking = null, relatedVehicle = null) {
+async function createNotification(recipientId, type, title, message, relatedBooking = null, relatedVehicle = null, data = null) {
   try {
     const notification = new Notification({
       recipient: recipientId,
@@ -20,6 +12,7 @@ async function createNotification(recipientId, type, title, message, relatedBook
       message,
       relatedBooking,
       relatedVehicle,
+      data,
       isRead: false
     });
     await notification.save();
@@ -30,226 +23,355 @@ async function createNotification(recipientId, type, title, message, relatedBook
   }
 }
 
-/**
- * Notify booking confirmation
- * @param {string} bookingId - Booking ID
- */
-async function notifyBookingConfirmed(bookingId) {
+async function notifyNewBookingRequest(bookingId, io) {
   try {
-    const booking = await Booking.findById(bookingId).populate('vehicleId').populate('renterId');
+    const booking = await Booking.findById(bookingId)
+      .populate('vehicleId')
+      .populate('customerId')
+      .populate('ownerId');
     if (!booking) return;
 
     const vehicle = booking.vehicleId;
-    const renter = booking.renterId;
+    const customer = booking.customerId;
+    const ownerId = booking.ownerId;
 
-    // Notify owner
-    await createNotification(
-      booking.ownerId,
-      'BOOKING_CONFIRMED',
-      'New Booking Confirmed',
-      `Your vehicle "${vehicle.title}" has been booked by ${renter.username || renter.email}.`,
+    const title = 'New Booking Request';
+    const message = `${customer?.username || 'A customer'} wants to book ${vehicle?.title || 'your vehicle'}. Pickup: ${booking.pickupLocation || booking.pickup || 'N/A'}, Destination: ${booking.destination || 'N/A'}. Fare: ₹${booking.estimatedFare || 0}`;
+
+    const notification = await createNotification(
+      ownerId,
+      'NEW_BOOKING_REQUEST',
+      title,
+      message,
       bookingId,
-      vehicle._id
+      booking.vehicleId,
+      {
+        customerName: customer?.username,
+        customerRating: customer?.averageRating,
+        vehicleName: vehicle?.title,
+        pickup: booking.pickupLocation || booking.pickup,
+        destination: booking.destination,
+        pickupDate: booking.pickupDate,
+        pickupTime: booking.pickupTime,
+        passengers: booking.passengers,
+        estimatedFare: booking.estimatedFare,
+        distanceKm: booking.distanceKm,
+        estimatedDuration: booking.estimatedDuration,
+        specialNote: booking.specialNote || booking.specialInstructions
+      }
     );
 
-    // Notify renter
-    await createNotification(
-      renter._id,
-      'BOOKING_CONFIRMED',
-      'Booking Confirmed',
-      `Your booking for "${vehicle.title}" has been confirmed.`,
-      bookingId,
-      vehicle._id
-    );
+    if (io) {
+      emitToUser(io, ownerId, 'notification:new', {
+        _id: notification._id,
+        type: 'NEW_BOOKING_REQUEST',
+        title,
+        message,
+        relatedBooking: bookingId,
+        relatedVehicle: booking.vehicleId,
+        data: notification.data,
+        createdAt: notification.createdAt,
+        isRead: false
+      });
+    }
   } catch (error) {
-    console.error('Error notifying booking confirmed:', error);
+    console.error('Error in notifyNewBookingRequest:', error);
   }
 }
 
-/**
- * Notify booking cancellation
- * @param {string} bookingId - Booking ID
- */
-async function notifyBookingCancelled(bookingId) {
+async function notifyBookingAccepted(bookingId, io) {
   try {
-    const booking = await Booking.findById(bookingId).populate('vehicleId').populate('renterId');
+    const booking = await Booking.findById(bookingId)
+      .populate('vehicleId')
+      .populate('ownerId');
     if (!booking) return;
 
     const vehicle = booking.vehicleId;
-    const renter = booking.renterId;
+    const owner = booking.ownerId;
 
-    // Notify owner
-    await createNotification(
+    const message = `Your booking for ${vehicle?.title || 'vehicle'} has been accepted by ${owner?.username || 'the owner'}.`;
+    const notification = await createNotification(
+      booking.customerId,
+      'BOOKING_ACCEPTED',
+      'Booking Accepted',
+      message,
+      bookingId,
+      booking.vehicleId
+    );
+
+    if (io) {
+      emitToUser(io, booking.customerId, 'booking:accepted', {
+        bookingId,
+        status: 'ACCEPTED',
+        notification
+      });
+      emitToUser(io, booking.customerId, 'notification:new', {
+        _id: notification._id,
+        type: 'BOOKING_ACCEPTED',
+        title: 'Booking Accepted',
+        message,
+        relatedBooking: bookingId,
+        relatedVehicle: booking.vehicleId,
+        createdAt: notification.createdAt,
+        isRead: false
+      });
+    }
+  } catch (error) {
+    console.error('Error in notifyBookingAccepted:', error);
+  }
+}
+
+async function notifyBookingRejected(bookingId, reason, io) {
+  try {
+    const booking = await Booking.findById(bookingId)
+      .populate('vehicleId');
+    if (!booking) return;
+
+    const vehicle = booking.vehicleId;
+    const message = reason
+      ? `Your booking request for ${vehicle?.title || 'vehicle'} was declined. Reason: ${reason}`
+      : `Your booking request for ${vehicle?.title || 'vehicle'} was declined. Please choose another nearby vehicle.`;
+
+    const notification = await createNotification(
+      booking.customerId,
+      'BOOKING_REJECTED',
+      'Booking Declined',
+      message,
+      bookingId,
+      booking.vehicleId,
+      { reason }
+    );
+
+    if (io) {
+      emitToUser(io, booking.customerId, 'booking:rejected', {
+        bookingId,
+        status: 'REJECTED',
+        reason,
+        notification
+      });
+      emitToUser(io, booking.customerId, 'notification:new', {
+        _id: notification._id,
+        type: 'BOOKING_REJECTED',
+        title: 'Booking Declined',
+        message,
+        relatedBooking: bookingId,
+        relatedVehicle: booking.vehicleId,
+        createdAt: notification.createdAt,
+        isRead: false
+      });
+    }
+  } catch (error) {
+    console.error('Error in notifyBookingRejected:', error);
+  }
+}
+
+async function notifyCounterOfferSent(bookingId, io) {
+  try {
+    const booking = await Booking.findById(bookingId)
+      .populate('vehicleId')
+      .populate('ownerId');
+    if (!booking) return;
+
+    const vehicle = booking.vehicleId;
+    const owner = booking.ownerId;
+    const counter = booking.counterOffer || {};
+
+    const message = `${owner?.username || 'Owner'} sent a counter offer for ${vehicle?.title || 'your booking'}. Original: ₹${counter.originalFare || booking.estimatedFare || 0}, New: ₹${counter.finalFare || 0}. ${counter.message ? 'Message: ' + counter.message : ''}`;
+
+    const notification = await createNotification(
+      booking.customerId,
+      'COUNTER_OFFER_SENT',
+      'Counter Offer Received',
+      message,
+      bookingId,
+      booking.vehicleId,
+      {
+        originalFare: counter.originalFare || booking.estimatedFare,
+        newFare: counter.finalFare,
+        ownerMessage: counter.message
+      }
+    );
+
+    if (io) {
+      emitToUser(io, booking.customerId, 'booking:counterOffer', {
+        bookingId,
+        status: 'COUNTER_OFFER_SENT',
+        counterOffer: counter,
+        notification
+      });
+      emitToUser(io, booking.customerId, 'notification:new', {
+        _id: notification._id,
+        type: 'COUNTER_OFFER_SENT',
+        title: 'Counter Offer Received',
+        message,
+        relatedBooking: bookingId,
+        relatedVehicle: booking.vehicleId,
+        data: { originalFare: counter.originalFare, newFare: counter.finalFare, ownerMessage: counter.message },
+        createdAt: notification.createdAt,
+        isRead: false
+      });
+    }
+  } catch (error) {
+    console.error('Error in notifyCounterOfferSent:', error);
+  }
+}
+
+async function notifyCounterOfferAccepted(bookingId, io) {
+  try {
+    const booking = await Booking.findById(bookingId)
+      .populate('vehicleId')
+      .populate('customerId');
+    if (!booking) return;
+
+    const vehicle = booking.vehicleId;
+    const customer = booking.customerId;
+    const counter = booking.counterOffer || {};
+
+    const message = `${customer?.username || 'Customer'} accepted your counter offer of ₹${counter.finalFare || booking.estimatedFare || 0}. Booking confirmed!`;
+
+    const notification = await createNotification(
       booking.ownerId,
+      'COUNTER_OFFER_ACCEPTED',
+      'Counter Offer Accepted',
+      message,
+      bookingId,
+      booking.vehicleId,
+      { finalFare: counter.finalFare }
+    );
+
+    if (io) {
+      emitToUser(io, booking.ownerId, 'booking:accepted', {
+        bookingId,
+        status: 'COUNTER_OFFER_ACCEPTED',
+        notification
+      });
+      emitToUser(io, booking.ownerId, 'notification:new', {
+        _id: notification._id,
+        type: 'COUNTER_OFFER_ACCEPTED',
+        title: 'Counter Offer Accepted',
+        message,
+        relatedBooking: bookingId,
+        relatedVehicle: booking.vehicleId,
+        createdAt: notification.createdAt,
+        isRead: false
+      });
+    }
+  } catch (error) {
+    console.error('Error in notifyCounterOfferAccepted:', error);
+  }
+}
+
+async function notifyBookingCancelled(bookingId, cancelledBy, io) {
+  try {
+    const booking = await Booking.findById(bookingId).populate('vehicleId');
+    if (!booking) return;
+
+    const vehicle = booking.vehicleId;
+    const recipientId = cancelledBy === 'customer' ? booking.ownerId : booking.customerId;
+
+    const message = `Booking for ${vehicle?.title || 'vehicle'} has been cancelled.`;
+
+    const notification = await createNotification(
+      recipientId,
       'BOOKING_CANCELLED',
       'Booking Cancelled',
-      `Booking for "${vehicle.title}" has been cancelled.`,
+      message,
       bookingId,
-      vehicle._id
+      booking.vehicleId
     );
 
-    // Notify renter
-    await createNotification(
-      renter._id,
-      'BOOKING_CANCELLED',
-      'Booking Cancelled',
-      `Your booking for "${vehicle.title}" has been cancelled.`,
-      bookingId,
-      vehicle._id
-    );
+    if (io) {
+      emitToUser(io, recipientId, 'booking:cancelled', {
+        bookingId,
+        status: 'CANCELLED',
+        cancelledBy,
+        notification
+      });
+      emitToUser(io, recipientId, 'notification:new', {
+        _id: notification._id,
+        type: 'BOOKING_CANCELLED',
+        title: 'Booking Cancelled',
+        message,
+        relatedBooking: bookingId,
+        relatedVehicle: booking.vehicleId,
+        createdAt: notification.createdAt,
+        isRead: false
+      });
+    }
   } catch (error) {
-    console.error('Error notifying booking cancelled:', error);
+    console.error('Error in notifyBookingCancelled:', error);
   }
 }
 
-/**
- * Notify booking completion
- * @param {string} bookingId - Booking ID
- */
-async function notifyBookingCompleted(bookingId) {
-  try {
-    const booking = await Booking.findById(bookingId).populate('vehicleId').populate('renterId');
-    if (!booking) return;
-
-    const vehicle = booking.vehicleId;
-    const renter = booking.renterId;
-
-    // Notify owner
-    await createNotification(
-      booking.ownerId,
-      'BOOKING_COMPLETED',
-      'Booking Completed',
-      `Booking for "${vehicle.title}" has been completed. Vehicle is now available.`,
-      bookingId,
-      vehicle._id
-    );
-
-    // Notify renter
-    await createNotification(
-      renter._id,
-      'BOOKING_COMPLETED',
-      'Booking Completed',
-      `Your booking for "${vehicle.title}" has been completed. Please leave a review.`,
-      bookingId,
-      vehicle._id
-    );
-  } catch (error) {
-    console.error('Error notifying booking completed:', error);
-  }
-}
-
-/**
- * Notify vehicle available again
- * @param {string} vehicleId - Vehicle ID
- */
-async function notifyVehicleAvailable(vehicleId) {
-  try {
-    const vehicle = await Listing.findById(vehicleId);
-    if (!vehicle) return;
-
-    // Notify owner
-    await createNotification(
-      vehicle.owner,
-      'VEHICLE_AVAILABLE',
-      'Vehicle Available',
-      `Your vehicle "${vehicle.title}" is now available for booking.`,
-      null,
-      vehicleId
-    );
-  } catch (error) {
-    console.error('Error notifying vehicle available:', error);
-  }
-}
-
-/**
- * Notify review received
- * @param {string} vehicleId - Vehicle ID
- * @param {string} reviewerId - Reviewer ID
- */
-async function notifyReviewReceived(vehicleId, reviewerId) {
-  try {
-    const vehicle = await Listing.findById(vehicleId);
-    if (!vehicle) return;
-
-    // Notify owner
-    await createNotification(
-      vehicle.owner,
-      'REVIEW_RECEIVED',
-      'New Review Received',
-      `Your vehicle "${vehicle.title}" has received a new review.`,
-      null,
-      vehicleId
-    );
-  } catch (error) {
-    console.error('Error notifying review received:', error);
-  }
-}
-
-/**
- * Notify payment received
- * @param {string} bookingId - Booking ID
- */
-async function notifyPaymentReceived(bookingId) {
+async function notifyTripCompleted(bookingId, io) {
   try {
     const booking = await Booking.findById(bookingId).populate('vehicleId');
     if (!booking) return;
 
     const vehicle = booking.vehicleId;
 
-    // Notify owner
+    const customerMessage = `Your trip in ${vehicle?.title || 'vehicle'} has been completed. Please leave a review.`;
     await createNotification(
-      booking.ownerId,
-      'PAYMENT_RECEIVED',
-      'Payment Received',
-      `Payment of ₹${booking.totalPrice} received for booking of "${vehicle.title}".`,
+      booking.customerId,
+      'TRIP_COMPLETED',
+      'Trip Completed',
+      customerMessage,
       bookingId,
-      vehicle._id
+      booking.vehicleId
     );
+
+    const ownerMessage = `Trip for ${vehicle?.title || 'vehicle'} has been completed. Vehicle is now available.`;
+    const ownerNotification = await createNotification(
+      booking.ownerId,
+      'TRIP_COMPLETED',
+      'Trip Completed',
+      ownerMessage,
+      bookingId,
+      booking.vehicleId
+    );
+
+    if (io) {
+      emitToUser(io, booking.customerId, 'notification:new', {
+        type: 'TRIP_COMPLETED',
+        title: 'Trip Completed',
+        message: customerMessage,
+        relatedBooking: bookingId,
+        relatedVehicle: booking.vehicleId
+      });
+      emitToUser(io, booking.ownerId, 'notification:new', {
+        _id: ownerNotification._id,
+        type: 'TRIP_COMPLETED',
+        title: 'Trip Completed',
+        message: ownerMessage,
+        relatedBooking: bookingId,
+        relatedVehicle: booking.vehicleId
+      });
+    }
   } catch (error) {
-    console.error('Error notifying payment received:', error);
+    console.error('Error in notifyTripCompleted:', error);
   }
 }
 
-/**
- * Get user notifications
- * @param {string} userId - User ID
- * @param {boolean} unreadOnly - Get only unread notifications
- * @returns {Promise<Array>} - Array of notifications
- */
 async function getUserNotifications(userId, unreadOnly = false) {
   try {
     const filter = { recipient: userId };
-    if (unreadOnly) {
-      filter.isRead = false;
-    }
-
-    const notifications = await Notification.find(filter)
+    if (unreadOnly) filter.isRead = false;
+    return await Notification.find(filter)
       .populate('relatedVehicle')
       .populate('relatedBooking')
       .sort({ createdAt: -1 })
       .limit(50);
-
-    return notifications;
   } catch (error) {
     console.error('Error getting user notifications:', error);
     return [];
   }
 }
 
-/**
- * Mark notification as read
- * @param {string} notificationId - Notification ID
- * @param {string} userId - User ID (for authorization)
- */
 async function markAsRead(notificationId, userId) {
   try {
     const notification = await Notification.findById(notificationId);
     if (!notification) return false;
-
-    if (notification.recipient.toString() !== userId.toString()) {
-      return false;
-    }
-
+    if (notification.recipient.toString() !== userId.toString()) return false;
     notification.isRead = true;
     await notification.save();
     return true;
@@ -259,10 +381,6 @@ async function markAsRead(notificationId, userId) {
   }
 }
 
-/**
- * Mark all notifications as read for a user
- * @param {string} userId - User ID
- */
 async function markAllAsRead(userId) {
   try {
     await Notification.updateMany(
@@ -271,23 +389,14 @@ async function markAllAsRead(userId) {
     );
     return true;
   } catch (error) {
-    console.error('Error marking all notifications as read:', error);
+    console.error('Error marking all as read:', error);
     return false;
   }
 }
 
-/**
- * Get unread notification count for a user
- * @param {string} userId - User ID
- * @returns {Promise<number>} - Unread count
- */
 async function getUnreadCount(userId) {
   try {
-    const count = await Notification.countDocuments({
-      recipient: userId,
-      isRead: false
-    });
-    return count;
+    return await Notification.countDocuments({ recipient: userId, isRead: false });
   } catch (error) {
     console.error('Error getting unread count:', error);
     return 0;
@@ -296,12 +405,13 @@ async function getUnreadCount(userId) {
 
 module.exports = {
   createNotification,
-  notifyBookingConfirmed,
+  notifyNewBookingRequest,
+  notifyBookingAccepted,
+  notifyBookingRejected,
+  notifyCounterOfferSent,
+  notifyCounterOfferAccepted,
   notifyBookingCancelled,
-  notifyBookingCompleted,
-  notifyVehicleAvailable,
-  notifyReviewReceived,
-  notifyPaymentReceived,
+  notifyTripCompleted,
   getUserNotifications,
   markAsRead,
   markAllAsRead,

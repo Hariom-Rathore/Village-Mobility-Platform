@@ -101,19 +101,20 @@ async function loadRecentBookings() {
   const el = document.getElementById('bookingsContainer');
   const empty = document.getElementById('emptyBookings');
   try {
-    const res = await fetch('/bookings/owner?status=PENDING,PENDING_OWNER_APPROVAL,COUNTER_OFFERED');
+    const res = await fetch('/bookings/owner?status=PENDING');
     const d = await res.json();
     if (!d.success || !d.bookings?.length) { empty.style.display = 'block'; return; }
     d.bookings.slice(0, 5).forEach(b => {
       const c = b.renterId || {};
       const div = document.createElement('div'); div.className = 'booking-item';
+      const statusLabel = b.bookingStatus === 'COUNTER_OFFER_SENT' ? 'Counter Offer' : 'Pending';
       div.innerHTML = `
         <div class="bi-left">
           <div class="bi-name">${c.username || 'Customer'}</div>
-          <div class="bi-route">${b.pickup || ''} → ${b.destination || ''}</div>
+          <div class="bi-route">${b.pickupLocation || b.pickup || ''} → ${b.destination || ''}</div>
         </div>
-        <div class="bi-fare me-2">₹${b.totalPrice || b.estimatedFare || 0}</div>
-        <span class="bi-status pending">Pending</span>
+        <div class="bi-fare me-2">₹${b.estimatedFare || b.totalPrice || 0}</div>
+        <span class="bi-status pending">${statusLabel}</span>
       `;
       el.appendChild(div);
     });

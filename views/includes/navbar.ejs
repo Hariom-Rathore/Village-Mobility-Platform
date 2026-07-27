@@ -1,74 +1,147 @@
-<nav class="navbar navbar-expand-md bg-white border-bottom sticky-top" style="height:64px;">
-  <div class="container-fluid px-3">
-    <a class="navbar-brand fw-bold fs-5" href="/" style="color:#2563eb;">
-      <i class="fa-solid fa-car me-1"></i> RideLocal
+<nav class="navbar" id="appNavbar">
+  <div class="navbar-inner">
+    <a href="/" class="navbar-brand">
+      <span class="brand-icon"><i class="fa-solid fa-car"></i></span>
+      RideLocal
     </a>
-    <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-      <span class="navbar-toggler-icon"></span>
+    <button class="navbar-toggle" id="navToggle" aria-label="Toggle navigation">
+      <i class="fas fa-bars"></i>
     </button>
-    <div class="collapse navbar-collapse" id="navbarNav">
-      <ul class="navbar-nav me-auto gap-1">
-        <% if(!currUser) { %>
-          <li class="nav-item"><a class="nav-link rounded-pill px-3" href="/customers/home"><i class="fas fa-home me-1"></i>Home</a></li>
-          <li class="nav-item"><a class="nav-link rounded-pill px-3" href="/cars">Vehicles</a></li>
-        <% } else if(currUser.role === 'customer') { %>
-          <li class="nav-item"><a class="nav-link rounded-pill px-3 <%= req.path === '/customers/home' ? 'active bg-light fw-semibold' : '' %>" href="/customers/home"><i class="fas fa-home me-1"></i>Home</a></li>
-          <li class="nav-item"><a class="nav-link rounded-pill px-3 <%= req.path === '/customers/my-trips' ? 'active bg-light fw-semibold' : '' %>" href="/customers/my-trips"><i class="fas fa-route me-1"></i>My Trips</a></li>
-          <li class="nav-item"><a class="nav-link rounded-pill px-3 position-relative" href="/notifications"><i class="fas fa-bell me-1"></i>Notifications <span class="badge bg-danger rounded-pill" id="navUnreadCount" style="display:none;font-size:10px;">0</span></a></li>
-          <li class="nav-item"><a class="nav-link rounded-pill px-3 <%= req.path === '/users/profile' ? 'active bg-light fw-semibold' : '' %>" href="/users/profile"><i class="fas fa-user me-1"></i>Profile</a></li>
-        <% } else if(currUser.role === 'owner') { %>
-          <li class="nav-item"><a class="nav-link rounded-pill px-3 <%= req.path === '/owners/dashboard' ? 'active bg-light fw-semibold' : '' %>" href="/owners/dashboard"><i class="fas fa-chart-simple me-1"></i>Dashboard</a></li>
-          <li class="nav-item"><a class="nav-link rounded-pill px-3 <%= req.path === '/owners/my-vehicles' ? 'active bg-light fw-semibold' : '' %>" href="/owners/my-vehicles"><i class="fas fa-car me-1"></i>My Vehicles</a></li>
-          <li class="nav-item"><a class="nav-link rounded-pill px-3 <%= req.path === '/owners/bookings' ? 'active bg-light fw-semibold' : '' %>" href="/owners/bookings"><i class="fas fa-calendar-check me-1"></i>Bookings</a></li>
-          <li class="nav-item"><a class="nav-link rounded-pill px-3 position-relative" href="/notifications"><i class="fas fa-bell me-1"></i>Notifications <span class="badge bg-danger rounded-pill" id="navUnreadCount" style="display:none;font-size:10px;">0</span></a></li>
-          <li class="nav-item"><a class="nav-link rounded-pill px-3 <%= req.path === '/users/profile' ? 'active bg-light fw-semibold' : '' %>" href="/users/profile"><i class="fas fa-user me-1"></i>Profile</a></li>
-        <% } %>
-      </ul>
-      <div class="d-flex align-items-center gap-2 mt-2 mt-md-0">
-        <% if(!currUser) { %>
-           <a class="btn btn-outline-primary btn-sm rounded-pill px-4" href="/users/login">Log in</a>
-           <a class="btn btn-primary btn-sm rounded-pill px-4" href="/users/signup">Sign up</a>
-        <% } else { %>
-          <span class="text-muted small me-2 d-none d-md-inline"><%= currUser.username %></span>
-           <a class="btn btn-outline-secondary btn-sm rounded-pill" href="/users/logout">Log out</a>
-        <% } %>
-      </div>
+    <div class="navbar-menu" id="navMenu">
+      <% if(!currUser) { %>
+        <a href="/customers/home" class="nav-link <%= req.path === '/customers/home' ? 'active' : '' %>">Home</a>
+        <a href="/cars" class="nav-link">Vehicles</a>
+        <a href="#how" class="nav-link">How it Works</a>
+        <div class="navbar-actions">
+          <a href="/users/login" class="btn btn-ghost">Log in</a>
+          <a href="/users/signup" class="btn btn-primary">Sign up</a>
+        </div>
+      <% } else if(currUser.role === 'customer') { %>
+        <a href="/customers/home" class="nav-link <%= req.path === '/customers/home' ? 'active' : '' %>"><i class="fas fa-home"></i> Home</a>
+        <a href="/cars" class="nav-link"><i class="fas fa-car"></i> Vehicles</a>
+        <a href="/customers/my-trips" class="nav-link <%= req.path === '/customers/my-trips' ? 'active' : '' %>"><i class="fas fa-route"></i> My Trips</a>
+        <div class="navbar-actions">
+          <a href="/notifications" class="nav-link position-relative">
+            <i class="fas fa-bell"></i>
+            <span class="notif-dot" id="navNotifDot" style="display:none"></span>
+          </a>
+          <a href="/users/profile" class="nav-link"><i class="fas fa-user"></i> <%= currUser.username %></a>
+          <a href="/users/logout" class="btn btn-ghost">Logout</a>
+        </div>
+      <% } else if(currUser.role === 'owner') { %>
+        <a href="/owners/dashboard" class="nav-link <%= req.path === '/owners/dashboard' ? 'active' : '' %>"><i class="fas fa-chart-simple"></i> Dashboard</a>
+        <a href="/owners/my-vehicles" class="nav-link <%= req.path === '/owners/my-vehicles' ? 'active' : '' %>"><i class="fas fa-car"></i> My Vehicles</a>
+        <a href="/owners/bookings" class="nav-link <%= req.path === '/owners/bookings' ? 'active' : '' %>"><i class="fas fa-calendar-check"></i> Bookings</a>
+        <div class="navbar-actions">
+          <a href="/notifications" class="nav-link position-relative">
+            <i class="fas fa-bell"></i>
+            <span class="notif-dot" id="navNotifDot" style="display:none"></span>
+          </a>
+          <a href="/users/profile" class="nav-link"><i class="fas fa-user"></i> <%= currUser.username %></a>
+          <a href="/users/logout" class="btn btn-ghost">Logout</a>
+        </div>
+      <% } %>
     </div>
   </div>
 </nav>
 
-<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+<style>
+.navbar {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 1000;
+  background: rgba(255,255,255,0.97); backdrop-filter: blur(20px);
+  border-bottom: 1px solid rgba(226,232,240,0.5);
+  height: var(--header-height, 72px);
+  transition: box-shadow 0.3s;
+}
+.navbar.scrolled { box-shadow: 0 4px 20px rgba(0,0,0,0.06); }
+.navbar-inner {
+  max-width: var(--max-width, 1280px); margin: 0 auto;
+  padding: 0 24px; height: 100%;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.navbar-brand {
+  display: flex; align-items: center; gap: 10px;
+  font-weight: 800; font-size: 20px; color: var(--text);
+  text-decoration: none; flex-shrink: 0;
+}
+.brand-icon {
+  width: 34px; height: 34px;
+  background: var(--gradient); border-radius: 9px;
+  display: flex; align-items: center; justify-content: center;
+  color: #fff; font-size: 15px;
+}
+.navbar-menu { display: flex; align-items: center; gap: 4px; }
+.nav-link {
+  display: flex; align-items: center; gap: 6px;
+  padding: 8px 14px; border-radius: var(--radius-full);
+  font-size: 14px; font-weight: 500; color: var(--text-secondary);
+  text-decoration: none; transition: all 0.2s; white-space: nowrap;
+}
+.nav-link:hover { background: var(--surface); color: var(--text); }
+.nav-link.active { background: var(--primary-50); color: var(--primary); font-weight: 600; }
+.navbar-actions { display: flex; align-items: center; gap: 8px; margin-left: 16px; padding-left: 16px; border-left: 1px solid var(--border); }
+.navbar-toggle { display: none; background: none; border: none; font-size: 22px; color: var(--text); cursor: pointer; padding: 8px; }
+.notif-dot { position: absolute; top: 4px; right: 4px; width: 8px; height: 8px; background: var(--danger); border-radius: 50%; border: 2px solid #fff; }
+
+@media (max-width: 768px) {
+  .navbar-toggle { display: block; }
+  .navbar-menu {
+    display: none; position: absolute; top: var(--header-height, 64px);
+    left: 0; right: 0; background: #fff; flex-direction: column;
+    padding: 12px 16px; gap: 4px;
+    border-bottom: 1px solid var(--border);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+  }
+  .navbar-menu.open { display: flex; }
+  .navbar-actions { margin-left: 0; padding-left: 0; border-left: none; margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--border); width: 100%; justify-content: stretch; }
+  .navbar-actions .btn { flex: 1; text-align: center; }
+  .nav-link { padding: 10px 14px; }
+}
+</style>
+
 <script>
 (function() {
-  const badge = document.getElementById('navUnreadCount');
-  if (!badge) return;
-
-  async function fetchUnreadCount() {
-    try {
-      const res = await fetch('/owners/api/unread-count');
-      const data = await res.json();
-      if (data.success && data.unreadCount > 0) {
-        badge.textContent = data.unreadCount > 99 ? '99+' : data.unreadCount;
-        badge.style.display = 'inline-block';
-      } else {
-        badge.style.display = 'none';
-      }
-    } catch(e) {}
+  // Scroll shadow
+  const nav = document.getElementById('appNavbar');
+  if (nav) {
+    window.addEventListener('scroll', () => {
+      nav.classList.toggle('scrolled', window.scrollY > 20);
+    });
   }
 
-  fetchUnreadCount();
-  setInterval(fetchUnreadCount, 15000);
+  // Mobile toggle
+  const toggle = document.getElementById('navToggle');
+  const menu = document.getElementById('navMenu');
+  if (toggle && menu) {
+    toggle.addEventListener('click', () => menu.classList.toggle('open'));
+    document.querySelectorAll('.nav-link').forEach(l => l.addEventListener('click', () => menu.classList.remove('open')));
+  }
 
-  // Socket.IO real-time updates
-  try {
-    const socket = io();
-    socket.on('connect', function() {
-      const userId = '<%= (currUser && currUser._id) || "" %>';
-      if (userId) socket.emit('join', userId);
-    });
-    socket.on('new_notification', function() {
-      fetchUnreadCount();
-    });
-  } catch(e) {}
+  // Unread notification badge
+  const dot = document.getElementById('navNotifDot');
+  if (dot) {
+    async function fetchUnread() {
+      try {
+        const r = await fetch('/notifications/unread-count');
+        const d = await r.json();
+        dot.style.display = d.success && d.unreadCount > 0 ? 'block' : 'none';
+      } catch(e) {}
+    }
+    fetchUnread();
+    setInterval(fetchUnread, 15000);
+    try {
+      const socket = io();
+      socket.on('connect', () => {
+        const userId = '<%= (currUser && currUser._id) || "" %>';
+        if (userId) socket.emit('join', userId);
+      });
+      socket.on('notification:new', fetchUnread);
+      socket.on('booking:new', fetchUnread);
+      socket.on('booking:accepted', fetchUnread);
+      socket.on('booking:rejected', fetchUnread);
+      socket.on('booking:counterOffer', fetchUnread);
+      socket.on('booking:cancelled', fetchUnread);
+    } catch(e) {}
+  }
 })();
 </script>

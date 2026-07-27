@@ -1,40 +1,44 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>RideLocal - Book Local Trips</title>
-    <link rel="stylesheet" href="/css/style.css"/>
-    <link rel="preconnect" href="https://res.cloudinary.com" crossorigin>
-    <link rel="preconnect" href="https://images.pexels.com" crossorigin>
-    <link rel="preconnect" href="https://images.unsplash.com" crossorigin>
-     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous" referrerpolicy="no-referrer">
-     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA==" crossorigin="anonymous" referrerpolicy="no-referrer"/>
-    <link href="/css/rating.css" rel="stylesheet"/>
-    </head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RideLocal - Book Local Trips</title>
+  <meta name="description" content="RideLocal connects you with verified local vehicle owners and drivers for safe, transparent trips.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="preconnect" href="https://res.cloudinary.com" crossorigin>
+  <link rel="preconnect" href="https://images.pexels.com" crossorigin>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA==" crossorigin="anonymous" referrerpolicy="no-referrer"/>
+  <link rel="stylesheet" href="/css/design-system.css">
+  <link rel="stylesheet" href="/css/style.css">
+  <% if (typeof extraStyles !== 'undefined') { %><style><%- extraStyles %></style><% } %>
+</head>
 <body>
-    <%- include("../../includes/navbar.ejs") %>
-  <main class="page-content">
-    <div class="container">
-      <% if (success && success.length) { %>
-        <div class="alert alert-success alert-dismissible fade show mt-3" role="alert">
-          <%= success[0] %>
-          <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+  <%- include("../../includes/navbar.ejs") %>
+  <div class="page-wrapper">
+    <% if (success && success.length) { %>
+      <div class="container" style="padding-top:16px">
+        <div class="alert alert-success">
+          <i class="fas fa-check-circle"></i>
+          <span><%= success[0] %></span>
+          <button class="alert-dismiss" onclick="this.parentElement.remove()">&times;</button>
         </div>
-      <% } %>
-      <% if (error && error.length) { %>
-        <div class="alert alert-danger alert-dismissible fade show mt-3" role="alert">
-          <%= error[0] %>
-          <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+      </div>
+    <% } %>
+    <% if (error && error.length) { %>
+      <div class="container" style="padding-top:16px">
+        <div class="alert alert-error">
+          <i class="fas fa-exclamation-circle"></i>
+          <span><%= error[0] %></span>
+          <button class="alert-dismiss" onclick="this.parentElement.remove()">&times;</button>
         </div>
-      <% } %>
-      <%- body %>
-    </div>
-  </main>
-    <%- include("../../includes/footer.ejs") %>
-
-     
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+      </div>
+    <% } %>
+    <%- body %>
+  </div>
+  <%- include("../../includes/footer.ejs") %>
+  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
   <script src="/css/js/script.js"></script>
 </body>
 </html>

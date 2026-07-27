@@ -1,275 +1,137 @@
 <% layout("/listings/layouts/boilerplate") %>
-
-<div class="container mt-4">
-  <h2>User Dashboard</h2>
-  
-  <!-- Statistics Cards -->
-  <div class="row mb-4">
-    <div class="col-md-3">
-      <div class="card bg-primary text-white">
-        <div class="card-body">
-          <h5 class="card-title">Total Bookings</h5>
-          <h3 class="card-text"><%= stats.totalBookings %></h3>
-        </div>
-      </div>
-    </div>
-    <div class="col-md-3">
-      <div class="card bg-success text-white">
-        <div class="card-body">
-          <h5 class="card-title">Completed</h5>
-          <h3 class="card-text"><%= stats.completedBookings %></h3>
-        </div>
-      </div>
-    </div>
-    <div class="col-md-3">
-      <div class="card bg-warning text-dark">
-        <div class="card-body">
-          <h5 class="card-title">Pending</h5>
-          <h3 class="card-text"><%= bookings.filter(b => b.bookingStatus === 'PENDING_OWNER_APPROVAL').length %></h3>
-        </div>
-      </div>
-    </div>
-    <div class="col-md-3">
-      <div class="card bg-info text-white">
-        <div class="card-body">
-          <h5 class="card-title">Total Spent</h5>
-          <h3 class="card-text">₹<%= stats.totalSpent.toLocaleString('en-IN') %></h3>
-        </div>
-      </div>
-    </div>
+<div class="dash-page">
+  <div class="dash-header">
+    <h1>My Dashboard</h1>
+    <p>Welcome back, <%= currUser ? currUser.username : 'User' %></p>
   </div>
 
-  <!-- Action Required (Counter Offers) -->
-  <% const counterOffered = bookings.filter(b => b.bookingStatus === 'COUNTER_OFFERED'); %>
-  <% if (counterOffered.length > 0) { %>
-    <div class="row mb-4">
-      <div class="col-12">
-        <div class="card border-primary shadow-sm">
-          <div class="card-header bg-primary text-white">
-            <h5 class="mb-0">Action Required: Owner Counter Offers</h5>
-          </div>
-          <div class="card-body">
-             <div class="table-responsive">
-              <table class="table align-middle">
-                <thead>
-                  <tr>
-                    <th>Vehicle</th>
-                    <th>Trip Details</th>
-                    <th>Your Est. Fare</th>
-                    <th>Owner's Offer</th>
-                    <th>Message</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <% counterOffered.forEach(booking => { %>
-                    <tr>
-                      <td><a href="/cars/<%= booking.vehicleId?._id %>"><%= booking.vehicleId?.title || 'N/A' %></a></td>
-                      <td>
-                         <small><strong>From:</strong> <%= booking.pickup %></small><br>
-                         <small><strong>To:</strong> <%= booking.destination %></small>
-                      </td>
-                      <td class="text-muted">₹<%= booking.estimatedFare?.toLocaleString('en-IN') || 0 %></td>
-                      <td class="fw-bold text-primary fs-5">₹<%= booking.counterOffer?.totalFare?.toLocaleString('en-IN') || 0 %></td>
-                      <td><small class="fst-italic"><%= booking.counterOffer?.message || 'No message' %></small></td>
-                      <td>
-                        <div class="d-flex gap-2">
-                           <button class="btn btn-sm btn-success" onclick="respondToOffer('<%= booking._id %>', 'accept')"><i class="fa-solid fa-check"></i> Accept</button>
-                           <button class="btn btn-sm btn-danger" onclick="respondToOffer('<%= booking._id %>', 'reject')"><i class="fa-solid fa-xmark"></i> Reject</button>
-                        </div>
-                      </td>
-                    </tr>
-                  <% }); %>
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
+  <div class="stats-grid">
+    <div class="stat-card"><div class="stat-icon" style="background:#2563eb"><i class="fas fa-calendar-check"></i></div><div class="stat-value"><%= stats.totalBookings %></div><div class="stat-label">Total Bookings</div></div>
+    <div class="stat-card"><div class="stat-icon" style="background:#10b981"><i class="fas fa-check-circle"></i></div><div class="stat-value"><%= stats.completedBookings %></div><div class="stat-label">Completed</div></div>
+    <div class="stat-card"><div class="stat-icon" style="background:#f59e0b"><i class="fas fa-clock"></i></div><div class="stat-value"><%= bookings.filter(b => b.bookingStatus === 'PENDING_OWNER_APPROVAL').length %></div><div class="stat-label">Pending</div></div>
+    <div class="stat-card"><div class="stat-icon" style="background:#8b5cf6"><i class="fas fa-wallet"></i></div><div class="stat-value">₹<%= (stats.totalSpent || 0).toLocaleString('en-IN') %></div><div class="stat-label">Total Spent</div></div>
+  </div>
+
+  <!-- Counter Offers -->
+  <% const co = bookings.filter(b => b.bookingStatus === 'COUNTER_OFFERED'); %>
+  <% if (co.length > 0) { %>
+    <div class="section-card" style="border-left:4px solid #f59e0b">
+      <div class="section-header"><h3>Action Required: Counter Offers (<%= co.length %>)</h3></div>
+      <div class="dash-table-wrap">
+        <table class="dash-table">
+          <thead><tr><th>Vehicle</th><th>Trip</th><th>Your Fare</th><th>Owner's Offer</th><th>Message</th><th>Actions</th></tr></thead>
+          <tbody><% co.forEach(b => { %>
+            <tr>
+              <td><a href="/cars/<%= b.vehicleId?._id %>"><%= b.vehicleId?.title || 'N/A' %></a></td>
+              <td><small><%= b.pickup %> &rarr; <%= b.destination %></small></td>
+              <td>₹<%= (b.estimatedFare || 0).toLocaleString('en-IN') %></td>
+              <td class="text-primary fw-bold">₹<%= (b.counterOffer?.totalFare || 0).toLocaleString('en-IN') %></td>
+              <td><small><%= b.counterOffer?.message || '—' %></small></td>
+              <td><div class="flex gap-sm"><button class="btn btn-sm btn-success" onclick="respondToOffer('<%= b._id %>','accept')"><i class="fas fa-check"></i> Accept</button><button class="btn btn-sm btn-danger" onclick="respondToOffer('<%= b._id %>','reject')"><i class="fas fa-times"></i> Reject</button></div></td>
+            </tr><% }); %></tbody>
+        </table>
       </div>
     </div>
   <% } %>
 
-  <!-- Pending Approvals (Waiting on Owner) -->
-  <% const pendingRequests = bookings.filter(b => b.bookingStatus === 'PENDING_OWNER_APPROVAL'); %>
-  <% if (pendingRequests.length > 0) { %>
-    <div class="row mb-4">
-      <div class="col-12">
-        <div class="card border-warning">
-          <div class="card-header bg-warning text-dark">
-            <h5 class="mb-0">Pending Approvals (Waiting on Owner)</h5>
-          </div>
-          <div class="card-body">
-            <div class="table-responsive">
-              <table class="table align-middle">
-                <thead>
-                  <tr>
-                    <th>Vehicle</th>
-                    <th>Trip Details</th>
-                    <th>Date & Time</th>
-                    <th>Est. Fare</th>
-                    <th>Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <% pendingRequests.forEach(booking => { %>
-                    <tr>
-                      <td><a href="/cars/<%= booking.vehicleId?._id %>"><%= booking.vehicleId?.title || 'N/A' %></a></td>
-                      <td>
-                        <small><strong>From:</strong> <%= booking.pickup %></small><br>
-                        <small><strong>To:</strong> <%= booking.destination %></small>
-                      </td>
-                      <td>
-                        <%= booking.pickupDate ? new Date(booking.pickupDate).toLocaleDateString() : 'N/A' %><br>
-                        <small class="text-muted"><%= booking.pickupTime %></small>
-                      </td>
-                      <td><strong>₹<%= booking.estimatedFare?.toLocaleString('en-IN') || 0 %></strong></td>
-                      <td><span class="badge bg-secondary">Reviewing...</span></td>
-                    </tr>
-                  <% }); %>
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
+  <!-- Pending -->
+  <% const pending = bookings.filter(b => b.bookingStatus === 'PENDING_OWNER_APPROVAL'); %>
+  <% if (pending.length > 0) { %>
+    <div class="section-card" style="border-left:4px solid #2563eb">
+      <div class="section-header"><h3>Pending Approvals (<%= pending.length %>)</h3></div>
+      <div class="dash-table-wrap">
+        <table class="dash-table">
+          <thead><tr><th>Vehicle</th><th>Trip</th><th>Date</th><th>Fare</th><th>Status</th></tr></thead>
+          <tbody><% pending.forEach(b => { %>
+            <tr>
+              <td><a href="/cars/<%= b.vehicleId?._id %>"><%= b.vehicleId?.title || 'N/A' %></a></td>
+              <td><small><%= b.pickup %> &rarr; <%= b.destination %></small></td>
+              <td><%= b.pickupDate ? new Date(b.pickupDate).toLocaleDateString() : 'N/A' %></td>
+              <td>₹<%= (b.estimatedFare || 0).toLocaleString('en-IN') %></td>
+              <td><span class="badge badge-warning">Reviewing</span></td>
+            </tr><% }); %></tbody>
+        </table>
       </div>
     </div>
   <% } %>
 
-  <!-- Current/Confirmed Rentals -->
-  <% const activeRentals = bookings.filter(b => b.bookingStatus === 'CONFIRMED' || b.bookingStatus === 'PENDING'); %>
-  <% if (activeRentals.length > 0) { %>
-    <div class="row mb-4">
-      <div class="col-12">
-        <div class="card border-success">
-          <div class="card-header bg-success text-white">
-            <h5 class="mb-0">Active/Confirmed Bookings (<%= activeRentals.length %>)</h5>
-          </div>
-          <div class="card-body">
-            <div class="table-responsive">
-              <table class="table align-middle">
-                <thead>
-                  <tr>
-                    <th>Vehicle</th>
-                    <th>Owner</th>
-                    <th>Pickup Date</th>
-                    <th>Amount</th>
-                    <th>Status</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <% activeRentals.forEach(booking => { %>
-                    <tr>
-                      <td><a href="/cars/<%= booking.vehicleId?._id %>"><%= booking.vehicleId?.title || 'N/A' %></a></td>
-                      <td><%= booking.ownerId?.username || booking.ownerId?.email || 'N/A' %></td>
-                      <td><%= booking.pickupDate ? new Date(booking.pickupDate).toLocaleDateString() : 'N/A' %></td>
-                      <td>₹<%= booking.totalPrice?.toLocaleString('en-IN') || 0 %></td>
-                      <td><span class="badge bg-success"><%= booking.bookingStatus %></span></td>
-                      <td>
-                         <button class="btn btn-sm btn-outline-danger" onclick="cancelBooking('<%= booking._id %>')">Cancel</button>
-                      </td>
-                    </tr>
-                  <% }); %>
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
+  <!-- Active -->
+  <% const active = bookings.filter(b => b.bookingStatus === 'CONFIRMED' || b.bookingStatus === 'PENDING'); %>
+  <% if (active.length > 0) { %>
+    <div class="section-card" style="border-left:4px solid #10b981">
+      <div class="section-header"><h3>Active Bookings (<%= active.length %>)</h3></div>
+      <div class="dash-table-wrap">
+        <table class="dash-table">
+          <thead><tr><th>Vehicle</th><th>Owner</th><th>Date</th><th>Amount</th><th>Status</th><th>Actions</th></tr></thead>
+          <tbody><% active.forEach(b => { %>
+            <tr>
+              <td><%= b.vehicleId?.title || 'N/A' %></td>
+              <td><%= b.ownerId?.username || 'N/A' %></td>
+              <td><%= b.pickupDate ? new Date(b.pickupDate).toLocaleDateString() : 'N/A' %></td>
+              <td>₹<%= (b.totalPrice || 0).toLocaleString('en-IN') %></td>
+              <td><span class="badge badge-success"><%= b.bookingStatus %></span></td>
+              <td><button class="btn btn-sm btn-danger" onclick="cancelBooking('<%= b._id %>')"><i class="fas fa-ban"></i> Cancel</button></td>
+            </tr><% }); %></tbody>
+        </table>
       </div>
     </div>
   <% } %>
 
   <!-- All Bookings -->
-  <div class="row">
-    <div class="col-12">
-      <div class="card">
-        <div class="card-header">
-          <h5 class="mb-0">All Bookings History</h5>
-        </div>
-        <div class="card-body">
-          <% if (bookings.length === 0) { %>
-            <p class="text-muted">No bookings yet. <a href="/cars">Browse vehicles</a> to make your first booking.</p>
-          <% } else { %>
-            <div class="table-responsive">
-              <table class="table">
-                <thead>
-                  <tr>
-                    <th>Vehicle</th>
-                    <th>Owner</th>
-                    <th>Pickup Date</th>
-                    <th>Amount</th>
-                    <th>Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <% bookings.forEach(booking => { %>
-                    <tr>
-                      <td><a href="/cars/<%= booking.vehicleId?._id %>"><%= booking.vehicleId?.title || 'N/A' %></a></td>
-                      <td><%= booking.ownerId?.username || booking.ownerId?.email || 'N/A' %></td>
-                      <td><%= booking.pickupDate ? new Date(booking.pickupDate).toLocaleDateString() : 'N/A' %></td>
-                      <td>₹<%= booking.totalPrice?.toLocaleString('en-IN') || booking.estimatedFare?.toLocaleString('en-IN') || 0 %></td>
-                      <td>
-                        <span class="badge bg-<%= 
-                          booking.bookingStatus === 'COMPLETED' ? 'success' : 
-                          booking.bookingStatus === 'CANCELLED' || booking.bookingStatus === 'REJECTED' ? 'danger' : 
-                          booking.bookingStatus === 'CONFIRMED' ? 'info' : 'secondary' 
-                        %>"><%= booking.bookingStatus %></span>
-                      </td>
-                    </tr>
-                  <% }); %>
-                </tbody>
-              </table>
-            </div>
-          <% } %>
-        </div>
+  <div class="section-card">
+    <div class="section-header"><h3>All Bookings</h3></div>
+    <% if (bookings.length === 0) { %>
+      <p class="text-secondary">No bookings yet. <a href="/cars">Browse vehicles</a>.</p>
+    <% } else { %>
+      <div class="dash-table-wrap">
+        <table class="dash-table">
+          <thead><tr><th>Vehicle</th><th>Owner</th><th>Date</th><th>Amount</th><th>Status</th></tr></thead>
+          <tbody><% bookings.forEach(b => { %>
+            <tr>
+              <td><a href="/cars/<%= b.vehicleId?._id %>"><%= b.vehicleId?.title || 'N/A' %></a></td>
+              <td><%= b.ownerId?.username || 'N/A' %></td>
+              <td><%= b.pickupDate ? new Date(b.pickupDate).toLocaleDateString() : 'N/A' %></td>
+              <td>₹<%= (b.totalPrice || b.estimatedFare || 0).toLocaleString('en-IN') %></td>
+              <td><span class="badge badge-<%= b.bookingStatus === 'COMPLETED' ? 'success' : b.bookingStatus === 'CANCELLED' || b.bookingStatus === 'REJECTED' ? 'danger' : b.bookingStatus === 'CONFIRMED' ? 'info' : 'secondary' %>"><%= b.bookingStatus %></span></td>
+            </tr><% }); %></tbody>
+        </table>
       </div>
-    </div>
+    <% } %>
   </div>
 </div>
 
 <script>
-async function respondToOffer(bookingId, action) {
-    if(!confirm(`Are you sure you want to ${action} this counter offer?`)) return;
-    
-    try {
-        const res = await fetch(`/cars/bookings/${bookingId}/counter/respond`, {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ action })
-        });
-        const data = await res.json();
-        
-        if(data.success) {
-            alert(`Offer ${action}ed successfully.`);
-            location.reload();
-        } else {
-            alert(data.error);
-        }
-    } catch(e) {
-        alert("Error responding to offer");
-    }
-}
-
-async function cancelBooking(bookingId) {
-  if (!confirm('Are you sure you want to cancel this booking?')) return;
-  const reason = prompt('Enter cancellation reason (optional):');
-  if (reason === null) return;
-
+async function respondToOffer(id, action) {
+  if(!confirm(`Are you sure?`)) return;
   try {
-    const response = await fetch(`/cars/bookings/${bookingId}/cancel`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ reason })
-    });
-    const result = await response.json();
-    if (result.success) {
-      alert('Booking cancelled successfully!');
-      location.reload();
-    } else {
-      alert('Failed to cancel booking: ' + result.error);
-    }
-  } catch (error) {
-    alert('Error cancelling booking: ' + error.message);
-  }
+    const r = await fetch(`/cars/bookings/${id}/counter/respond`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({action}) });
+    const d = await r.json();
+    if(d.success) { alert(`Offer ${action}ed`); location.reload(); }
+    else alert(d.error);
+  } catch(e) { alert("Error"); }
+}
+async function cancelBooking(id) {
+  if(!confirm('Cancel this booking?')) return;
+  try {
+    const r = await fetch(`/cars/bookings/${id}/cancel`, { method:'POST', headers:{'Content-Type':'application/json'} });
+    const d = await r.json();
+    if(d.success) { alert('Cancelled'); location.reload(); }
+    else alert(d.error);
+  } catch(e) { alert("Error"); }
 }
 </script>
+
+<style>
+.dash-page { max-width: var(--max-width); margin: 0 auto; padding: 32px 24px; }
+.dash-header h1 { font-size: 28px; font-weight: 800; }
+.dash-header p { color: var(--text-secondary); font-size: 14px; }
+.stats-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; margin: 24px 0; }
+.section-card { background: var(--card); border: 1px solid var(--border-light); border-radius: var(--radius-lg); padding: 20px; margin-bottom: 20px; }
+.section-header h3 { font-size: 16px; font-weight: 700; }
+.dash-table-wrap { overflow-x: auto; margin-top: 12px; }
+.dash-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.dash-table th { text-align: left; padding: 10px 12px; font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.3px; border-bottom: 2px solid var(--border); background: var(--surface); }
+.dash-table td { padding: 10px 12px; border-bottom: 1px solid var(--border-light); }
+.dash-table tr:hover td { background: var(--surface); }
+.fw-bold { font-weight: 700; }
+</style>

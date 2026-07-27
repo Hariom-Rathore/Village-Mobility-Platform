@@ -1,372 +1,152 @@
 <% layout("/listings/layouts/boilerplate") %>
-
-<div class="container mt-4">
-  <h2>Owner Dashboard</h2>
-  
-  <!-- Statistics Cards -->
-  <div class="row mb-4">
-    <div class="col-md-3">
-      <div class="card bg-primary text-white">
-        <div class="card-body">
-          <h5 class="card-title">Total Bookings</h5>
-          <h3 class="card-text"><%= stats.totalBookings %></h3>
-        </div>
-      </div>
-    </div>
-    <div class="col-md-3">
-      <div class="card bg-success text-white">
-        <div class="card-body">
-          <h5 class="card-title">Completed</h5>
-          <h3 class="card-text"><%= stats.completedBookings %></h3>
-        </div>
-      </div>
-    </div>
-    <div class="col-md-3">
-      <div class="card bg-warning text-dark">
-        <div class="card-body">
-          <h5 class="card-title">Pending Requests</h5>
-          <h3 class="card-text"><%= bookings.filter(b => b.bookingStatus === 'PENDING_OWNER_APPROVAL').length %></h3>
-        </div>
-      </div>
-    </div>
-    <div class="col-md-3">
-      <div class="card bg-info text-white">
-        <div class="card-body">
-          <h5 class="card-title">Total Revenue</h5>
-          <h3 class="card-text">₹<%= stats.totalRevenue.toLocaleString('en-IN') %></h3>
-        </div>
-      </div>
-    </div>
+<div class="dash-page">
+  <div class="dash-header">
+    <h1>Owner Dashboard</h1>
+    <p>Welcome back, <%= currUser ? currUser.username : 'Owner' %></p>
   </div>
 
-  <!-- Pending Booking Requests -->
-  <% const pendingRequests = bookings.filter(b => b.bookingStatus === 'PENDING_OWNER_APPROVAL'); %>
-  <% if (pendingRequests.length > 0) { %>
-    <div class="row mb-4">
-      <div class="col-12">
-        <div class="card border-warning">
-          <div class="card-header bg-warning text-dark d-flex justify-content-between align-items-center">
-            <h5 class="mb-0">Pending Booking Requests (<%= pendingRequests.length %>)</h5>
-          </div>
-          <div class="card-body">
-            <div class="table-responsive">
-              <table class="table align-middle">
-                <thead>
-                  <tr>
-                    <th>Customer</th>
-                    <th>Trip Details</th>
-                    <th>Date & Time</th>
-                    <th>Est. Fare</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <% pendingRequests.forEach(booking => { %>
-                    <tr>
-                      <td>
-                        <strong><%= booking.renterId?.username || booking.renterId?.email || 'N/A' %></strong><br>
-                        <small class="text-muted"><i class="fa-solid fa-users"></i> <%= booking.passengers %> pax</small>
-                      </td>
-                      <td>
-                        <small><strong>From:</strong> <%= booking.pickup %></small><br>
-                        <small><strong>To:</strong> <%= booking.destination %></small><br>
-                        <span class="badge bg-secondary"><%= booking.tripType %></span>
-                        <% if(booking.specialInstructions) { %>
-                           <br><small class="text-info fst-italic"><%= booking.specialInstructions %></small>
-                        <% } %>
-                      </td>
-                      <td>
-                        <%= booking.pickupDate ? new Date(booking.pickupDate).toLocaleDateString() : 'N/A' %><br>
-                        <small class="text-muted"><%= booking.pickupTime %></small>
-                      </td>
-                      <td><strong>₹<%= booking.estimatedFare?.toLocaleString('en-IN') || 0 %></strong></td>
-                      <td>
-                        <div class="d-flex gap-2 flex-wrap">
-                            <button class="btn btn-sm btn-success" onclick="acceptRequest('<%= booking._id %>')"><i class="fa-solid fa-check"></i> Accept</button>
-                            <button class="btn btn-sm btn-danger" onclick="rejectRequest('<%= booking._id %>')"><i class="fa-solid fa-xmark"></i> Reject</button>
-                            <button class="btn btn-sm btn-outline-primary" onclick="openCounterOfferModal('<%= booking._id %>', <%= booking.basePrice %>, <%= booking.estimatedFare %>)"><i class="fa-solid fa-handshake-angle"></i> Counter Offer</button>
-                        </div>
-                      </td>
-                    </tr>
-                  <% }); %>
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
+  <div class="stats-grid">
+    <div class="stat-card"><div class="stat-icon" style="background:#2563eb"><i class="fas fa-calendar-check"></i></div><div class="stat-value"><%= stats.totalBookings %></div><div class="stat-label">Total Bookings</div></div>
+    <div class="stat-card"><div class="stat-icon" style="background:#10b981"><i class="fas fa-check-circle"></i></div><div class="stat-value"><%= stats.completedBookings %></div><div class="stat-label">Completed</div></div>
+    <div class="stat-card"><div class="stat-icon" style="background:#f59e0b"><i class="fas fa-clock"></i></div><div class="stat-value"><%= bookings.filter(b => b.bookingStatus === 'PENDING_OWNER_APPROVAL').length %></div><div class="stat-label">Pending Requests</div></div>
+    <div class="stat-card"><div class="stat-icon" style="background:#8b5cf6"><i class="fas fa-wallet"></i></div><div class="stat-value">₹<%= (stats.totalRevenue || 0).toLocaleString('en-IN') %></div><div class="stat-label">Total Revenue</div></div>
+  </div>
+
+  <!-- Pending Requests -->
+  <% const pending = bookings.filter(b => b.bookingStatus === 'PENDING_OWNER_APPROVAL'); %>
+  <% if (pending.length > 0) { %>
+    <div class="section-card" style="border-left:4px solid #f59e0b">
+      <div class="section-header"><h3>Pending Booking Requests (<%= pending.length %>)</h3></div>
+      <div class="dash-table-wrap">
+        <table class="dash-table">
+          <thead><tr><th>Customer</th><th>Trip</th><th>Date</th><th>Fare</th><th>Actions</th></tr></thead>
+          <tbody><% pending.forEach(b => { %>
+            <tr>
+              <td><strong><%= b.renterId?.username || 'N/A' %></strong><br><small class="text-secondary"><%= b.passengers %> pax</small></td>
+              <td><small><%= b.pickup %> &rarr; <%= b.destination %></small><% if(b.specialInstructions) { %><br><small class="text-primary-50"><%= b.specialInstructions %></small><% } %></td>
+              <td><%= b.pickupDate ? new Date(b.pickupDate).toLocaleDateString() : 'N/A' %><br><small class="text-secondary"><%= b.pickupTime %></small></td>
+              <td class="fw-bold">₹<%= (b.estimatedFare || 0).toLocaleString('en-IN') %></td>
+              <td>
+                <div class="flex gap-sm" style="flex-wrap:wrap">
+                  <button class="btn btn-sm btn-success" onclick="acceptRequest('<%= b._id %>')"><i class="fas fa-check"></i> Accept</button>
+                  <button class="btn btn-sm btn-danger" onclick="rejectRequest('<%= b._id %>')"><i class="fas fa-times"></i> Reject</button>
+                  <button class="btn btn-sm btn-warning" onclick="openCounterOfferModal('<%= b._id %>', <%= b.basePrice || 0 %>, <%= b.estimatedFare || 0 %>)"><i class="fas fa-handshake"></i> Counter</button>
+                </div>
+              </td>
+            </tr><% }); %></tbody>
+        </table>
       </div>
     </div>
   <% } %>
 
-  <!-- Counter Offered Bookings -->
-  <% const counterOffered = bookings.filter(b => b.bookingStatus === 'COUNTER_OFFERED'); %>
-  <% if (counterOffered.length > 0) { %>
-    <div class="row mb-4">
-      <div class="col-12">
-        <div class="card border-info">
-          <div class="card-header bg-info text-white">
-            <h5 class="mb-0">Waiting on Customer (Counter Offer Sent)</h5>
-          </div>
-          <div class="card-body">
-             <div class="table-responsive">
-              <table class="table align-middle">
-                <thead>
-                  <tr>
-                    <th>Customer</th>
-                    <th>Trip Details</th>
-                    <th>Original Fare</th>
-                    <th>Your Offer</th>
-                    <th>Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <% counterOffered.forEach(booking => { %>
-                    <tr>
-                      <td><%= booking.renterId?.username || booking.renterId?.email || 'N/A' %></td>
-                      <td><%= booking.pickup %> &rarr; <%= booking.destination %></td>
-                      <td>₹<%= booking.estimatedFare?.toLocaleString('en-IN') || 0 %></td>
-                      <td class="text-primary fw-bold">₹<%= booking.counterOffer?.totalFare?.toLocaleString('en-IN') || 0 %></td>
-                      <td><span class="badge bg-secondary">Pending Response</span></td>
-                    </tr>
-                  <% }); %>
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
+  <!-- Counter Offers sent -->
+  <% const co = bookings.filter(b => b.bookingStatus === 'COUNTER_OFFERED'); %>
+  <% if (co.length > 0) { %>
+    <div class="section-card" style="border-left:4px solid #2563eb">
+      <div class="section-header"><h3>Waiting on Customer (<%= co.length %>)</h3></div>
+      <div class="dash-table-wrap">
+        <table class="dash-table">
+          <thead><tr><th>Customer</th><th>Trip</th><th>Original</th><th>Your Offer</th><th>Status</th></tr></thead>
+          <tbody><% co.forEach(b => { %>
+            <tr>
+              <td><%= b.renterId?.username || 'N/A' %></td>
+              <td><small><%= b.pickup %> &rarr; <%= b.destination %></small></td>
+              <td>₹<%= (b.estimatedFare || 0).toLocaleString('en-IN') %></td>
+              <td class="fw-bold text-primary">₹<%= (b.counterOffer?.totalFare || 0).toLocaleString('en-IN') %></td>
+              <td><span class="badge badge-warning">Pending</span></td>
+            </tr><% }); %></tbody>
+        </table>
       </div>
     </div>
   <% } %>
 
-  <!-- Current/Confirmed Bookings -->
-  <% const activeBookings = bookings.filter(b => b.bookingStatus === 'CONFIRMED' || b.bookingStatus === 'PENDING'); %>
-  <% if (activeBookings.length > 0) { %>
-    <div class="row mb-4">
-      <div class="col-12">
-        <div class="card">
-          <div class="card-header bg-success text-white">
-            <h5 class="mb-0">Active/Confirmed Bookings (<%= activeBookings.length %>)</h5>
-          </div>
-          <div class="card-body">
-            <div class="table-responsive">
-              <table class="table">
-                <thead>
-                  <tr>
-                    <th>Vehicle</th>
-                    <th>Customer</th>
-                    <th>Trip Date</th>
-                    <th>Amount</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <% activeBookings.forEach(booking => { %>
-                    <tr>
-                      <td><%= booking.vehicleId?.title || 'N/A' %></td>
-                      <td><%= booking.renterId?.username || booking.renterId?.email || 'N/A' %></td>
-                      <td><%= booking.pickupDate ? new Date(booking.pickupDate).toLocaleDateString() : 'N/A' %></td>
-                      <td>₹<%= booking.totalPrice?.toLocaleString('en-IN') || 0 %></td>
-                      <td>
-                        <button class="btn btn-sm btn-outline-success" onclick="completeBooking('<%= booking._id %>')">Mark Completed</button>
-                      </td>
-                    </tr>
-                  <% }); %>
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
+  <!-- Active -->
+  <% const active = bookings.filter(b => b.bookingStatus === 'CONFIRMED' || b.bookingStatus === 'PENDING'); %>
+  <% if (active.length > 0) { %>
+    <div class="section-card" style="border-left:4px solid #10b981">
+      <div class="section-header"><h3>Active Bookings (<%= active.length %>)</h3></div>
+      <div class="dash-table-wrap">
+        <table class="dash-table">
+          <thead><tr><th>Vehicle</th><th>Customer</th><th>Date</th><th>Amount</th><th>Actions</th></tr></thead>
+          <tbody><% active.forEach(b => { %>
+            <tr>
+              <td><%= b.vehicleId?.title || 'N/A' %></td>
+              <td><%= b.renterId?.username || 'N/A' %></td>
+              <td><%= b.pickupDate ? new Date(b.pickupDate).toLocaleDateString() : 'N/A' %></td>
+              <td>₹<%= (b.totalPrice || 0).toLocaleString('en-IN') %></td>
+              <td><button class="btn btn-sm btn-success" onclick="completeBooking('<%= b._id %>')"><i class="fas fa-check-circle"></i> Complete</button></td>
+            </tr><% }); %></tbody>
+        </table>
       </div>
     </div>
   <% } %>
 
-  <!-- All Bookings History -->
-  <div class="row">
-    <div class="col-12">
-      <div class="card">
-        <div class="card-header">
-          <h5 class="mb-0">All Bookings History</h5>
-        </div>
-        <div class="card-body">
-          <% if (bookings.length === 0) { %>
-            <p class="text-muted">No bookings yet.</p>
-          <% } else { %>
-            <div class="table-responsive">
-              <table class="table">
-                <thead>
-                  <tr>
-                    <th>Vehicle</th>
-                    <th>Renter</th>
-                    <th>Pickup Date</th>
-                    <th>Amount</th>
-                    <th>Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <% bookings.forEach(booking => { %>
-                    <tr>
-                      <td><%= booking.vehicleId?.title || 'N/A' %></td>
-                      <td><%= booking.renterId?.username || booking.renterId?.email || 'N/A' %></td>
-                      <td><%= booking.pickupDate ? new Date(booking.pickupDate).toLocaleDateString() : 'N/A' %></td>
-                      <td>₹<%= booking.totalPrice?.toLocaleString('en-IN') || booking.estimatedFare?.toLocaleString('en-IN') || 0 %></td>
-                      <td>
-                        <span class="badge bg-<%= 
-                          booking.bookingStatus === 'COMPLETED' ? 'success' : 
-                          booking.bookingStatus === 'CANCELLED' || booking.bookingStatus === 'REJECTED' ? 'danger' : 
-                          booking.bookingStatus === 'CONFIRMED' ? 'info' : 'secondary' 
-                        %>"><%= booking.bookingStatus %></span>
-                      </td>
-                    </tr>
-                  <% }); %>
-                </tbody>
-              </table>
-            </div>
-          <% } %>
-        </div>
+  <!-- All Bookings -->
+  <div class="section-card">
+    <div class="section-header"><h3>All Bookings History</h3></div>
+    <% if (bookings.length === 0) { %>
+      <p class="text-secondary">No bookings yet.</p>
+    <% } else { %>
+      <div class="dash-table-wrap">
+        <table class="dash-table">
+          <thead><tr><th>Vehicle</th><th>Renter</th><th>Date</th><th>Amount</th><th>Status</th></tr></thead>
+          <tbody><% bookings.forEach(b => { %>
+            <tr>
+              <td><%= b.vehicleId?.title || 'N/A' %></td>
+              <td><%= b.renterId?.username || 'N/A' %></td>
+              <td><%= b.pickupDate ? new Date(b.pickupDate).toLocaleDateString() : 'N/A' %></td>
+              <td>₹<%= (b.totalPrice || b.estimatedFare || 0).toLocaleString('en-IN') %></td>
+              <td><span class="badge badge-<%= b.bookingStatus === 'COMPLETED' ? 'success' : b.bookingStatus === 'CANCELLED' || b.bookingStatus === 'REJECTED' ? 'danger' : b.bookingStatus === 'CONFIRMED' ? 'info' : 'secondary' %>"><%= b.bookingStatus %></span></td>
+            </tr><% }); %></tbody>
+        </table>
       </div>
-    </div>
+    <% } %>
   </div>
 </div>
 
 <!-- Counter Offer Modal -->
-<div class="modal fade" id="counterOfferModal" tabindex="-1">
-  <div class="modal-dialog">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title">Send Counter Offer</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-      </div>
-      <div class="modal-body">
-        <form id="counterOfferForm">
-            <input type="hidden" id="coBookingId">
-            <div class="mb-3">
-                <label class="form-label">Base Fare (₹)</label>
-                <input type="number" class="form-control" id="coBaseFare" required>
-            </div>
-            <div class="mb-3">
-                <label class="form-label">Total Estimated Fare (₹)</label>
-                <input type="number" class="form-control" id="coTotalFare" required>
-            </div>
-            <div class="mb-3">
-                <label class="form-label">Message to Customer (Optional)</label>
-                <textarea class="form-control" id="coMessage" rows="3" placeholder="Explain why the price changed..."></textarea>
-            </div>
-        </form>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-        <button type="button" class="btn btn-primary" onclick="submitCounterOffer()">Send Offer</button>
-      </div>
+<div class="modal-overlay" id="coModal" style="display:none" onclick="if(event.target===this)closeModal()">
+  <div class="modal-content" style="max-width:440px">
+    <div class="modal-header"><h3>Send Counter Offer</h3><button class="modal-close" onclick="closeModal()">&times;</button></div>
+    <div class="modal-body">
+      <form id="coForm">
+        <input type="hidden" id="coBookingId">
+        <div class="input-group"><label>Base Fare (₹)</label><input class="input-field" type="number" id="coBaseFare" required></div>
+        <div class="input-group"><label>Total Fare (₹)</label><input class="input-field" type="number" id="coTotalFare" required></div>
+        <div class="input-group"><label>Message</label><textarea class="input-field" id="coMessage" rows="3" placeholder="Explain the price change..."></textarea></div>
+      </form>
     </div>
+    <div class="modal-footer"><button class="btn btn-ghost" onclick="closeModal()">Cancel</button><button class="btn btn-primary" onclick="submitCounterOffer()">Send Offer</button></div>
   </div>
 </div>
 
 <script>
-async function acceptRequest(bookingId) {
-    if(!confirm("Accept this booking request?")) return;
-    try {
-        const res = await fetch(`/cars/bookings/${bookingId}/accept`, { method: 'POST', headers: {'Content-Type': 'application/json'} });
-        const data = await res.json();
-        if(data.success) {
-            alert('Request accepted!');
-            location.reload();
-        } else {
-            alert(data.error);
-        }
-    } catch(e) { alert("Error"); }
+async function acceptRequest(id) { if(!confirm('Accept?')) return; try { const r=await fetch('/cars/bookings/'+id+'/accept',{method:'POST'}); const d=await r.json(); d.success?(alert('Accepted'),location.reload()):alert(d.error); } catch(e){alert('Error')} }
+async function rejectRequest(id) { if(!confirm('Reject?')) return; try { const r=await fetch('/cars/bookings/'+id+'/reject',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({reason:'Rejected by owner'})}); const d=await r.json(); d.success?(alert('Rejected'),location.reload()):alert(d.error); } catch(e){alert('Error')} }
+function openCounterOfferModal(id,base,total) {
+  document.getElementById('coBookingId').value=id; document.getElementById('coBaseFare').value=base||0; document.getElementById('coTotalFare').value=total||0; document.getElementById('coModal').style.display='flex';
 }
-
-async function rejectRequest(bookingId) {
-    const reason = prompt("Reason for rejection:");
-    if(reason === null) return;
-    try {
-        const res = await fetch(`/cars/bookings/${bookingId}/reject`, { 
-            method: 'POST', 
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ reason }) 
-        });
-        const data = await res.json();
-        if(data.success) {
-            alert('Request rejected.');
-            location.reload();
-        } else {
-            alert(data.error);
-        }
-    } catch(e) { alert("Error"); }
-}
-
-function openCounterOfferModal(bookingId, base, total) {
-    document.getElementById('coBookingId').value = bookingId;
-    document.getElementById('coBaseFare').value = base || 0;
-    document.getElementById('coTotalFare').value = total || 0;
-    const modal = new bootstrap.Modal(document.getElementById('counterOfferModal'));
-    modal.show();
-}
-
+function closeModal() { document.getElementById('coModal').style.display='none'; }
 async function submitCounterOffer() {
-    const bookingId = document.getElementById('coBookingId').value;
-    const baseFare = document.getElementById('coBaseFare').value;
-    const totalFare = document.getElementById('coTotalFare').value;
-    const message = document.getElementById('coMessage').value;
-    
-    try {
-        const res = await fetch(`/cars/bookings/${bookingId}/counter`, {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ baseFare, totalFare, message })
-        });
-        const data = await res.json();
-        if(data.success) {
-            alert('Counter offer sent!');
-            location.reload();
-        } else {
-            alert(data.error);
-        }
-    } catch(e) { alert("Error"); }
+  const id=document.getElementById('coBookingId').value,bf=document.getElementById('coBaseFare').value,tf=document.getElementById('coTotalFare').value,msg=document.getElementById('coMessage').value;
+  try { const r=await fetch('/cars/bookings/'+id+'/counter',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({baseFare:bf,totalFare:tf,message:msg})}); const d=await r.json(); d.success?(alert('Sent!'),closeModal(),location.reload()):alert(d.error); } catch(e){alert('Error')}
 }
-
-async function completeBooking(bookingId) {
-  const vehicleConditionAfter = prompt('Enter vehicle condition after rental:');
-  if (vehicleConditionAfter === null) return;
-
-  try {
-    const response = await fetch(`/cars/bookings/${bookingId}/complete`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ vehicleConditionAfter })
-    });
-    const result = await response.json();
-    if (result.success) {
-      alert('Booking completed successfully!');
-      location.reload();
-    } else {
-      alert('Failed to complete booking: ' + result.error);
-    }
-  } catch (error) {
-    alert('Error completing booking: ' + error.message);
-  }
-}
-
-async function cancelBooking(bookingId) {
-  if (!confirm('Are you sure you want to cancel this booking?')) return;
-  const reason = prompt('Enter cancellation reason (optional):');
-  if (reason === null) return;
-
-  try {
-    const response = await fetch(`/cars/bookings/${bookingId}/cancel`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ reason })
-    });
-    const result = await response.json();
-    if (result.success) {
-      alert('Booking cancelled successfully!');
-      location.reload();
-    } else {
-      alert('Failed to cancel booking: ' + result.error);
-    }
-  } catch (error) {
-    alert('Error cancelling booking: ' + error.message);
-  }
-}
+async function completeBooking(id) { if(!confirm('Mark as completed?')) return; try { const r=await fetch('/cars/bookings/'+id+'/complete',{method:'POST',headers:{'Content-Type':'application/json'}}); const d=await r.json(); d.success?(alert('Completed'),location.reload()):alert(d.error); } catch(e){alert('Error')} }
 </script>
+
+<style>
+.dash-page { max-width: var(--max-width); margin: 0 auto; padding: 32px 24px; }
+.dash-header h1 { font-size: 28px; font-weight: 800; }
+.dash-header p { color: var(--text-secondary); font-size: 14px; }
+.stats-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; margin: 24px 0; }
+.section-card { background: var(--card); border: 1px solid var(--border-light); border-radius: var(--radius-lg); padding: 20px; margin-bottom: 20px; }
+.section-header h3 { font-size: 16px; font-weight: 700; }
+.dash-table-wrap { overflow-x: auto; margin-top: 12px; }
+.dash-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.dash-table th { text-align: left; padding: 10px 12px; font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.3px; border-bottom: 2px solid var(--border); background: var(--surface); }
+.dash-table td { padding: 10px 12px; border-bottom: 1px solid var(--border-light); }
+.dash-table tr:hover td { background: var(--surface); }
+.fw-bold { font-weight: 700; }
+.text-primary { color: var(--primary); }
+.text-primary-50 { color: var(--primary); font-size: 12px; font-style: italic; }
+</style>

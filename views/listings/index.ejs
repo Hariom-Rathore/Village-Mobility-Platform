@@ -1,361 +1,130 @@
 <% layout("/listings/layouts/boilerplate") %>
-<body>
-    <!-- <h3>all listings</h3> -->
-    <!-- <form method="GET" action="/cars/new">
-  
-    </form> -->
-<style>
-  #filters {
-    display: flex;
-    flex-wrap: nowrap;
-    align-items: center;
-    gap: 1.5rem;
-    margin-top: 1.5rem;
-    overflow-x: auto;
-    padding-bottom: 0.5rem;
-  }
-
-  .filter {
-    text-align: center;
-    opacity: 0.7;
-    min-width: 90px;
-    flex: 0 0 auto;
-  }
-
-  .filter:hover {
-    opacity: 1;
-    cursor: pointer;
-  }
-
-  .filter-link {
-    color: inherit;
-  }
-
-  .filter-link.active .filter {
-    opacity: 1;
-    color: #fe424d;
-  }
-
-  .tax-info{
-    display: none;
-  }
-
-  .filter i {
-    font-size: 1.2rem;
-  }
-
-.tax-toggle {
-  border: 1px solid #cfcfcf;
-  border-radius: 999px;
-  min-height: 3rem;
-  padding: 0.5rem 1rem;
-  margin-left: auto;
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-  background-color: #fff;
-  white-space: nowrap;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
-}
-
-.tax-toggle.active,
-.tax-toggle:focus-within {
-  border-color: #212529;
-  box-shadow: 0 0 0 0.15rem rgba(33, 37, 41, 0.12);
-}
-
-.tax-toggle .form-check-input {
-  float: none;
-  margin-left: 0;
-  margin-right: 0;
-  margin-top: 0;
-  cursor: pointer;
-}
-
-.tax-toggle .form-check-label {
-  margin-bottom: 0;
-  font-size: 0.9rem;
-  cursor: pointer;
-}
-
-  .filter p {
-    margin-top: 0.35rem;
-    margin-bottom: 0;
-    font-size: 0.8rem;
-  }
-
-  /* Mobile Responsive */
-  @media (max-width: 575.98px) {
-    #filters {
-      gap: 0.75rem;
-      margin-top: 1rem;
-    }
-
-    .filter {
-      min-width: 70px;
-    }
-
-    .filter i {
-      font-size: 0.9rem;
-    }
-
-    .filter p {
-      font-size: 0.65rem;
-    }
-
-    .tax-toggle {
-      min-height: 2.2rem;
-      padding: 0.35rem 0.6rem;
-      font-size: 0.8rem;
-    }
-  }
-
-  @media (min-width: 576px) and (max-width: 767.98px) {
-    #filters {
-      gap: 1rem;
-    }
-
-    .filter {
-      min-width: 80px;
-    }
-
-    .filter i {
-      font-size: 1rem;
-    }
-
-    .filter p {
-      font-size: 0.75rem;
-    }
-  }
-
-  @media (min-width: 768px) and (max-width: 991.98px) {
-    #filters {
-      gap: 1.25rem;
-    }
-  }
-</style>
-
-  
-    <div id="filters">
-      <a href="/cars?category=all" class="filter-link <%= currentCategory === 'all' ? 'active' : '' %>">
-        <div class="filter">
-          <div><i class="fa-solid fa-fire"></i></div>
-          <p>Trending</p>
-        </div>
-      </a>
-
-      <a href="/cars?category=sedans" class="filter-link <%= currentCategory === 'sedans' ? 'active' : '' %>">
-        <div class="filter">
-          <div><i class="fa-solid fa-car-side"></i></div>
-          <p>Sedans</p>
-        </div>
-      </a>
-
-      <a href="/cars?category=suvs" class="filter-link <%= currentCategory === 'suvs' ? 'active' : '' %>">
-        <div class="filter">
-          <div><i class="fa-solid fa-truck-monster"></i></div>
-          <p>SUVs</p>
-        </div>
-      </a>
-
-      <a href="/cars?seats=4" class="filter-link <%= Number(currentSeats) === 4 ? 'active' : '' %>">
-        <div class="filter">
-          <div><i class="fa-solid fa-user-friends"></i></div>
-          <p>4 Seater</p>
-        </div>
-      </a>
-
-      <a href="/cars?seats=6" class="filter-link <%= Number(currentSeats) === 6 ? 'active' : '' %>">
-        <div class="filter">
-          <div><i class="fa-solid fa-users"></i></div>
-          <p>6 Seater</p>
-        </div>
-      </a>
-
-      <a href="/cars?seats=10" class="filter-link <%= Number(currentSeats) === 10 ? 'active' : '' %>">
-        <div class="filter">
-          <div><i class="fa-solid fa-people-roof"></i></div>
-          <p>10 Seater</p>
-        </div>
-      </a>
-
-      <a href="/cars?category=luxury" class="filter-link <%= currentCategory === 'luxury' ? 'active' : '' %>">
-        <div class="filter">
-          <div><i class="fa-solid fa-crown"></i></div>
-          <p>Luxury</p>
-        </div>
-      </a>
-
-      <a href="/cars?category=sports" class="filter-link <%= currentCategory === 'sports' ? 'active' : '' %>">
-        <div class="filter">
-          <div><i class="fa-solid fa-flag-checkered"></i></div>
-          <p>Sports</p>
-        </div>
-      </a>
-
-      <a href="/cars?category=offroad" class="filter-link <%= currentCategory === 'offroad' ? 'active' : '' %>">
-        <div class="filter">
-          <div><i class="fa-solid fa-hill-rockslide"></i></div>
-          <p>Offroad</p>
-        </div>
-      </a>
-
-      <a href="/cars?category=family" class="filter-link <%= currentCategory === 'family' ? 'active' : '' %>">
-        <div class="filter">
-          <div><i class="fa-solid fa-people-group"></i></div>
-          <p>Family</p>
-        </div>
-      </a>
-
-      <a href="/cars?category=vintage" class="filter-link <%= currentCategory === 'vintage' ? 'active' : '' %>">
-        <div class="filter">
-          <div><i class="fa-solid fa-clock-rotate-left"></i></div>
-          <p>Vintage</p>
-        </div>
-      </a>
-
-      <a href="/cars?category=winter" class="filter-link <%= currentCategory === 'winter' ? 'active' : '' %>">
-        <div class="filter">
-          <div><i class="fa-regular fa-snowflake"></i></div>
-          <p>Winter</p>
-        </div>
-      </a>
-
-      <div class="tax-toggle form-switch">
-        <input 
-        class="form-check-input"
-        type="checkbox"
-        role="switch"
-        id="flewSwitchCheckDefault"
-        />
-        <label class="form-check-label" for="flewSwitchCheckDefault"
-        >Display total after taxes</label>
-      </div>
-
-    </div>
-
-    <div class="row row-cols-lg-3 row-cols-md-2 row-cols-sm-1 mt-3">
-      <% if (!alllistings || alllistings.length === 0) { %>
-        <div class="col-12 my-3">
-          <div class="alert alert-warning">No cars found<% if (currentSearch && currentSearch.trim()) { %> for "<%= currentSearch %>"<% } %></div>
-        </div>
-      <% } %>
-         <% for(let listing of alllistings){%>
-            <% 
-              let listingImageUrl = "https://images.pexels.com/photos/11129937/pexels-photo-11129937.jpeg";
-              if (listing.image && listing.image.url) {
-                listingImageUrl = listing.image.url;
-                // Add Cloudinary optimization parameters if it's a Cloudinary URL
-                if (listingImageUrl.includes('cloudinary.com')) {
-                  listingImageUrl = listingImageUrl.replace('/upload/', '/upload/q_auto,f_auto,w_800,h_600,c_limit/');
-                }
-                // Add Unsplash optimization parameters if it's an Unsplash URL
-                else if (listingImageUrl.includes('unsplash.com')) {
-                  if (!listingImageUrl.includes('?')) {
-                    listingImageUrl += '?auto=format&fit=crop&w=800&q=80';
-                  }
-                }
-              } else if (typeof listing.image === "string") {
-                listingImageUrl = listing.image;
-                // Add Unsplash optimization if needed
-                if (listingImageUrl.includes('unsplash.com') && !listingImageUrl.includes('?')) {
-                  listingImageUrl += '?auto=format&fit=crop&w=800&q=80';
-                }
-              }
-            %>
-            <% 
-              const availabilityStatus = listing.availabilityStatus || 'AVAILABLE';
-              const statusColors = {
-                'AVAILABLE': 'success',
-                'BOOKED': 'danger',
-                'RESERVED': 'warning',
-                'UNDER_MAINTENANCE': 'secondary',
-                'HIDDEN': 'dark'
-              };
-              const badgeColor = statusColors[availabilityStatus] || 'secondary';
-              
-              let availabilityText = 'Available';
-              if (availabilityStatus === 'BOOKED') {
-                if (listing.nextAvailableAt) {
-                  const nextDate = new Date(listing.nextAvailableAt);
-                  availabilityText = `Booked until ${nextDate.toLocaleDateString()}`;
-                } else {
-                  availabilityText = 'Booked';
-                }
-              } else if (availabilityStatus === 'AVAILABLE' && listing.nextAvailableAt) {
-                const nextDate = new Date(listing.nextAvailableAt);
-                availabilityText = `Available from ${nextDate.toLocaleDateString()}`;
-              } else if (availabilityStatus === 'UNDER_MAINTENANCE') {
-                availabilityText = 'Under Maintenance';
-              } else if (availabilityStatus === 'RESERVED') {
-                availabilityText = 'Reserved';
-              }
-            %>
-            <a href="/cars/<%=listing._id%>" class="listing-link">
-    <div class="card col listing-card">
-  <img 
-    src="<%= listingImageUrl %>" 
-    class="card-img-top" 
-    alt="<%= listing.title %>" 
-    style="height: 20rem; object-fit: cover;" 
-    loading="lazy" 
-    decoding="async"
-    onerror="this.onerror=null;this.src='https://images.pexels.com/photos/11129937/pexels-photo-11129937.jpeg';"
-  />
-  <div class="card-img-overlay"></div>
-  <div class="card-body">
-    <div class="d-flex justify-content-between align-items-start">
-      <p class="card-text mb-1">
-        <%=listing.title%>
-      </p>
-      <span class="badge bg-<%= badgeColor %>"><%= availabilityText %></span>
-    </div>
-    <p class="card-text">
-      <%= listing.price != null ? listing.price.toLocaleString("en-IN") : "Price not available" %> /day
-      <% if(listing.ratePerKm != null && listing.ratePerKm !== '') { %>
-        <br/><small class="text-muted">&#8377; <%= listing.ratePerKm %> /km</small>
-      <% } %>
-       <i class="tax-info"> &nbsp:&nbsp;+18%GST</i>
-    </p>
-    <% if (listing.averageRating && listing.totalReviews > 0) { %>
-      <div class="mt-2">
-        <small class="text-warning">
-          <% for(let i = 0; i < 5; i++) { %>
-            <% if (i < Math.floor(listing.averageRating)) { %>
-              <i class="fas fa-star"></i>
-            <% } else if (i < listing.averageRating) { %>
-              <i class="fas fa-star-half-alt"></i>
-            <% } else { %>
-              <i class="far fa-star"></i>
-            <% } %>
-          <% } %>
-        </small>
-        <small class="text-muted">(<%= listing.totalReviews %> reviews)</small>
-      </div>
-    <% } %>
+<div class="listings-page">
+  <!-- Filters -->
+  <div class="listings-filters">
+    <a href="/cars?category=all" class="filter-link <%= currentCategory === 'all' ? 'active' : '' %>">
+      <div class="filter"><i class="fa-solid fa-fire"></i><p>Trending</p></div>
+    </a>
+    <a href="/cars?category=sedans" class="filter-link <%= currentCategory === 'sedans' ? 'active' : '' %>">
+      <div class="filter"><i class="fa-solid fa-car-side"></i><p>Sedans</p></div>
+    </a>
+    <a href="/cars?category=suvs" class="filter-link <%= currentCategory === 'suvs' ? 'active' : '' %>">
+      <div class="filter"><i class="fa-solid fa-truck-monster"></i><p>SUVs</p></div>
+    </a>
+    <a href="/cars?seats=4" class="filter-link <%= Number(currentSeats) === 4 ? 'active' : '' %>">
+      <div class="filter"><i class="fa-solid fa-user-friends"></i><p>4 Seater</p></div>
+    </a>
+    <a href="/cars?seats=6" class="filter-link <%= Number(currentSeats) === 6 ? 'active' : '' %>">
+      <div class="filter"><i class="fa-solid fa-users"></i><p>6 Seater</p></div>
+    </a>
+    <a href="/cars?seats=10" class="filter-link <%= Number(currentSeats) === 10 ? 'active' : '' %>">
+      <div class="filter"><i class="fa-solid fa-people-roof"></i><p>10 Seater</p></div>
+    </a>
+    <a href="/cars?category=luxury" class="filter-link <%= currentCategory === 'luxury' ? 'active' : '' %>">
+      <div class="filter"><i class="fa-solid fa-crown"></i><p>Luxury</p></div>
+    </a>
+    <a href="/cars?category=sports" class="filter-link <%= currentCategory === 'sports' ? 'active' : '' %>">
+      <div class="filter"><i class="fa-solid fa-flag-checkered"></i><p>Sports</p></div>
+    </a>
+    <a href="/cars?category=offroad" class="filter-link <%= currentCategory === 'offroad' ? 'active' : '' %>">
+      <div class="filter"><i class="fa-solid fa-hill-rockslide"></i><p>Offroad</p></div>
+    </a>
+    <a href="/cars?category=family" class="filter-link <%= currentCategory === 'family' ? 'active' : '' %>">
+      <div class="filter"><i class="fa-solid fa-people-group"></i><p>Family</p></div>
+    </a>
+    <a href="/cars?category=vintage" class="filter-link <%= currentCategory === 'vintage' ? 'active' : '' %>">
+      <div class="filter"><i class="fa-solid fa-clock-rotate-left"></i><p>Vintage</p></div>
+    </a>
+    <a href="/cars?category=winter" class="filter-link <%= currentCategory === 'winter' ? 'active' : '' %>">
+      <div class="filter"><i class="fa-regular fa-snowflake"></i><p>Winter</p></div>
+    </a>
+    <label class="tax-toggle">
+      <input type="checkbox" id="taxSwitch">
+      <span>Display total after taxes</span>
+    </label>
   </div>
-</div>
-   <%}%>
-</div>
-    
-</a>
 
-    
-</body>
+  <!-- Grid -->
+  <% if (!alllistings || alllistings.length === 0) { %>
+    <div class="empty-state" style="margin-top:40px">
+      <i class="fas fa-car"></i>
+      <h3>No vehicles found</h3>
+      <p><% if (currentSearch && currentSearch.trim()) { %>No results for "<%= currentSearch %>"<% } else { %>Try adjusting your filters<% } %></p>
+    </div>
+  <% } else { %>
+    <div class="listings-grid">
+      <% for(let listing of alllistings){ %>
+        <% let imgUrl = "https://images.pexels.com/photos/11129937/pexels-photo-11129937.jpeg";
+           if (listing.image && listing.image.url) {
+             imgUrl = listing.image.url;
+             if (imgUrl.includes('cloudinary.com')) imgUrl = imgUrl.replace('/upload/', '/upload/q_auto,f_auto,w_400,h_300,c_limit/');
+             else if (imgUrl.includes('unsplash.com') && !imgUrl.includes('?')) imgUrl += '?auto=format&fit=crop&w=400&q=80';
+           } else if (typeof listing.image === "string") {
+             imgUrl = listing.image;
+             if (imgUrl.includes('unsplash.com') && !imgUrl.includes('?')) imgUrl += '?auto=format&fit=crop&w=400&q=80';
+           }
+        %>
+        <% const av = listing.availabilityStatus || 'AVAILABLE'; %>
+        <% const badgeMap = { AVAILABLE: ['success','Available'], BOOKED: ['danger','Booked'], RESERVED: ['warning','Reserved'], UNDER_MAINTENANCE: ['secondary','Maintenance'], HIDDEN: ['secondary','Hidden'] }; %>
+        <% const [badgeColor, badgeText] = badgeMap[av] || ['secondary','Unknown']; %>
+        <a href="/cars/<%=listing._id%>" class="listing-card-link">
+          <div class="card listing-card">
+            <div class="listing-card-img-wrap">
+              <img src="<%= imgUrl %>" alt="<%= listing.title %>" loading="lazy" onerror="this.src='https://images.pexels.com/photos/11129937/pexels-photo-11129937.jpeg'">
+              <span class="badge badge-<%= badgeColor %> listing-badge"><%= badgeText %></span>
+            </div>
+            <div class="card-body">
+              <h4><%= listing.title %></h4>
+              <p class="price">
+                &#8377; <%= listing.price != null ? listing.price.toLocaleString("en-IN") : "—" %>
+                <small>/day</small>
+                <% if(listing.ratePerKm != null) { %><br><small class="km-rate">&#8377; <%= listing.ratePerKm %>/km</small><% } %>
+                <i class="tax-info" style="display:none"> &nbsp;+18% GST</i>
+              </p>
+              <% if (listing.averageRating && listing.totalReviews > 0) { %>
+                <div class="listing-rating">
+                  <% for(let i = 1; i <= 5; i++) { %>
+                    <i class="<%= i <= Math.floor(listing.averageRating) ? 'fas' : (i <= listing.averageRating ? 'fas fa-star-half-alt' : 'far') %> fa-star"></i>
+                  <% } %>
+                  <span>(<%= listing.totalReviews %>)</span>
+                </div>
+              <% } %>
+            </div>
+          </div>
+        </a>
+      <% } %>
+    </div>
+  <% } %>
+</div>
 
 <script>
-  const taxSwitch = document.getElementById("flewSwitchCheckDefault");
-  const taxToggle = document.querySelector(".tax-toggle");
-
-  if (taxSwitch) {
-    taxSwitch.addEventListener("change", () => {
-      const taxInfo = document.getElementsByClassName("tax-info");
-      if (taxToggle) {
-        taxToggle.classList.toggle("active", taxSwitch.checked);
-      }
-      for (const info of taxInfo) {
-        info.style.display = taxSwitch.checked ? "inline" : "none";
-      }
-    });
-  }
+document.getElementById('taxSwitch')?.addEventListener('change', function() {
+  document.querySelectorAll('.tax-info').forEach(e => e.style.display = this.checked ? 'inline' : 'none');
+});
 </script>
+
+<style>
+.listings-page { padding: 24px 24px 48px; max-width: var(--max-width); margin: 0 auto; }
+.listings-filters { display: flex; flex-wrap: nowrap; align-items: center; gap: 4px; overflow-x: auto; padding: 4px 0 12px; margin-bottom: 24px; }
+.filter-link { text-decoration: none; color: var(--text-secondary); flex: 0 0 auto; }
+.filter { display: flex; flex-direction: column; align-items: center; padding: 10px 14px; border-radius: var(--radius-lg); transition: all 0.2s; min-width: 80px; cursor: pointer; }
+.filter:hover { background: var(--surface); }
+.filter-link.active .filter { background: var(--primary-50); color: var(--primary); }
+.filter i { font-size: 18px; }
+.filter p { margin: 4px 0 0; font-size: 11px; font-weight: 500; white-space: nowrap; }
+.tax-toggle { display: flex; align-items: center; gap: 8px; margin-left: auto; padding: 8px 14px; border: 1px solid var(--border); border-radius: var(--radius-full); white-space: nowrap; cursor: pointer; font-size: 12px; color: var(--text-secondary); flex-shrink: 0; }
+.tax-toggle input[type="checkbox"] { accent-color: var(--primary); width: 14px; height: 14px; }
+.listings-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 24px; }
+.listing-card-link { text-decoration: none; color: inherit; display: block; transition: transform 0.2s; }
+.listing-card-link:hover { transform: translateY(-4px); }
+.listing-card { overflow: hidden; }
+.listing-card-img-wrap { position: relative; height: 200px; overflow: hidden; background: var(--surface); }
+.listing-card-img-wrap img { width: 100%; height: 100%; object-fit: cover; }
+.listing-badge { position: absolute; top: 12px; right: 12px; }
+.listing-card .card-body h4 { font-size: 16px; font-weight: 700; margin-bottom: 4px; }
+.listing-card .card-body .price { font-size: 18px; font-weight: 700; color: var(--primary); }
+.listing-card .card-body .price small { font-size: 12px; font-weight: 400; color: var(--text-secondary); }
+.listing-card .card-body .km-rate { font-size: 12px; color: var(--text-secondary); font-weight: 400; }
+.listing-rating { color: #f59e0b; font-size: 12px; margin-top: 6px; }
+.listing-rating span { color: var(--text-secondary); margin-left: 4px; }
+</style>

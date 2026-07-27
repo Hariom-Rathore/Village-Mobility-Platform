@@ -1,75 +1,54 @@
 <% layout("/listings/layouts/boilerplate") %>
-<style>
-.signup-page { min-height: 80vh; display: flex; align-items: center; justify-content: center; padding: 20px; }
-.signup-card { background: white; border-radius: 24px; padding: 40px; box-shadow: 0 4px 24px rgba(0,0,0,0.08); width: 100%; max-width: 440px; }
-.signup-card h1 { font-size: 28px; font-weight: 700; text-align: center; margin-bottom: 8px; }
-.signup-card .subtitle { text-align: center; color: #666; font-size: 14px; margin-bottom: 32px; }
-.form-group { margin-bottom: 20px; }
-.form-group label { display: block; font-size: 14px; font-weight: 600; color: #333; margin-bottom: 8px; }
-.form-group input, .form-group select { width: 100%; padding: 14px 16px; border: 2px solid #e5e7eb; border-radius: 12px; font-size: 15px; transition: all 0.2s; background: #f9fafb; }
-.form-group input:focus, .form-group select:focus { outline: none; border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37,99,235,0.1); background: white; }
-.btn-signup { width: 100%; background: #2563eb; color: white; border: none; border-radius: 12px; padding: 16px; font-size: 16px; font-weight: 600; cursor: pointer; transition: all 0.2s; }
-.btn-signup:hover { background: #1d4ed8; transform: translateY(-1px); }
-.role-selector { display: flex; gap: 12px; margin-bottom: 20px; }
-.role-option { flex: 1; padding: 16px; border: 2px solid #e5e7eb; border-radius: 12px; text-align: center; cursor: pointer; transition: all 0.2s; background: #f9fafb; }
-.role-option:hover { border-color: #93c5fd; }
-.role-option.active { border-color: #2563eb; background: #eff6ff; }
-.role-option i { font-size: 24px; color: #2563eb; margin-bottom: 8px; }
-.role-option span { display: block; font-size: 14px; font-weight: 600; color: #333; }
-.login-link { text-align: center; margin-top: 20px; font-size: 14px; color: #666; }
-.login-link a { color: #2563eb; font-weight: 600; text-decoration: none; }
-</style>
+<div class="auth-page">
+  <div class="auth-card fade-in">
+    <a href="/" class="auth-logo">
+      <span class="brand-icon"><i class="fa-solid fa-car"></i></span>
+      RideLocal
+    </a>
+    <h1>Create an account</h1>
+    <p class="auth-subtitle">Join RideLocal for safe, local trips</p>
 
-<div class="signup-page">
-  <div class="signup-card">
-    <h1>Create Account</h1>
-    <p class="subtitle">Choose how you want to use the platform</p>
+    <% if (typeof message !== 'undefined' && message) { %>
+      <div class="alert alert-error mb-md"><i class="fas fa-exclamation-circle"></i><span><%= message %></span></div>
+    <% } %>
+
     <form action="/users/signup" method="POST">
-      <div class="role-selector">
-        <div class="role-option active" onclick="selectRole(this, 'customer')">
-          <i class="fas fa-user"></i>
-          <span>Customer</span>
-          <small style="display:block;font-size:11px;color:#999;margin-top:4px;">Book trips</small>
-        </div>
-        <div class="role-option" onclick="selectRole(this, 'owner')">
-          <i class="fas fa-car"></i>
-          <span>Owner</span>
-          <small style="display:block;font-size:11px;color:#999;margin-top:4px;">List vehicles</small>
-        </div>
-      </div>
-      <input type="hidden" name="role" id="roleInput" value="customer">
-      <div class="form-group">
+      <div class="input-group">
         <label>Username</label>
-        <input type="text" name="username" placeholder="Enter your name" required>
+        <input class="input-field" type="text" name="username" placeholder="Choose a username" required>
       </div>
-      <div class="form-group">
+      <div class="input-group">
         <label>Email</label>
-        <input type="email" name="email" placeholder="Enter your email" required>
+        <input class="input-field" type="email" name="email" placeholder="Enter your email" required>
       </div>
-      <div class="form-group">
+      <div class="input-group">
         <label>Password</label>
-        <input type="password" name="password" placeholder="Create a password" required minlength="6">
+        <input class="input-field" type="password" name="password" placeholder="Create a password" required>
       </div>
-      <button type="submit" class="btn-signup">Create Account</button>
+      <div class="input-group">
+        <label>I am a</label>
+        <div class="radio-group">
+          <label class="radio-label"><input type="radio" name="role" value="customer" checked> Customer</label>
+          <label class="radio-label"><input type="radio" name="role" value="owner"> Vehicle Owner</label>
+        </div>
+      </div>
+      <button type="submit" class="btn btn-primary btn-lg btn-block mt-md">Create Account</button>
     </form>
-    <div class="login-link">
-      Already have an account? <a href="/login">Log in</a>
-    </div>
+    <p class="auth-footer">Already have an account? <a href="/users/login">Log in</a></p>
   </div>
 </div>
 
-<script>
-function selectRole(el, role) {
-  document.querySelectorAll('.role-option').forEach(r => r.classList.remove('active'));
-  el.classList.add('active');
-  document.getElementById('roleInput').value = role;
-}
-
-// Auto-select role from URL query param (e.g. ?role=owner)
-const urlParams = new URLSearchParams(window.location.search);
-const roleParam = urlParams.get('role');
-if (roleParam === 'owner') {
-  const ownerEl = document.querySelector('.role-option[onclick*="owner"]');
-  if (ownerEl) selectRole(ownerEl, 'owner');
-}
-</script>
+<style>
+.auth-page { min-height: calc(100vh - var(--header-height, 72px)); display: flex; align-items: center; justify-content: center; padding: 40px 20px; background: var(--surface); }
+.auth-card { background: var(--card); border-radius: var(--radius-xl); padding: 40px; box-shadow: var(--shadow-lg); width: 100%; max-width: 440px; border: 1px solid var(--border-light); }
+.auth-logo { display: flex; align-items: center; justify-content: center; gap: 10px; font-weight: 800; font-size: 22px; color: var(--text); margin-bottom: 24px; text-decoration: none; }
+.auth-card h1 { font-size: 24px; font-weight: 800; text-align: center; margin-bottom: 4px; }
+.auth-subtitle { text-align: center; color: var(--text-secondary); font-size: 14px; margin-bottom: 28px; }
+.auth-card .input-group { margin-bottom: 16px; }
+.radio-group { display: flex; gap: 24px; margin-top: 6px; }
+.radio-label { display: flex; align-items: center; gap: 8px; font-size: 14px; cursor: pointer; }
+.radio-label input[type="radio"] { accent-color: var(--primary); width: 16px; height: 16px; }
+.auth-footer { text-align: center; margin-top: 20px; font-size: 14px; color: var(--text-secondary); }
+.auth-footer a { color: var(--primary); font-weight: 600; text-decoration: none; }
+.auth-footer a:hover { text-decoration: underline; }
+</style>
