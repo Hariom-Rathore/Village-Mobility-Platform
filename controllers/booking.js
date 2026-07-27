@@ -223,7 +223,7 @@ module.exports.createBookingRequest = async (req, res) => {
         if (!listing) return res.status(404).json({ success: false, error: 'Vehicle not found' });
         if (!listing.owner || listing.owner.equals(req.user._id)) return res.status(400).json({ success: false, error: 'Cannot book your own vehicle' });
 
-        let totalDays = 1;
+        let totalDays = Number(booking.tripDays) || 1;
         if (booking.pickupDate && booking.returnDate) {
             const p = new Date(booking.pickupDate), r = new Date(booking.returnDate);
             totalDays = Math.max(1, Math.ceil((r - p) / (1000 * 60 * 60 * 24)));
@@ -242,9 +242,11 @@ module.exports.createBookingRequest = async (req, res) => {
         const distanceKm = Number(booking.distanceKm || booking.estimatedDistance || 0);
         const ratePerKm = Number(listing.pricePerKm || listing.ratePerKm || 0);
         const baseDaily = Number(listing.baseFare || listing.price || 0);
+        const nightCharge = Number(listing.nightCharge || 0);
         const distanceCharge = distanceKm * ratePerKm;
         const timeCharge = baseDaily * totalDays;
-        const basePrice = Math.ceil(timeCharge + distanceCharge);
+        const nightStayCharge = (booking.nightStay === 'yes' && nightCharge > 0) ? nightCharge * Math.max(0, totalDays - 1) : 0;
+        const basePrice = Math.ceil(timeCharge + distanceCharge + nightStayCharge);
         const platformFee = Math.max(50, Math.ceil(basePrice * 0.05));
         const tax = Math.ceil((basePrice + platformFee) * 0.18);
         const estimatedFare = basePrice + platformFee + tax;
@@ -257,10 +259,10 @@ module.exports.createBookingRequest = async (req, res) => {
             pickup: booking.pickupLocation || booking.pickupAddress,
             pickupLocation: booking.pickupLocation || booking.pickupAddress,
             pickupAddress: booking.pickupAddress || booking.pickupLocation,
-            pickupCoordinates: booking.pickupCoordinates ? { type: 'Point', coordinates: booking.pickupCoordinates } : undefined,
+            pickupCoordinates: booking.pickupCoordinates ? { type: 'Point', coordinates: booking.pickupCoordinates } : (booking.pickupLat && booking.pickupLng ? { type: 'Point', coordinates: [parseFloat(booking.pickupLng), parseFloat(booking.pickupLat)] } : undefined),
             destination: booking.destination || booking.destinationAddress,
             destinationAddress: booking.destinationAddress || booking.destination,
-            destinationCoordinates: booking.destinationCoordinates ? { type: 'Point', coordinates: booking.destinationCoordinates } : undefined,
+            destinationCoordinates: booking.destinationCoordinates ? { type: 'Point', coordinates: booking.destinationCoordinates } : (booking.destLat && booking.destLng ? { type: 'Point', coordinates: [parseFloat(booking.destLng), parseFloat(booking.destLat)] } : undefined),
             pickupDate: new Date(booking.pickupDate || booking.travelDate),
             pickupTime: booking.pickupTime, pickupDateTime,
             tripType: booking.tripType,
@@ -270,7 +272,8 @@ module.exports.createBookingRequest = async (req, res) => {
             driverType: booking.driverType || 'dedicated-driver',
             distanceKm, estimatedDuration: booking.estimatedDuration || '',
             basePrice, pricePerKM: ratePerKm, totalPrice: estimatedFare, estimatedFare,
-            platformFee, tax, totalDays,
+            platformFee, tax, totalDays, tripDays: totalDays,
+            nightStay: booking.nightStay === 'yes', nightStayCharge,
             paymentMethod: booking.paymentMethod || 'cash', bookingStatus: 'PENDING', paymentStatus: 'PENDING',
             ownerWhatsappNumber
         });

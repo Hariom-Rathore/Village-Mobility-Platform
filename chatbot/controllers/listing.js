@@ -23,7 +23,7 @@ module.exports.index = async (req, res) => {
     console.log("Fetching all listings...");
     const alllistings = await Listing.find({}).populate("owner");
     console.log("Found listings:", alllistings.length, alllistings);
-    res.render("listings/index.ejs", { alllistings });
+    res.render("listings/index.ejs", { alllistings, currentTripType: '', currentSearch: '' });
 };
 
 module.exports.renderNewForm = (req, res) => {

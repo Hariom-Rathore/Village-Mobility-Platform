@@ -1,73 +1,93 @@
 <% layout("/listings/layouts/boilerplate") %>
 <%
   const vImg = listing.images?.[0]?.url || listing.image?.url || 'https://images.pexels.com/photos/11129937/pexels-photo-11129937.jpeg';
-  const fare = searchParams?.fare || Math.ceil((listing.baseFare || listing.price || 0) + ((searchParams?.distance || 0) * (listing.pricePerKm || listing.ratePerKm || 0)));
+  const baseFare = listing.baseFare || listing.price || 0;
+  const perKm = listing.pricePerKm || listing.ratePerKm || 0;
+  const nightCharge = listing.nightCharge || 0;
 %>
 <div class="booking-page fade-in">
   <div class="booking-layout">
-    <!-- Left side: Form -->
+    <!-- Left: Form -->
     <div class="booking-main">
       <a href="/cars/<%= listing._id %>" class="back-link"><i class="fas fa-arrow-left"></i> Back</a>
       <h1>Book Your Ride</h1>
 
-      <form id="bookingForm" action="/book/<%= listing._id %>/request" method="POST">
+      <form id="bookingForm" action="/cars/book/<%= listing._id %>/request" method="POST">
         <div class="card" style="margin-bottom:16px">
           <div class="card-body">
             <h3 class="card-title"><i class="fas fa-route" style="color:var(--primary)"></i> Trip Details</h3>
+
             <div class="form-row2">
               <div class="input-group">
                 <label><i class="fas fa-circle-dot" style="color:#10b981"></i> Pickup Location</label>
-                <input class="input-field" type="text" id="pickupLocation" name="booking[pickupLocation]" value="<%= searchParams?.pickup || '' %>" placeholder="Pickup location" required>
+                <input class="input-field" type="text" id="pickupLocation" name="booking[pickupLocation]" value="<%= searchParams?.pickup || '' %>" placeholder="Enter pickup location" required>
+                <input type="hidden" id="pickupLat" name="booking[pickupLat]" value="<%= searchParams?.pickupLat || '' %>">
+                <input type="hidden" id="pickupLng" name="booking[pickupLng]" value="<%= searchParams?.pickupLng || '' %>">
               </div>
               <div class="input-group">
                 <label><i class="fas fa-location-dot" style="color:#ef4444"></i> Destination</label>
-                <input class="input-field" type="text" id="destination" name="booking[destination]" value="<%= searchParams?.destination || '' %>" placeholder="Destination" required>
+                <input class="input-field" type="text" id="destination" name="booking[destination]" value="<%= searchParams?.destination || '' %>" placeholder="Enter destination" required>
+                <input type="hidden" id="destLat" name="booking[destLat]" value="<%= searchParams?.destLat || '' %>">
+                <input type="hidden" id="destLng" name="booking[destLng]" value="<%= searchParams?.destLng || '' %>">
               </div>
             </div>
+
             <div class="form-row2">
               <div class="input-group">
                 <label><i class="fas fa-calendar"></i> Travel Date</label>
-                <input class="input-field" type="date" name="booking[pickupDate]" value="<%= searchParams?.date || '' %>" required>
+                <input class="input-field" type="date" id="tripDate" name="booking[pickupDate]" value="<%= searchParams?.date || '' %>" required>
               </div>
               <div class="input-group">
                 <label><i class="fas fa-clock"></i> Pickup Time</label>
-                <input class="input-field" type="time" name="booking[pickupTime]" value="<%= searchParams?.time || '' %>" required>
+                <input class="input-field" type="time" name="booking[pickupTime]" value="<%= searchParams?.time || '09:00' %>" required>
               </div>
             </div>
+
             <div class="form-row2">
               <div class="input-group">
-                <label><i class="fas fa-users"></i> Passengers</label>
-                <input class="input-field" type="number" name="booking[passengers]" min="1" max="<%= listing.seats || 10 %>" value="<%= searchParams?.passengers || 1 %>" required>
+                <label><i class="fas fa-calendar-week"></i> Trip Duration (Days)</label>
+                <select class="input-field" id="tripDays" name="booking[tripDays]">
+                  <% for(let d=1; d<=15; d++) { %>
+                    <option value="<%= d %>" <%= (searchParams?.tripDays == d) ? 'selected' : '' %>><%= d %> Day<%= d > 1 ? 's' : '' %></option>
+                  <% } %>
+                </select>
               </div>
               <div class="input-group">
-                <label><i class="fas fa-road"></i> Distance (km)</label>
-                <input class="input-field" type="number" name="booking[distanceKm]" value="<%= searchParams?.distance || 0 %>" readonly>
+                <label><i class="fas fa-users"></i> Passengers</label>
+                <input class="input-field" type="number" id="passengers" name="booking[passengers]" min="1" max="<%= listing.seats || 10 %>" value="<%= searchParams?.passengers || 1 %>" required>
               </div>
             </div>
+
+            <div class="input-group">
+              <label class="checkbox-label">
+                <input type="checkbox" id="nightStay" name="booking[nightStay]" value="yes">
+                <span class="checkbox-custom"></span>
+                Need Night Stay? <% if (nightCharge > 0) { %><span class="text-secondary">(+₹<%= nightCharge.toLocaleString('en-IN') %>/night)</span><% } %>
+              </label>
+            </div>
+
             <div class="input-group">
               <label><i class="fas fa-pen"></i> Special Instructions</label>
-              <textarea class="input-field" name="booking[specialInstructions]" rows="3" placeholder="Any special requests..."></textarea>
+              <textarea class="input-field" name="booking[specialInstructions]" rows="3" placeholder="Any special requests for the driver..."></textarea>
             </div>
           </div>
         </div>
 
+        <input type="hidden" id="distanceKm" name="booking[distanceKm]" value="<%= searchParams?.distance || 0 %>">
+        <input type="hidden" id="estimatedFare" name="booking[estimatedFare]" value="">
         <input type="hidden" name="booking[tripType]" value="one-way">
         <input type="hidden" name="booking[estimatedDuration]" value="">
-        <input type="hidden" name="booking[estimatedFare]" value="<%= fare %>">
         <input type="hidden" name="booking[paymentMethod]" value="cash">
-        <% if(searchParams?.pickupLat) { %><input type="hidden" name="booking[pickupLat]" value="<%= searchParams.pickupLat %>"><% } %>
-        <% if(searchParams?.pickupLng) { %><input type="hidden" name="booking[pickupLng]" value="<%= searchParams.pickupLng %>"><% } %>
-        <% if(searchParams?.destLat) { %><input type="hidden" name="booking[destLat]" value="<%= searchParams.destLat %>"><% } %>
-        <% if(searchParams?.destLng) { %><input type="hidden" name="booking[destLng]" value="<%= searchParams.destLng %>"><% } %>
 
         <button type="submit" class="btn btn-primary btn-lg btn-block" id="submitBtn">
           <i class="fas fa-paper-plane"></i> Send Booking Request
         </button>
+        <div id="bookingError" class="alert alert-error" style="display:none;margin-top:12px"><i class="fas fa-exclamation-circle"></i><span id="bookingErrorMsg"></span></div>
       </form>
     </div>
 
-    <!-- Right side: Summary -->
-    <div class="booking-sidebar">
+    <!-- Right: Fare Summary -->
+    <div class="booking-sidebar" id="fareSidebar">
       <div class="card">
         <div class="card-body">
           <img src="<%= vImg %>" alt="<%= listing.vehicleName || listing.title %>" class="booking-vehicle-img" onerror="this.src='https://images.pexels.com/photos/11129937/pexels-photo-11129937.jpeg'">
@@ -81,14 +101,22 @@
 
           <div class="fare-summary">
             <h4>Fare Estimate</h4>
-            <div class="fare-row"><span>Base Fare</span><span>₹<%= (listing.baseFare || listing.price || 0).toLocaleString('en-IN') %></span></div>
-            <div class="fare-row"><span>Distance (<%= searchParams?.distance || 0 %> km × ₹<%= listing.pricePerKm || listing.ratePerKm || 0 %>/km)</span><span>₹<%= ((searchParams?.distance || 0) * (listing.pricePerKm || listing.ratePerKm || 0)).toLocaleString('en-IN') %></span></div>
+            <div class="fare-row"><span>Base Fare (per day)</span><span>₹<span id="fsBase"><%= baseFare.toLocaleString('en-IN') %></span></span></div>
+            <div class="fare-row"><span>Distance Charge</span><span id="fsDistVal">₹0</span></div>
+            <div class="fare-row" id="fsDistDetail" style="font-size:12px;color:var(--text-secondary);display:none"><span id="fsDistCalc"></span></div>
+            <div class="fare-row"><span>Trip Duration</span><span id="fsDays">1 Day</span></div>
+            <div id="fsNightRow" class="fare-row" style="display:none"><span>Night Stay Charges</span><span>+₹<span id="fsNightVal"><%= nightCharge.toLocaleString('en-IN') %></span></span></div>
+            <div class="fare-row" id="fsSubtotalRow"><span>Subtotal</span><span id="fsSubtotal">₹0</span></div>
             <div class="fare-divider"></div>
-            <div class="fare-row total"><span>Estimated Total</span><span>₹<%= fare.toLocaleString('en-IN') %></span></div>
+            <div class="fare-row total"><span>Estimated Total</span><span id="fsTotal">₹0</span></div>
+          </div>
+
+          <div id="fsDistanceInfo" class="text-secondary" style="font-size:12px;margin:8px 0 0;display:none">
+            <i class="fas fa-road"></i> <span id="fsDistText">0 km</span> &middot; ₹<span id="fsPerKm"><%= perKm %></span>/km
           </div>
 
           <div class="booking-note">
-            <i class="fas fa-clock"></i> Booking stays pending until the owner confirms
+            <i class="fas fa-clock"></i> Booking stays pending until owner confirms
           </div>
         </div>
       </div>
@@ -97,21 +125,114 @@
 </div>
 
 <script>
-(function() {
-  const inputs = document.querySelectorAll('input[type="date"]');
-  const d = new Date();
-  inputs.forEach(el => { if (!el.value) { el.value = d.toISOString().split('T')[0]; el.min = d.toISOString().split('T')[0]; } });
-  document.querySelectorAll('input[type="time"]').forEach(el => {
-    if (!el.value) el.value = String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()+30).padStart(2,'0');
-  });
-  document.getElementById('bookingForm')?.addEventListener('submit', function(e) {
-    const btn = document.getElementById('submitBtn');
-    btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending...';
-  });
-})();
+// ── Pricing constants ──
+const BASE_FARE = <%= baseFare %>;
+const PER_KM = <%= perKm %>;
+const NIGHT_CHARGE = <%= nightCharge %>;
 
-// Autocomplete for location fields
+// ── Haversine distance ──
+function haversineKm(lat1, lon1, lat2, lon2) {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180) * Math.cos(lat2*Math.PI/180) * Math.sin(dLon/2)**2;
+  return Math.round(R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)));
+}
+
+// ── Update fare ──
+function updateFare() {
+  const dist = parseFloat(document.getElementById('distanceKm').value) || 0;
+  const days = parseInt(document.getElementById('tripDays').value) || 1;
+  const nightStay = document.getElementById('nightStay').checked;
+
+  const baseTotal = BASE_FARE * days;
+  const distCharge = dist * PER_KM;
+  const nightTotal = nightStay ? NIGHT_CHARGE * Math.max(0, days - 1) : 0;
+  const total = baseTotal + distCharge + nightTotal;
+
+  // Update sidebar
+  document.getElementById('fsBase').textContent = BASE_FARE.toLocaleString('en-IN');
+  document.getElementById('fsDistVal').textContent = '₹' + distCharge.toLocaleString('en-IN');
+  document.getElementById('fsDays').textContent = days + ' Day' + (days > 1 ? 's' : '');
+  document.getElementById('fsSubtotal').textContent = '₹' + (baseTotal + distCharge).toLocaleString('en-IN');
+  document.getElementById('fsTotal').textContent = '₹' + total.toLocaleString('en-IN');
+
+  // Distance calculation detail
+  const dd = document.getElementById('fsDistDetail');
+  const dc = document.getElementById('fsDistCalc');
+  if (dist > 0 && PER_KM > 0) {
+    dd.style.display = 'flex';
+    dc.textContent = dist + ' km × ₹' + PER_KM + '/km = ₹' + distCharge.toLocaleString('en-IN');
+  } else {
+    dd.style.display = 'none';
+  }
+
+  // Night stay row
+  const nr = document.getElementById('fsNightRow');
+  if (nightStay && NIGHT_CHARGE > 0) {
+    nr.style.display = 'flex';
+    document.getElementById('fsNightVal').textContent = nightTotal.toLocaleString('en-IN');
+  } else {
+    nr.style.display = 'none';
+  }
+
+  // Distance info
+  const di = document.getElementById('fsDistanceInfo');
+  if (dist > 0) {
+    di.style.display = 'block';
+    document.getElementById('fsDistText').textContent = dist + ' km';
+  } else {
+    di.style.display = 'none';
+  }
+
+  // Set hidden estimated fare
+  document.getElementById('estimatedFare').value = total;
+}
+
+// ── Geocode address → {lat, lng} ──
+async function geocodeAddress(address) {
+  if (!address || address.trim().length < 3) return null;
+  try {
+    const r = await fetch('/cars/geocode?q=' + encodeURIComponent(address.trim()));
+    const d = await r.json();
+    if (d && d.length > 0) {
+      return { lat: parseFloat(d[0].lat), lng: parseFloat(d[0].lon) };
+    }
+  } catch(e) {}
+  return null;
+}
+
+// ── Calculate distance between pickup & dest ──
+async function calcDistance() {
+  const pickup = document.getElementById('pickupLocation').value.trim();
+  const dest = document.getElementById('destination').value.trim();
+  if (!pickup || !dest || pickup.length < 3 || dest.length < 3) return;
+
+  // Try from autocomplete data attributes first
+  let pLat = parseFloat(document.getElementById('pickupLocation').dataset.lat);
+  let pLng = parseFloat(document.getElementById('pickupLocation').dataset.lon);
+  let dLat = parseFloat(document.getElementById('destination').dataset.lat);
+  let dLng = parseFloat(document.getElementById('destination').dataset.lon);
+
+  // Fallback: geocode
+  if (!pLat || !pLng) { const g = await geocodeAddress(pickup); if (g) { pLat = g.lat; pLng = g.lng; } }
+  if (!dLat || !dLng) { const g = await geocodeAddress(dest); if (g) { dLat = g.lat; dLng = g.lng; } }
+
+  if (pLat && pLng && dLat && dLng) {
+    const dist = haversineKm(pLat, pLng, dLat, dLng);
+    document.getElementById('distanceKm').value = dist;
+    document.getElementById('pickupLat').value = pLat;
+    document.getElementById('pickupLng').value = pLng;
+    document.getElementById('destLat').value = dLat;
+    document.getElementById('destLng').value = dLng;
+  }
+  updateFare();
+}
+
+// ── ESC (escape HTML) ──
 function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+// ── Autocomplete setup ──
 function setupAutocomplete(inputId) {
   const input = document.getElementById(inputId);
   if (!input) return;
@@ -131,7 +252,7 @@ function setupAutocomplete(inputId) {
         const d = await r.json();
         if (!d.length) { container.innerHTML = ''; container.classList.remove('open'); return; }
         container.innerHTML = d.map((item, i) =>
-          '<div class="ac-item" data-primary="' + esc(item.primary) + '" data-lat="' + item.lat + '" data-lon="' + item.lon + '">' +
+          '<div class="ac-item" data-primary="' + esc(item.primary) + '" data-secondary="' + esc(item.secondary) + '" data-lat="' + item.lat + '" data-lon="' + item.lon + '">' +
             '<i class="fas fa-map-marker-alt"></i>' +
             '<div><div class="ac-primary">' + esc(item.primary) + '</div><div class="ac-secondary">' + esc(item.secondary) + '</div></div>' +
           '</div>'
@@ -144,6 +265,7 @@ function setupAutocomplete(inputId) {
             input.dataset.lon = el.dataset.lon;
             container.innerHTML = '';
             container.classList.remove('open');
+            calcDistance();
           });
         });
       } catch(e) { container.classList.remove('open'); }
@@ -152,18 +274,70 @@ function setupAutocomplete(inputId) {
   input.addEventListener('keydown', (e) => {
     const items = container.querySelectorAll('.ac-item');
     if (!items.length) return;
-    if (e.key === 'ArrowDown') { e.preventDefault(); curFocus = Math.min(curFocus + 1, items.length - 1); items.forEach(el => el.classList.remove('ac-focus')); items[curFocus].classList.add('ac-focus'); items[curFocus].scrollIntoView({ block: 'nearest' }); }
-    else if (e.key === 'ArrowUp') { e.preventDefault(); curFocus = Math.max(curFocus - 1, 0); items.forEach(el => el.classList.remove('ac-focus')); items[curFocus].classList.add('ac-focus'); items[curFocus].scrollIntoView({ block: 'nearest' }); }
+    if (e.key === 'ArrowDown') { e.preventDefault(); curFocus = Math.min(curFocus+1, items.length-1); items.forEach(el=>el.classList.remove('ac-focus')); items[curFocus].classList.add('ac-focus'); items[curFocus].scrollIntoView({block:'nearest'}); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); curFocus = Math.max(curFocus-1,0); items.forEach(el=>el.classList.remove('ac-focus')); items[curFocus].classList.add('ac-focus'); items[curFocus].scrollIntoView({block:'nearest'}); }
     else if (e.key === 'Enter' && curFocus >= 0) { e.preventDefault(); items[curFocus].click(); }
     else if (e.key === 'Escape') { container.innerHTML = ''; container.classList.remove('open'); }
   });
   document.addEventListener('click', (e) => {
     if (!e.target.closest('.ac-wrap') && e.target !== input) { container.innerHTML = ''; container.classList.remove('open'); }
   });
+  // On blur, recalc distance if value changed
+  input.addEventListener('blur', () => { setTimeout(calcDistance, 500); });
 }
+
+// ── Init ──
 document.addEventListener('DOMContentLoaded', () => {
+  // Set default date
+  const d = new Date();
+  const dateInput = document.getElementById('tripDate');
+  if (!dateInput.value) { dateInput.value = d.toISOString().split('T')[0]; dateInput.min = d.toISOString().split('T')[0]; }
+  document.querySelectorAll('input[type="time"]').forEach(el => {
+    if (!el.value) el.value = String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()+30).padStart(2,'0');
+  });
+
+  // Autocomplete
   setupAutocomplete('pickupLocation');
   setupAutocomplete('destination');
+
+  // Recalculate on changes
+  document.getElementById('tripDays').addEventListener('change', updateFare);
+  document.getElementById('nightStay').addEventListener('change', updateFare);
+  document.getElementById('passengers').addEventListener('input', updateFare);
+
+  // Initial fare calc
+  setTimeout(calcDistance, 1000);
+
+  // Submit via AJAX
+  document.getElementById('bookingForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const btn = document.getElementById('submitBtn');
+    const errDiv = document.getElementById('bookingError');
+    const errMsg = document.getElementById('bookingErrorMsg');
+    errDiv.style.display = 'none';
+    btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending...';
+
+    try {
+      const formData = new FormData(this);
+      const params = new URLSearchParams();
+      for (const [key, val] of formData) params.append(key, val);
+      const r = await fetch(this.action, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: params.toString() });
+      const d = await r.json();
+      if (d.success) {
+        // Show success and redirect to my-trips
+        btn.innerHTML = '<i class="fas fa-check-circle"></i> Sent! Redirecting...';
+        setTimeout(() => { window.location.href = '/customers/my-trips'; }, 1200);
+      } else {
+        errMsg.textContent = d.error || 'Unable to create booking request';
+        errDiv.style.display = 'flex';
+        btn.disabled = false; btn.innerHTML = '<i class="fas fa-paper-plane"></i> Send Booking Request';
+      }
+    } catch(e) {
+      errMsg.textContent = 'Network error. Please try again.';
+      errDiv.style.display = 'flex';
+      btn.disabled = false; btn.innerHTML = '<i class="fas fa-paper-plane"></i> Send Booking Request';
+    }
+  });
 });
 </script>
 
@@ -185,14 +359,22 @@ document.addEventListener('DOMContentLoaded', () => {
 .fare-row.total { font-size: 17px; font-weight: 700; color: var(--text); }
 .fare-row.total span:last-child { color: var(--primary); }
 .fare-divider { height: 1px; background: var(--border-light); margin: 6px 0; }
-.booking-note { margin-top: 16px; padding: 12px; background: var(--warning-bg, #fef3c7); border-radius: var(--radius-md); font-size: 13px; color: #92400e; display: flex; align-items: center; gap: 8px; }
-.ac-wrap { display: none; position: absolute; top: 100%; left: 0; right: 0; z-index: 100; background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; box-shadow: 0 8px 30px rgba(0,0,0,0.12); max-height: 280px; overflow-y: auto; margin-top: 4px; }
+.booking-note { margin-top: 16px; padding: 12px; background: #fef3c7; border-radius: var(--radius-md); font-size: 13px; color: #92400e; display: flex; align-items: center; gap: 8px; }
+
+/* Checkbox styling */
+.checkbox-label { display: flex; align-items: center; gap: 10px; cursor: pointer; font-size: 14px; font-weight: 500; padding: 10px 0; }
+.checkbox-label input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--primary); cursor: pointer; }
+.checkbox-label .text-secondary { font-size: 12px; font-weight: 400; }
+
+/* Autocomplete */
+.ac-wrap { display: none; position: absolute; top: 100%; left: 0; right: 0; z-index: 1000; background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; box-shadow: 0 12px 48px rgba(0,0,0,0.15); max-height: 360px; overflow-y: auto; margin-top: 4px; }
 .ac-wrap.open { display: block; }
-.ac-item { display: flex; align-items: center; gap: 10px; padding: 10px 14px; cursor: pointer; transition: background 0.1s; }
-.ac-item:hover, .ac-item.ac-focus { background: #f1f5f9; }
-.ac-item i { color: #2563eb; font-size: 14px; width: 16px; text-align: center; flex-shrink: 0; }
-.ac-primary { font-size: 14px; font-weight: 500; color: #0f172a; }
-.ac-secondary { font-size: 12px; color: #94a3b8; }
+.ac-item { display: flex; align-items: center; gap: 12px; padding: 12px 16px; cursor: pointer; transition: background 0.1s; border-left: 3px solid transparent; }
+.ac-item:hover, .ac-item.ac-focus { background: #f1f5f9; border-left-color: #2563eb; }
+.ac-item i { color: #94a3b8; font-size: 16px; width: 20px; text-align: center; flex-shrink: 0; }
+.ac-primary { font-size: 15px; font-weight: 500; color: #0f172a; }
+.ac-secondary { font-size: 12px; color: #94a3b8; margin-top: 1px; }
 .ac-item:not(:last-child) { border-bottom: 1px solid #f1f5f9; }
+
 @media (max-width: 800px) { .booking-layout { grid-template-columns: 1fr; } }
 </style>

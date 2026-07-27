@@ -1,42 +1,37 @@
 <% layout("/listings/layouts/boilerplate") %>
+<% var tripType = typeof currentTripType !== 'undefined' ? currentTripType : ''; %>
 <div class="listings-page">
   <!-- Filters -->
   <div class="listings-filters">
-    <a href="/cars?category=all" class="filter-link <%= currentCategory === 'all' ? 'active' : '' %>">
-      <div class="filter"><i class="fa-solid fa-fire"></i><p>Trending</p></div>
+    <a href="/cars" class="filter-link <%= !tripType ? 'active' : '' %>">
+      <div class="filter"><i class="fa-solid fa-fire"></i><p>All</p></div>
     </a>
-    <a href="/cars?category=sedans" class="filter-link <%= currentCategory === 'sedans' ? 'active' : '' %>">
-      <div class="filter"><i class="fa-solid fa-car-side"></i><p>Sedans</p></div>
+    <a href="/cars?tripType=local" class="filter-link <%= tripType === 'local' ? 'active' : '' %>">
+      <div class="filter"><i class="fa-solid fa-city"></i><p>Local Trips</p></div>
     </a>
-    <a href="/cars?category=suvs" class="filter-link <%= currentCategory === 'suvs' ? 'active' : '' %>">
-      <div class="filter"><i class="fa-solid fa-truck-monster"></i><p>SUVs</p></div>
+    <a href="/cars?tripType=outstation" class="filter-link <%= tripType === 'outstation' ? 'active' : '' %>">
+      <div class="filter"><i class="fa-solid fa-road"></i><p>Outstation</p></div>
     </a>
-    <a href="/cars?seats=4" class="filter-link <%= Number(currentSeats) === 4 ? 'active' : '' %>">
-      <div class="filter"><i class="fa-solid fa-user-friends"></i><p>4 Seater</p></div>
+    <a href="/cars?tripType=wedding" class="filter-link <%= tripType === 'wedding' ? 'active' : '' %>">
+      <div class="filter"><i class="fa-solid fa-ring"></i><p>Wedding</p></div>
     </a>
-    <a href="/cars?seats=6" class="filter-link <%= Number(currentSeats) === 6 ? 'active' : '' %>">
-      <div class="filter"><i class="fa-solid fa-users"></i><p>6 Seater</p></div>
+    <a href="/cars?tripType=airport-pickup" class="filter-link <%= tripType === 'airport-pickup' ? 'active' : '' %>">
+      <div class="filter"><i class="fa-solid fa-plane"></i><p>Airport</p></div>
     </a>
-    <a href="/cars?seats=10" class="filter-link <%= Number(currentSeats) === 10 ? 'active' : '' %>">
-      <div class="filter"><i class="fa-solid fa-people-roof"></i><p>10 Seater</p></div>
+    <a href="/cars?tripType=temple-visit" class="filter-link <%= tripType === 'temple-visit' ? 'active' : '' %>">
+      <div class="filter"><i class="fa-solid fa-place-of-worship"></i><p>Temple Visit</p></div>
     </a>
-    <a href="/cars?category=luxury" class="filter-link <%= currentCategory === 'luxury' ? 'active' : '' %>">
-      <div class="filter"><i class="fa-solid fa-crown"></i><p>Luxury</p></div>
+    <a href="/cars?tripType=tourism" class="filter-link <%= tripType === 'tourism' ? 'active' : '' %>">
+      <div class="filter"><i class="fa-solid fa-mountain"></i><p>Tour Package</p></div>
     </a>
-    <a href="/cars?category=sports" class="filter-link <%= currentCategory === 'sports' ? 'active' : '' %>">
-      <div class="filter"><i class="fa-solid fa-flag-checkered"></i><p>Sports</p></div>
+    <a href="/cars?tripType=corporate" class="filter-link <%= tripType === 'corporate' ? 'active' : '' %>">
+      <div class="filter"><i class="fa-solid fa-briefcase"></i><p>Corporate</p></div>
     </a>
-    <a href="/cars?category=offroad" class="filter-link <%= currentCategory === 'offroad' ? 'active' : '' %>">
-      <div class="filter"><i class="fa-solid fa-hill-rockslide"></i><p>Offroad</p></div>
+    <a href="/cars?tripType=railway-pickup" class="filter-link <%= tripType === 'railway-pickup' ? 'active' : '' %>">
+      <div class="filter"><i class="fa-solid fa-train"></i><p>Railway</p></div>
     </a>
-    <a href="/cars?category=family" class="filter-link <%= currentCategory === 'family' ? 'active' : '' %>">
+    <a href="/cars?tripType=family" class="filter-link <%= tripType === 'family' ? 'active' : '' %>">
       <div class="filter"><i class="fa-solid fa-people-group"></i><p>Family</p></div>
-    </a>
-    <a href="/cars?category=vintage" class="filter-link <%= currentCategory === 'vintage' ? 'active' : '' %>">
-      <div class="filter"><i class="fa-solid fa-clock-rotate-left"></i><p>Vintage</p></div>
-    </a>
-    <a href="/cars?category=winter" class="filter-link <%= currentCategory === 'winter' ? 'active' : '' %>">
-      <div class="filter"><i class="fa-regular fa-snowflake"></i><p>Winter</p></div>
     </a>
     <label class="tax-toggle">
       <input type="checkbox" id="taxSwitch">
@@ -49,7 +44,7 @@
     <div class="empty-state" style="margin-top:40px">
       <i class="fas fa-car"></i>
       <h3>No vehicles found</h3>
-      <p><% if (currentSearch && currentSearch.trim()) { %>No results for "<%= currentSearch %>"<% } else { %>Try adjusting your filters<% } %></p>
+      <p><% if (currentSearch && currentSearch.trim()) { %>No results for "<%= currentSearch %>"<% } else if (tripType) { %>No vehicles found for this trip type. Try a different category.<% } else { %>Try adjusting your filters<% } %></p>
     </div>
   <% } else { %>
     <div class="listings-grid">

@@ -157,12 +157,23 @@ header.scrolled { box-shadow: 0 4px 20px rgba(0,0,0,0.06); }
   .hero-card-3 { display: none; }
 }
 
-/* ── SEARCH SECTION ── */
-.search-section { padding: 0; position: relative; z-index: 10; margin-top: -60px; }
+/* ── SEARCH SECTION (sticky) ── */
+.search-section {
+  padding: 0; position: sticky; top: 80px; z-index: 100; margin-top: -60px;
+  transition: box-shadow 0.3s;
+}
 .search-card {
   background: #fff; border-radius: 20px; box-shadow: 0 20px 60px rgba(0,0,0,0.1);
   padding: 32px; display: flex; gap: 16px; align-items: flex-end; flex-wrap: wrap;
   border: 1px solid rgba(226,232,240,0.5);
+  transition: box-shadow 0.3s, border-radius 0.3s, padding 0.3s;
+}
+.search-section.is-stuck .search-card {
+  border-radius: 0 0 20px 20px;
+  padding: 20px 32px;
+  border-top: none;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+  backdrop-filter: blur(20px); background: rgba(255,255,255,0.97);
 }
 .search-field { flex: 1; min-width: 160px; }
 .search-field label { display: block; font-size: 12px; font-weight: 600; color: var(--text-secondary); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
@@ -180,14 +191,14 @@ header.scrolled { box-shadow: 0 4px 20px rgba(0,0,0,0.06); }
   .search-btn { width: 100%; }
 }
 
-/* Autocomplete Dropdown */
-.ac-wrap { display: none; position: absolute; top: 100%; left: 0; right: 0; z-index: 100; background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; box-shadow: 0 8px 30px rgba(0,0,0,0.12); max-height: 280px; overflow-y: auto; margin-top: 4px; }
+/* Autocomplete Dropdown — Google Places style */
+.ac-wrap { display: none; position: absolute; top: 100%; left: 0; right: 0; z-index: 1000; background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; box-shadow: 0 12px 48px rgba(0,0,0,0.15); max-height: 360px; overflow-y: auto; margin-top: 4px; }
 .ac-wrap.open { display: block; }
-.ac-item { display: flex; align-items: center; gap: 10px; padding: 10px 14px; cursor: pointer; transition: background 0.1s; }
-.ac-item:hover, .ac-item.ac-focus { background: #f1f5f9; }
-.ac-item i { color: #2563eb; font-size: 14px; width: 16px; text-align: center; flex-shrink: 0; }
-.ac-primary { font-size: 14px; font-weight: 500; color: #0f172a; }
-.ac-secondary { font-size: 12px; color: #94a3b8; }
+.ac-item { display: flex; align-items: center; gap: 12px; padding: 12px 16px; cursor: pointer; transition: background 0.1s; border-left: 3px solid transparent; }
+.ac-item:hover, .ac-item.ac-focus { background: #f1f5f9; border-left-color: #2563eb; }
+.ac-item i { color: #94a3b8; font-size: 16px; width: 20px; text-align: center; flex-shrink: 0; }
+.ac-primary { font-size: 15px; font-weight: 500; color: #0f172a; }
+.ac-secondary { font-size: 12px; color: #94a3b8; margin-top: 1px; }
 .ac-item:not(:last-child) { border-bottom: 1px solid #f1f5f9; }
 
 /* ── SECTION COMMON ── */
@@ -570,42 +581,42 @@ document.addEventListener('DOMContentLoaded', () => {
       <p class="section-subtitle">Wide range of trip types to meet every travel need</p>
     </div>
     <div class="services-grid">
-      <div class="service-card animate-in" onclick="location.href='/cars?type=local'">
+      <div class="service-card animate-in" onclick="location.href='/cars?tripType=local'">
         <div class="service-icon"><i class="fas fa-city"></i></div>
         <h3>Local Trips</h3>
         <p>Intra-city travel made easy with trusted local drivers</p>
       </div>
-      <div class="service-card animate-in" onclick="location.href='/cars?type=outstation'">
+      <div class="service-card animate-in" onclick="location.href='/cars?tripType=outstation'">
         <div class="service-icon"><i class="fas fa-road"></i></div>
         <h3>Outstation</h3>
         <p>Inter-city trips with comfortable vehicles and experienced drivers</p>
       </div>
-      <div class="service-card animate-in" onclick="location.href='/cars?type=wedding'">
+      <div class="service-card animate-in" onclick="location.href='/cars?tripType=wedding'">
         <div class="service-icon"><i class="fas fa-ring"></i></div>
         <h3>Wedding</h3>
         <p>Premium vehicles for your special day</p>
       </div>
-      <div class="service-card animate-in" onclick="location.href='/cars?type=airport-pickup'">
+      <div class="service-card animate-in" onclick="location.href='/cars?tripType=airport-pickup'">
         <div class="service-icon"><i class="fas fa-plane"></i></div>
         <h3>Airport</h3>
         <p>Timely airport pickups and drops with flight tracking</p>
       </div>
-      <div class="service-card animate-in" onclick="location.href='/cars?type=temple-visit'">
+      <div class="service-card animate-in" onclick="location.href='/cars?tripType=temple-visit'">
         <div class="service-icon"><i class="fas fa-place-of-worship"></i></div>
         <h3>Temple Visit</h3>
         <p>Spiritual journeys with reliable transportation</p>
       </div>
-      <div class="service-card animate-in" onclick="location.href='/cars?type=tourism'">
+      <div class="service-card animate-in" onclick="location.href='/cars?tripType=tourism'">
         <div class="service-icon"><i class="fas fa-mountain"></i></div>
         <h3>Tour Package</h3>
         <p>Custom tour packages for groups and families</p>
       </div>
-      <div class="service-card animate-in" onclick="location.href='/cars?type=corporate'">
+      <div class="service-card animate-in" onclick="location.href='/cars?tripType=corporate'">
         <div class="service-icon"><i class="fas fa-briefcase"></i></div>
         <h3>Corporate Travel</h3>
         <p>Professional travel solutions for your business</p>
       </div>
-      <div class="service-card animate-in" onclick="location.href='/cars?type=railway-pickup'">
+      <div class="service-card animate-in" onclick="location.href='/cars?tripType=railway-pickup'">
         <div class="service-icon"><i class="fas fa-train"></i></div>
         <h3>Railway Pickup</h3>
         <p>Hassle-free railway station transfers</p>
@@ -934,6 +945,15 @@ window.addEventListener('scroll', () => {
     a.classList.toggle('active', a.getAttribute('href') === '#' + current);
   });
 });
+
+// Sticky search — detect when .search-section sticks to top
+const searchSec = document.querySelector('.search-section');
+if (searchSec) {
+  const obs = new IntersectionObserver(([e]) => {
+    searchSec.classList.toggle('is-stuck', e.intersectionRatio < 1);
+  }, { threshold: [1] });
+  obs.observe(searchSec);
+}
 </script>
 </body>
 </html>

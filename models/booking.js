@@ -60,6 +60,9 @@ const BookingSchema = new Schema({
   platformFee: { type: Number, default: 0 },
   tax: { type: Number, default: 0 },
   totalDays: { type: Number, default: 1 },
+  tripDays: { type: Number, default: 1 },
+  nightStay: { type: Boolean, default: false },
+  nightStayCharge: { type: Number, default: 0 },
   securityDeposit: { type: Number, default: 0 },
 
   paymentMethod: { type: String, enum: ['razorpay', 'cod', 'cash', 'upi', 'online'], default: 'cash' },

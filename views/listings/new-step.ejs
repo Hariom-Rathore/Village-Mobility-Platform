@@ -1,1069 +1,475 @@
 <% layout("/listings/layouts/boilerplate") %>
-
-<style>
-.step-form {
-    max-width: 800px;
-    margin: 0 auto;
-    padding: 20px;
-}
-
-.progress-container {
-    margin-bottom: 30px;
-}
-
-.progress-bar {
-    height: 8px;
-    background: #e0e0e0;
-    border-radius: 4px;
-    overflow: hidden;
-}
-
-.progress-fill {
-    height: 100%;
-    background: linear-gradient(90deg, #4CAF50, #45a049);
-    transition: width 0.3s ease;
-}
-
-.step-indicators {
-    display: flex;
-    justify-content: space-between;
-    margin-top: 10px;
-    flex-wrap: wrap;
-    gap: 10px;
-}
-
-.step-indicator {
-    display: flex;
-    align-items: center;
-    font-size: 12px;
-    color: #666;
-}
-
-.step-indicator.active {
-    color: #4CAF50;
-    font-weight: bold;
-}
-
-.step-indicator.completed {
-    color: #45a049;
-}
-
-.step-content {
-    display: none;
-    animation: fadeIn 0.3s ease;
-}
-
-.step-content.active {
-    display: block;
-}
-
-@keyframes fadeIn {
-    from { opacity: 0; transform: translateY(10px); }
-    to { opacity: 1; transform: translateY(0); }
-}
-
-.form-section {
-    background: #f9f9f9;
-    padding: 20px;
-    border-radius: 8px;
-    margin-bottom: 20px;
-}
-
-.form-section h3 {
-    margin-bottom: 15px;
-    color: #333;
-    border-bottom: 2px solid #4CAF50;
-    padding-bottom: 8px;
-}
-
-.pricing-helper {
-    background: #e3f2fd;
-    padding: 15px;
-    border-radius: 5px;
-    margin-bottom: 20px;
-    font-size: 14px;
-}
-
-.pricing-helper h4 {
-    color: #1976d2;
-    margin-bottom: 10px;
-}
-
-.pricing-helper ul {
-    margin: 0;
-    padding-left: 20px;
-}
-
-.pricing-helper li {
-    margin-bottom: 5px;
-}
-
-.btn-group {
-    display: flex;
-    justify-content: space-between;
-    margin-top: 30px;
-}
-
-.btn-group button {
-    padding: 10px 30px;
-    border: none;
-    border-radius: 5px;
-    cursor: pointer;
-    font-size: 16px;
-    transition: background 0.3s ease;
-}
-
-.btn-prev {
-    background: #6c757d;
-    color: white;
-}
-
-.btn-prev:hover {
-    background: #5a6268;
-}
-
-.btn-next {
-    background: #4CAF50;
-    color: white;
-}
-
-.btn-next:hover {
-    background: #45a049;
-}
-
-.btn-submit {
-    background: #2196F3;
-    color: white;
-}
-
-.btn-submit:hover {
-    background: #0b7dda;
-}
-
-.image-upload-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-    gap: 15px;
-    margin-top: 15px;
-}
-
-.image-upload-item {
-    border: 2px dashed #ccc;
-    border-radius: 8px;
-    padding: 15px;
-    text-align: center;
-    cursor: pointer;
-    transition: border-color 0.3s ease;
-}
-
-.image-upload-item:hover {
-    border-color: #4CAF50;
-}
-
-.image-upload-item.has-image {
-    border-style: solid;
-    border-color: #4CAF50;
-}
-
-.image-upload-item img {
-    max-width: 100%;
-    max-height: 100px;
-    object-fit: cover;
-    border-radius: 4px;
-}
-
-.image-upload-item label {
-    display: block;
-    margin-top: 8px;
-    font-size: 12px;
-    color: #666;
-}
-
-.checkbox-group {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-    gap: 10px;
-}
-
-.checkbox-item {
-    display: flex;
-    align-items: center;
-    padding: 8px;
-    background: white;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-}
-
-.checkbox-item input[type="checkbox"] {
-    margin-right: 8px;
-}
-
-.map-container {
-    height: 300px;
-    border: 2px solid #ddd;
-    border-radius: 8px;
-    margin-bottom: 15px;
-}
-
-#location-map {
-    width: 100%;
-    height: 100%;
-}
-
-.location-search {
-    display: flex;
-    gap: 10px;
-    margin-bottom: 15px;
-}
-
-.location-search input {
-    flex: 1;
-    padding: 10px;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-}
-
-.location-search button {
-    padding: 10px 20px;
-    background: #4CAF50;
-    color: white;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-}
-
-.auto-save-indicator {
-    text-align: right;
-    font-size: 12px;
-    color: #666;
-    margin-top: 10px;
-}
-
-.auto-save-indicator.saving {
-    color: #ff9800;
-}
-
-.auto-save-indicator.saved {
-    color: #4CAF50;
-}
-
-.required-field {
-    color: #d32f2f;
-}
-
-.form-control:focus {
-    border-color: #4CAF50;
-    box-shadow: 0 0 0 0.2rem rgba(76, 175, 80, 0.25);
-}
-
-.driver-section {
-    display: none;
-}
-
-.driver-section.active {
-    display: block;
-}
-
-.document-upload-item {
-    background: white;
-    padding: 15px;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    margin-bottom: 10px;
-}
-
-.document-upload-item label {
-    display: block;
-    margin-bottom: 8px;
-    font-weight: bold;
-}
-
-.verification-badge {
-    display: inline-block;
-    padding: 4px 8px;
-    border-radius: 4px;
-    font-size: 12px;
-    margin-left: 10px;
-}
-
-.verification-badge.pending {
-    background: #fff3cd;
-    color: #856404;
-}
-
-.verification-badge.verified {
-    background: #d4edda;
-    color: #155724;
-}
-
-.verification-badge.rejected {
-    background: #f8d7da;
-    color: #721c24;
-}
-
-.alert {
-    padding: 15px;
-    margin-bottom: 20px;
-    border-radius: 4px;
-}
-
-.alert-danger {
-    background: #f8d7da;
-    color: #721c24;
-    border: 1px solid #f5c6cb;
-}
-</style>
-
-<div class="step-form">
+<div class="step-form-page">
+  <div class="step-form-card">
     <h2>Add Your Vehicle</h2>
-    
+    <p style="color:var(--text-secondary);font-size:14px;margin:-8px 0 24px">Fill in the details to list your vehicle on RideLocal</p>
+
     <% if (errorMsg) { %>
-        <div class="alert alert-danger" role="alert"><%= errorMsg %></div>
+      <div class="alert alert-error"><i class="fas fa-exclamation-circle"></i><span><%= errorMsg %></span></div>
     <% } %>
-    
-    <div class="progress-container">
-        <div class="progress-bar">
-            <div class="progress-fill" id="progress-fill" style="width: 14.28%"></div>
-        </div>
-        <div class="step-indicators">
-            <div class="step-indicator active" data-step="1">1. Vehicle Info</div>
-            <div class="step-indicator" data-step="2">2. Pricing</div>
-            <div class="step-indicator" data-step="3">3. Location</div>
-            <div class="step-indicator" data-step="4">4. Driver</div>
-            <div class="step-indicator" data-step="5">5. Photos</div>
-            <div class="step-indicator" data-step="6">6. Documents</div>
-            <div class="step-indicator" data-step="7">7. Booking Rules</div>
-        </div>
+
+    <!-- Progress -->
+    <div class="step-progress">
+      <div class="step-bar"><div class="step-bar-fill" id="progressFill" style="width:14.28%"></div></div>
+      <div class="step-labels" id="stepLabels">
+        <span class="step-lbl active" data-step="1">Vehicle Info</span>
+        <span class="step-lbl" data-step="2">Pricing</span>
+        <span class="step-lbl" data-step="3">Location</span>
+        <span class="step-lbl" data-step="4">Driver</span>
+        <span class="step-lbl" data-step="5">Photos</span>
+        <span class="step-lbl" data-step="6">Documents</span>
+        <span class="step-lbl" data-step="7">Rules</span>
+      </div>
     </div>
 
-    <form method="POST" action="/cars/new-step" novalidate class="needs-validation" enctype="multipart/form-data" id="stepForm">
-        
-        <!-- Step 1: Basic Vehicle Info -->
-        <div class="step-content active" id="step1">
-            <div class="form-section">
-                <h3>Basic Vehicle Information</h3>
-                
-                <div class="mb-3">
-                    <label for="title" class="form-label">Vehicle Title <span class="required-field">*</span></label>
-                    <input id="title" name="listing[title]" placeholder="e.g. Toyota Innova Crysta" type="text" class="form-control" required>
-                    <div class="invalid-feedback">Please enter a vehicle title.</div>
-                </div>
+    <form method="POST" action="/cars/new-step" enctype="multipart/form-data" id="stepForm">
 
-                <div class="mb-3">
-                    <label for="description" class="form-label">Vehicle Description <span class="required-field">*</span></label>
-                    <textarea id="description" name="listing[description]" placeholder="Describe your vehicle features, condition, etc." class="form-control" rows="3" required></textarea>
-                    <div class="invalid-feedback">Please enter a description.</div>
-                </div>
-
-                <div class="row">
-                    <div class="mb-3 col-md-6">
-                        <label for="vehicleName" class="form-label">Vehicle Name</label>
-                        <input id="vehicleName" name="listing[vehicleName]" placeholder="e.g. Innova Crysta" type="text" class="form-control">
-                    </div>
-
-                    <div class="mb-3 col-md-6">
-                        <label for="brand" class="form-label">Brand</label>
-                        <input id="brand" name="listing[brand]" placeholder="e.g. Toyota" type="text" class="form-control">
-                    </div>
-                </div>
-
-                <div class="row">
-                    <div class="mb-3 col-md-6">
-                        <label for="model" class="form-label">Model</label>
-                        <input id="model" name="listing[model]" placeholder="e.g. VX" type="text" class="form-control">
-                    </div>
-
-                    <div class="mb-3 col-md-6">
-                        <label for="year" class="form-label">Year</label>
-                        <input id="year" name="listing[year]" placeholder="e.g. 2020" type="number" class="form-control" min="1900" max="<%= new Date().getFullYear() + 1 %>">
-                    </div>
-                </div>
-
-                <div class="mb-3">
-                    <label for="vehicleNumber" class="form-label">Vehicle Number</label>
-                    <input id="vehicleNumber" name="listing[vehicleNumber]" placeholder="e.g. MH01AB1234" type="text" class="form-control">
-                </div>
-
-                <div class="row">
-                    <div class="mb-3 col-md-6">
-                        <label for="vehicleType" class="form-label">Vehicle Type</label>
-                        <input id="vehicleType" name="listing[vehicleType]" placeholder="e.g. SUV, Sedan, Hatchback" type="text" class="form-control">
-                    </div>
-
-                    <div class="mb-3 col-md-6">
-                        <label for="fuelType" class="form-label">Fuel Type</label>
-                        <select id="fuelType" name="listing[fuelType]" class="form-select">
-                            <option value="other">Other</option>
-                            <option value="petrol">Petrol</option>
-                            <option value="diesel">Diesel</option>
-                            <option value="electric">Electric</option>
-                            <option value="hybrid">Hybrid</option>
-                            <option value="cng">CNG</option>
-                        </select>
-                    </div>
-                </div>
-
-                <div class="row">
-                    <div class="mb-3 col-md-6">
-                        <label for="transmission" class="form-label">Transmission</label>
-                        <select id="transmission" name="listing[transmission]" class="form-select">
-                            <option value="manual">Manual</option>
-                            <option value="automatic">Automatic</option>
-                        </select>
-                    </div>
-
-                    <div class="mb-3 col-md-6">
-                        <label for="seats" class="form-label">Seating Capacity</label>
-                        <select id="seats" name="listing[seats]" class="form-select">
-                            <option value="4">4 Seater</option>
-                            <option value="5">5 Seater</option>
-                            <option value="6">6 Seater</option>
-                            <option value="7">7 Seater</option>
-                            <option value="10">10 Seater</option>
-                        </select>
-                    </div>
-                </div>
-
-                <div class="row">
-                    <div class="mb-3 col-md-4">
-                        <label for="acAvailable" class="form-label">AC Available</label>
-                        <select id="acAvailable" name="listing[acAvailable]" class="form-select">
-                            <option value="true">Yes</option>
-                            <option value="false">No</option>
-                        </select>
-                    </div>
-
-                    <div class="mb-3 col-md-4">
-                        <label for="musicSystem" class="form-label">Music System</label>
-                        <select id="musicSystem" name="listing[musicSystem]" class="form-select">
-                            <option value="false">No</option>
-                            <option value="true">Yes</option>
-                        </select>
-                    </div>
-
-                    <div class="mb-3 col-md-4">
-                        <label for="luggageCapacity" class="form-label">Luggage Capacity</label>
-                        <select id="luggageCapacity" name="listing[luggageCapacity]" class="form-select">
-                            <option value="small">Small</option>
-                            <option value="medium">Medium</option>
-                            <option value="large">Large</option>
-                            <option value="extra-large">Extra Large</option>
-                        </select>
-                    </div>
-                </div>
+      <!-- ═══ STEP 1: VEHICLE INFO ═══ -->
+      <div class="step-panel active" id="step1">
+        <div class="step-section">
+          <h3>Basic Vehicle Information</h3>
+          <div class="input-group">
+            <label>Vehicle Title <span class="req">*</span></label>
+            <input class="input-field" name="listing[title]" placeholder="e.g. Toyota Innova Crysta" required>
+          </div>
+          <div class="input-group">
+            <label>Description <span class="req">*</span></label>
+            <textarea class="input-field" name="listing[description]" rows="3" placeholder="Describe your vehicle features, condition..." required></textarea>
+          </div>
+          <div class="form-row2">
+            <div class="input-group">
+              <label>Vehicle Name</label>
+              <input class="input-field" name="listing[vehicleName]" placeholder="e.g. Innova Crysta">
             </div>
-
-            <div class="btn-group">
-                <button type="button" class="btn-prev" style="visibility: hidden;">Previous</button>
-                <button type="button" class="btn-next" onclick="nextStep(1)">Next</button>
+            <div class="input-group">
+              <label>Brand</label>
+              <input class="input-field" name="listing[brand]" placeholder="e.g. Toyota">
             </div>
+          </div>
+          <div class="form-row2">
+            <div class="input-group">
+              <label>Model</label>
+              <input class="input-field" name="listing[model]" placeholder="e.g. VX">
+            </div>
+            <div class="input-group">
+              <label>Year</label>
+              <input class="input-field" name="listing[year]" type="number" placeholder="e.g. 2020" min="1900" max="<%= new Date().getFullYear() + 1 %>">
+            </div>
+          </div>
+          <div class="input-group">
+            <label>Vehicle Number</label>
+            <input class="input-field" name="listing[vehicleNumber]" placeholder="e.g. MH01AB1234">
+          </div>
+          <div class="form-row2">
+            <div class="input-group">
+              <label>Vehicle Type</label>
+              <input class="input-field" name="listing[vehicleType]" placeholder="e.g. SUV, Sedan, Hatchback">
+            </div>
+            <div class="input-group">
+              <label>Fuel Type</label>
+              <select class="input-field" name="listing[fuelType]">
+                <option value="petrol">Petrol</option>
+                <option value="diesel">Diesel</option>
+                <option value="electric">Electric</option>
+                <option value="hybrid">Hybrid</option>
+                <option value="cng">CNG</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-row2">
+            <div class="input-group">
+              <label>Transmission</label>
+              <select class="input-field" name="listing[transmission]">
+                <option value="manual">Manual</option>
+                <option value="automatic">Automatic</option>
+              </select>
+            </div>
+            <div class="input-group">
+              <label>Seating Capacity</label>
+              <select class="input-field" name="listing[seats]">
+                <option value="4">4 Seater</option>
+                <option value="5">5 Seater</option>
+                <option value="6">6 Seater</option>
+                <option value="7">7 Seater</option>
+                <option value="10">10 Seater</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-row3">
+            <div class="input-group">
+              <label>AC Available</label>
+              <select class="input-field" name="listing[acAvailable]">
+                <option value="true">Yes</option>
+                <option value="false">No</option>
+              </select>
+            </div>
+            <div class="input-group">
+              <label>Music System</label>
+              <select class="input-field" name="listing[musicSystem]">
+                <option value="false">No</option>
+                <option value="true">Yes</option>
+              </select>
+            </div>
+            <div class="input-group">
+              <label>Luggage</label>
+              <select class="input-field" name="listing[luggageCapacity]">
+                <option value="small">Small</option>
+                <option value="medium">Medium</option>
+                <option value="large">Large</option>
+                <option value="extra-large">Extra Large</option>
+              </select>
+            </div>
+          </div>
         </div>
+        <div class="step-nav"><span></span><button type="button" class="btn btn-primary" onclick="nextStep(1)">Next <i class="fas fa-arrow-right"></i></button></div>
+      </div>
 
-        <!-- Step 2: Pricing -->
-        <div class="step-content" id="step2">
-            <div class="form-section">
-                <h3>Pricing Information</h3>
-                
-                <div class="pricing-helper">
-                    <h4>Pricing Guide:</h4>
-                    <ul>
-                        <li><strong>Base Fare:</strong> Minimum charge for any trip (e.g., ₹200)</li>
-                        <li><strong>Price Per KM:</strong> Charge for each kilometer traveled (e.g., ₹12/KM)</li>
-                        <li><strong>Minimum Trip Fare:</strong> Minimum total fare for a trip (optional, e.g., ₹500)</li>
-                        <li><strong>Night Charge:</strong> Extra charge for night trips (optional, e.g., ₹100)</li>
-                    </ul>
-                </div>
-
-                <div class="row">
-                    <div class="mb-3 col-md-6">
-                        <label for="baseFare" class="form-label">Base Fare (₹) <span class="required-field">*</span></label>
-                        <input id="baseFare" name="listing[baseFare]" placeholder="e.g. 200" type="number" class="form-control" min="0" required>
-                        <div class="invalid-feedback">Please enter base fare.</div>
-                    </div>
-
-                    <div class="mb-3 col-md-6">
-                        <label for="pricePerKm" class="form-label">Price Per KM (₹) <span class="required-field">*</span></label>
-                        <input id="pricePerKm" name="listing[pricePerKm]" placeholder="e.g. 12" type="number" class="form-control" min="0" required>
-                        <div class="invalid-feedback">Please enter price per KM.</div>
-                    </div>
-                </div>
-
-                <div class="row">
-                    <div class="mb-3 col-md-6">
-                        <label for="minimumTripFare" class="form-label">Minimum Trip Fare (₹) <small>(Optional)</small></label>
-                        <input id="minimumTripFare" name="listing[minimumTripFare]" placeholder="e.g. 500" type="number" class="form-control" min="0">
-                    </div>
-
-                    <div class="mb-3 col-md-6">
-                        <label for="nightCharge" class="form-label">Night Charge (₹) <small>(Optional)</small></label>
-                        <input id="nightCharge" name="listing[nightCharge]" placeholder="e.g. 100" type="number" class="form-control" min="0">
-                    </div>
-                </div>
+      <!-- ═══ STEP 2: PRICING ═══ -->
+      <div class="step-panel" id="step2">
+        <div class="step-section">
+          <h3>Pricing Information</h3>
+          <div class="pricing-tip">
+            <i class="fas fa-info-circle"></i>
+            <div><strong>Pricing Guide:</strong> Base Fare is the minimum charge per trip. Price Per KM is added for each kilometer traveled. Minimum Trip Fare and Night Charge are optional.</div>
+          </div>
+          <div class="form-row2">
+            <div class="input-group">
+              <label>Base Fare (₹) <span class="req">*</span></label>
+              <input class="input-field" name="listing[baseFare]" placeholder="e.g. 200" type="number" min="0" required>
             </div>
-
-            <div class="btn-group">
-                <button type="button" class="btn-prev" onclick="prevStep(2)">Previous</button>
-                <button type="button" class="btn-next" onclick="nextStep(2)">Next</button>
+            <div class="input-group">
+              <label>Price Per KM (₹) <span class="req">*</span></label>
+              <input class="input-field" name="listing[pricePerKm]" placeholder="e.g. 12" type="number" min="0" required>
             </div>
+          </div>
+          <div class="form-row2">
+            <div class="input-group">
+              <label>Minimum Trip Fare (₹) <small style="font-weight:400">Optional</small></label>
+              <input class="input-field" name="listing[minimumTripFare]" placeholder="e.g. 500" type="number" min="0">
+            </div>
+            <div class="input-group">
+              <label>Night Charge (₹) <small style="font-weight:400">Optional</small></label>
+              <input class="input-field" name="listing[nightCharge]" placeholder="e.g. 100" type="number" min="0">
+            </div>
+          </div>
         </div>
+        <div class="step-nav"><button type="button" class="btn btn-ghost" onclick="prevStep(2)"><i class="fas fa-arrow-left"></i> Previous</button><button type="button" class="btn btn-primary" onclick="nextStep(2)">Next <i class="fas fa-arrow-right"></i></button></div>
+      </div>
 
-        <!-- Step 3: Location -->
-        <div class="step-content" id="step3">
-            <div class="form-section">
-                <h3>Location Information</h3>
-                
-                <div class="location-search">
-                    <input type="text" id="location-search" placeholder="Search your village/town...">
-                    <button type="button" onclick="searchLocation()">Search</button>
-                </div>
-
-                <div class="map-container">
-                    <div id="location-map"></div>
-                </div>
-
-                <div class="mb-3">
-                    <label for="location" class="form-label">Location <span class="required-field">*</span></label>
-                    <input id="location" name="listing[location]" placeholder="Your location will be auto-filled" type="text" class="form-control" readonly>
-                    <div class="invalid-feedback">Please select a location.</div>
-                </div>
-
-                <input type="hidden" id="location-coordinates" name="listing[locationCoordinates]">
-
-                <div class="row">
-                    <div class="mb-3 col-md-6">
-                        <label for="village" class="form-label">Village</label>
-                        <input id="village" name="listing[village]" type="text" class="form-control">
-                    </div>
-
-                    <div class="mb-3 col-md-6">
-                        <label for="area" class="form-label">Area</label>
-                        <input id="area" name="listing[area]" type="text" class="form-control">
-                    </div>
-                </div>
-
-                <div class="row">
-                    <div class="mb-3 col-md-6">
-                        <label for="city" class="form-label">City</label>
-                        <input id="city" name="listing[city]" type="text" class="form-control">
-                    </div>
-
-                    <div class="mb-3 col-md-6">
-                        <label for="district" class="form-label">District</label>
-                        <input id="district" name="listing[district]" type="text" class="form-control">
-                    </div>
-                </div>
-
-                <div class="row">
-                    <div class="mb-3 col-md-6">
-                        <label for="state" class="form-label">State</label>
-                        <input id="state" name="listing[state]" type="text" class="form-control">
-                    </div>
-
-                    <div class="mb-3 col-md-6">
-                        <label for="serviceRadius" class="form-label">Service Radius</label>
-                        <select id="serviceRadius" name="listing[serviceRadius]" class="form-select">
-                            <option value="">Select radius</option>
-                            <option value="20">20 KM</option>
-                            <option value="50">50 KM</option>
-                            <option value="100">100 KM</option>
-                            <option value="null">Anywhere</option>
-                        </select>
-                    </div>
-                </div>
+      <!-- ═══ STEP 3: LOCATION ═══ -->
+      <div class="step-panel" id="step3">
+        <div class="step-section">
+          <h3>Location Information</h3>
+          <div class="loc-search">
+            <input class="input-field" type="text" id="locSearch" placeholder="Search your village/town..." style="flex:1">
+            <button type="button" class="btn btn-primary" onclick="searchLocation()"><i class="fas fa-search"></i></button>
+          </div>
+          <div class="map-wrap"><div id="locMap"></div></div>
+          <div class="input-group">
+            <label>Location <span class="req">*</span></label>
+            <input class="input-field" id="locationField" name="listing[location]" placeholder="Select from map or search" readonly required>
+          </div>
+          <input type="hidden" id="locationCoords" name="listing[locationCoordinates]">
+          <div class="form-row2">
+            <div class="input-group"><label>Village</label><input class="input-field" id="villageField" name="listing[village]"></div>
+            <div class="input-group"><label>Area</label><input class="input-field" id="areaField" name="listing[area]"></div>
+          </div>
+          <div class="form-row2">
+            <div class="input-group"><label>City</label><input class="input-field" id="cityField" name="listing[city]"></div>
+            <div class="input-group"><label>District</label><input class="input-field" id="districtField" name="listing[district]"></div>
+          </div>
+          <div class="form-row2">
+            <div class="input-group"><label>State</label><input class="input-field" id="stateField" name="listing[state]"></div>
+            <div class="input-group">
+              <label>Service Radius</label>
+              <select class="input-field" name="listing[serviceRadius]">
+                <option value="">Select radius</option>
+                <option value="20">20 KM</option>
+                <option value="50">50 KM</option>
+                <option value="100">100 KM</option>
+                <option value="">Anywhere</option>
+              </select>
             </div>
-
-            <div class="btn-group">
-                <button type="button" class="btn-prev" onclick="prevStep(3)">Previous</button>
-                <button type="button" class="btn-next" onclick="nextStep(3)">Next</button>
-            </div>
+          </div>
         </div>
+        <div class="step-nav"><button type="button" class="btn btn-ghost" onclick="prevStep(3)"><i class="fas fa-arrow-left"></i> Previous</button><button type="button" class="btn btn-primary" onclick="nextStep(3)">Next <i class="fas fa-arrow-right"></i></button></div>
+      </div>
 
-        <!-- Step 4: Driver -->
-        <div class="step-content" id="step4">
-            <div class="form-section">
-                <h3>Driver Information</h3>
-                
-                <div class="mb-3">
-                    <label class="form-label">Who will drive? <span class="required-field">*</span></label>
-                    <div>
-                        <input type="radio" id="driver-owner" name="listing[driverType]" value="owner" checked onchange="toggleDriverFields()">
-                        <label for="driver-owner">Owner</label>
-                    </div>
-                    <div>
-                        <input type="radio" id="driver-dedicated" name="listing[driverType]" value="dedicated-driver" onchange="toggleDriverFields()">
-                        <label for="driver-dedicated">Dedicated Driver</label>
-                    </div>
-                </div>
-
-                <div class="driver-section" id="dedicated-driver-section">
-                    <div class="mb-3">
-                        <label for="driverName" class="form-label">Driver Name</label>
-                        <input id="driverName" name="listing[driverName]" placeholder="Driver's full name" type="text" class="form-control">
-                    </div>
-
-                    <div class="mb-3">
-                        <label for="driverExperience" class="form-label">Driver Experience (Years)</label>
-                        <input id="driverExperience" name="listing[driverExperience]" placeholder="e.g. 5" type="number" class="form-control" min="0">
-                    </div>
-
-                    <div class="mb-3">
-                        <label for="driverPhoneNumber" class="form-label">Driver Phone Number</label>
-                        <input id="driverPhoneNumber" name="listing[driverPhoneNumber]" placeholder="e.g. 919876543210" type="text" class="form-control">
-                    </div>
-
-                    <div class="mb-3">
-                        <label for="driverLicenseNumber" class="form-label">Driver License Number</label>
-                        <input id="driverLicenseNumber" name="listing[driverLicenseNumber]" placeholder="License number" type="text" class="form-control">
-                    </div>
-
-                    <div class="mb-3">
-                        <label for="driverPhoto" class="form-label">Driver Photo <small>(Optional)</small></label>
-                        <input id="driverPhoto" name="driverPhoto" type="file" class="form-control">
-                    </div>
-                </div>
+      <!-- ═══ STEP 4: DRIVER ═══ -->
+      <div class="step-panel" id="step4">
+        <div class="step-section">
+          <h3>Driver Information</h3>
+          <div class="input-group">
+            <label>Who will drive? <span class="req">*</span></label>
+            <div class="radio-group">
+              <label class="radio-label"><input type="radio" name="listing[driverType]" value="owner" checked onchange="toggleDriver()"> Owner</label>
+              <label class="radio-label"><input type="radio" name="listing[driverType]" value="dedicated-driver" onchange="toggleDriver()"> Dedicated Driver</label>
             </div>
-
-            <div class="btn-group">
-                <button type="button" class="btn-prev" onclick="prevStep(4)">Previous</button>
-                <button type="button" class="btn-next" onclick="nextStep(4)">Next</button>
+          </div>
+          <div class="driver-fields" id="driverFields" style="display:none">
+            <div class="form-row2">
+              <div class="input-group"><label>Driver Name</label><input class="input-field" name="listing[driverName]" placeholder="Full name"></div>
+              <div class="input-group"><label>Experience (Years)</label><input class="input-field" name="listing[driverExperience]" placeholder="e.g. 5" type="number" min="0"></div>
             </div>
+            <div class="form-row2">
+              <div class="input-group"><label>Phone Number</label><input class="input-field" name="listing[driverPhoneNumber]" placeholder="e.g. 919876543210"></div>
+              <div class="input-group"><label>License Number</label><input class="input-field" name="listing[driverLicenseNumber]" placeholder="License number"></div>
+            </div>
+            <div class="input-group"><label>Driver Photo <small style="font-weight:400">Optional</small></label><input class="input-field" type="file" name="driverPhoto" accept="image/*"></div>
+          </div>
         </div>
+        <div class="step-nav"><button type="button" class="btn btn-ghost" onclick="prevStep(4)"><i class="fas fa-arrow-left"></i> Previous</button><button type="button" class="btn btn-primary" onclick="nextStep(4)">Next <i class="fas fa-arrow-right"></i></button></div>
+      </div>
 
-        <!-- Step 5: Photos -->
-        <div class="step-content" id="step5">
-            <div class="form-section">
-                <h3>Vehicle Photos</h3>
-                <p class="text-muted">Minimum 4 photos required (Front, Rear, Left, Right). Interior and Dashboard are optional.</p>
-                
-                <div class="image-upload-grid">
-                    <div class="image-upload-item" onclick="document.getElementById('frontImage').click()">
-                        <input type="file" id="frontImage" name="frontImage" accept="image/*" style="display: none;" onchange="previewImage(this, 'front')">
-                        <div id="front-preview">
-                            <span>+</span>
-                        </div>
-                        <label>Front <span class="required-field">*</span></label>
-                    </div>
-
-                    <div class="image-upload-item" onclick="document.getElementById('rearImage').click()">
-                        <input type="file" id="rearImage" name="rearImage" accept="image/*" style="display: none;" onchange="previewImage(this, 'rear')">
-                        <div id="rear-preview">
-                            <span>+</span>
-                        </div>
-                        <label>Rear <span class="required-field">*</span></label>
-                    </div>
-
-                    <div class="image-upload-item" onclick="document.getElementById('leftImage').click()">
-                        <input type="file" id="leftImage" name="leftImage" accept="image/*" style="display: none;" onchange="previewImage(this, 'left')">
-                        <div id="left-preview">
-                            <span>+</span>
-                        </div>
-                        <label>Left <span class="required-field">*</span></label>
-                    </div>
-
-                    <div class="image-upload-item" onclick="document.getElementById('rightImage').click()">
-                        <input type="file" id="rightImage" name="rightImage" accept="image/*" style="display: none;" onchange="previewImage(this, 'right')">
-                        <div id="right-preview">
-                            <span>+</span>
-                        </div>
-                        <label>Right <span class="required-field">*</span></label>
-                    </div>
-
-                    <div class="image-upload-item" onclick="document.getElementById('interiorImage').click()">
-                        <input type="file" id="interiorImage" name="interiorImage" accept="image/*" style="display: none;" onchange="previewImage(this, 'interior')">
-                        <div id="interior-preview">
-                            <span>+</span>
-                        </div>
-                        <label>Interior <small>(Optional)</small></label>
-                    </div>
-
-                    <div class="image-upload-item" onclick="document.getElementById('dashboardImage').click()">
-                        <input type="file" id="dashboardImage" name="dashboardImage" accept="image/*" style="display: none;" onchange="previewImage(this, 'dashboard')">
-                        <div id="dashboard-preview">
-                            <span>+</span>
-                        </div>
-                        <label>Dashboard <small>(Optional)</small></label>
-                    </div>
-                </div>
-            </div>
-
-            <div class="btn-group">
-                <button type="button" class="btn-prev" onclick="prevStep(5)">Previous</button>
-                <button type="button" class="btn-next" onclick="nextStep(5)">Next</button>
-            </div>
+      <!-- ═══ STEP 5: PHOTOS ═══ -->
+      <div class="step-panel" id="step5">
+        <div class="step-section">
+          <h3>Vehicle Photos</h3>
+          <p style="font-size:13px;color:var(--text-secondary);margin:-8px 0 16px">Minimum 4 photos required (Front, Rear, Left, Right). Interior and Dashboard are optional.</p>
+          <div class="photo-grid">
+            <% ['front','rear','left','right','interior','dashboard'].forEach(type => { %>
+              <div class="photo-box" onclick="document.getElementById('<%= type %>Img').click()">
+                <input type="file" id="<%= type %>Img" name="<%= type %>Image" accept="image/*" style="display:none" onchange="previewImg(this,'<%= type %>')">
+                <div class="photo-preview" id="<%= type %>Preview"><i class="fas fa-camera"></i><span><%= type.charAt(0).toUpperCase() + type.slice(1) %><%= ['front','rear','left','right'].includes(type) ? ' <span class="req">*</span>' : '' %></span></div>
+              </div>
+            <% }) %>
+          </div>
         </div>
+        <div class="step-nav"><button type="button" class="btn btn-ghost" onclick="prevStep(5)"><i class="fas fa-arrow-left"></i> Previous</button><button type="button" class="btn btn-primary" onclick="nextStep(5)">Next <i class="fas fa-arrow-right"></i></button></div>
+      </div>
 
-        <!-- Step 6: Documents -->
-        <div class="step-content" id="step6">
-            <div class="form-section">
-                <h3>Vehicle Documents</h3>
-                <p class="text-muted">Vehicle RC and Insurance are required. Other documents are optional.</p>
-                
-                <div class="document-upload-item">
-                    <label>Vehicle RC <span class="required-field">*</span></label>
-                    <input type="file" name="vehicleRC" accept="image/*,.pdf" class="form-control" required>
-                    <div class="invalid-feedback">Please upload Vehicle RC.</div>
-                </div>
-
-                <div class="document-upload-item">
-                    <label>Insurance <span class="required-field">*</span></label>
-                    <input type="file" name="insurance" accept="image/*,.pdf" class="form-control" required>
-                    <div class="invalid-feedback">Please upload Insurance.</div>
-                </div>
-
-                <div class="document-upload-item">
-                    <label>Pollution Certificate <small>(Optional)</small></label>
-                    <input type="file" name="pollutionCertificate" accept="image/*,.pdf" class="form-control">
-                </div>
-
-                <div class="document-upload-item">
-                    <label>Fitness Certificate <small>(Optional)</small></label>
-                    <input type="file" name="fitnessCertificate" accept="image/*,.pdf" class="form-control">
-                </div>
-
-                <div class="document-upload-item">
-                    <label>Owner Driving License <small>(Optional)</small></label>
-                    <input type="file" name="ownerDrivingLicense" accept="image/*,.pdf" class="form-control">
-                </div>
-
-                <div class="document-upload-item">
-                    <label>Driver Driving License <small>(Optional)</small></label>
-                    <input type="file" name="driverDrivingLicense" accept="image/*,.pdf" class="form-control">
-                </div>
-
-                <div class="document-upload-item">
-                    <label>Aadhaar <small>(Optional)</small></label>
-                    <input type="file" name="aadhaar" accept="image/*,.pdf" class="form-control">
-                </div>
+      <!-- ═══ STEP 6: DOCUMENTS ═══ -->
+      <div class="step-panel" id="step6">
+        <div class="step-section">
+          <h3>Vehicle Documents</h3>
+          <p style="font-size:13px;color:var(--text-secondary);margin:-8px 0 16px">Vehicle RC and Insurance are required. Other documents are optional.</p>
+          <% 
+            const docs = [
+              { name: 'vehicleRC', label: 'Vehicle RC', req: true },
+              { name: 'insurance', label: 'Insurance', req: true },
+              { name: 'pollutionCertificate', label: 'Pollution Certificate', req: false },
+              { name: 'fitnessCertificate', label: 'Fitness Certificate', req: false },
+              { name: 'ownerDrivingLicense', label: 'Owner Driving License', req: false },
+              { name: 'driverDrivingLicense', label: 'Driver Driving License', req: false },
+              { name: 'aadhaar', label: 'Aadhaar Card', req: false }
+            ];
+          %>
+          <% docs.forEach(d => { %>
+            <div class="doc-upload">
+              <label><%= d.label %><% if(d.req) { %> <span class="req">*</span><% } %></label>
+              <input class="input-field" type="file" name="<%= d.name %>" accept="image/*,.pdf" <%= d.req ? 'required' : '' %>>
             </div>
-
-            <div class="btn-group">
-                <button type="button" class="btn-prev" onclick="prevStep(6)">Previous</button>
-                <button type="button" class="btn-next" onclick="nextStep(6)">Next</button>
-            </div>
+          <% }) %>
         </div>
+        <div class="step-nav"><button type="button" class="btn btn-ghost" onclick="prevStep(6)"><i class="fas fa-arrow-left"></i> Previous</button><button type="button" class="btn btn-primary" onclick="nextStep(6)">Next <i class="fas fa-arrow-right"></i></button></div>
+      </div>
 
-        <!-- Step 7: Booking Rules -->
-        <div class="step-content" id="step7">
-            <div class="form-section">
-                <h3>Booking Rules & Payment Settings</h3>
-                
-                <div class="row">
-                    <div class="mb-3 col-md-6">
-                        <label for="minimumBookingAmount" class="form-label">Minimum Booking Amount (₹)</label>
-                        <input id="minimumBookingAmount" name="listing[bookingRules][minimumBookingAmount]" placeholder="e.g. 500" type="number" class="form-control" min="0">
-                    </div>
-
-                    <div class="mb-3 col-md-6">
-                        <label for="maximumPassengers" class="form-label">Maximum Passengers</label>
-                        <input id="maximumPassengers" name="listing[bookingRules][maximumPassengers]" placeholder="e.g. 6" type="number" class="form-control" min="1">
-                    </div>
-                </div>
-
-                <div class="mb-3">
-                    <label class="form-label">Available Trip Types</label>
-                    <div class="checkbox-group">
-                        <div class="checkbox-item">
-                            <input type="checkbox" id="trip-local" name="listing[availableTripTypes]" value="local">
-                            <label for="trip-local">Local Trips</label>
-                        </div>
-                        <div class="checkbox-item">
-                            <input type="checkbox" id="trip-outstation" name="listing[availableTripTypes]" value="outstation">
-                            <label for="trip-outstation">Outstation Trips</label>
-                        </div>
-                        <div class="checkbox-item">
-                            <input type="checkbox" id="trip-airport" name="listing[availableTripTypes]" value="airport-pickup">
-                            <label for="trip-airport">Airport Pickup</label>
-                        </div>
-                        <div class="checkbox-item">
-                            <input type="checkbox" id="trip-railway" name="listing[availableTripTypes]" value="railway-pickup">
-                            <label for="trip-railway">Railway Pickup</label>
-                        </div>
-                        <div class="checkbox-item">
-                            <input type="checkbox" id="trip-wedding" name="listing[availableTripTypes]" value="wedding">
-                            <label for="trip-wedding">Wedding</label>
-                        </div>
-                        <div class="checkbox-item">
-                            <input type="checkbox" id="trip-family" name="listing[availableTripTypes]" value="family-function">
-                            <label for="trip-family">Family Function</label>
-                        </div>
-                        <div class="checkbox-item">
-                            <input type="checkbox" id="trip-temple" name="listing[availableTripTypes]" value="temple-visit">
-                            <label for="trip-temple">Temple Visit</label>
-                        </div>
-                        <div class="checkbox-item">
-                            <input type="checkbox" id="trip-tourism" name="listing[availableTripTypes]" value="tourism">
-                            <label for="trip-tourism">Tourism</label>
-                        </div>
-                        <div class="checkbox-item">
-                            <input type="checkbox" id="trip-corporate" name="listing[availableTripTypes]" value="corporate">
-                            <label for="trip-corporate">Corporate</label>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="mb-3">
-                    <label class="form-label">Booking Preferences</label>
-                    <div class="checkbox-group">
-                        <div class="checkbox-item">
-                            <input type="checkbox" id="smoking" name="listing[bookingRules][smokingAllowed]" value="true">
-                            <label for="smoking">Smoking Allowed</label>
-                        </div>
-                        <div class="checkbox-item">
-                            <input type="checkbox" id="pets" name="listing[bookingRules][petsAllowed]" value="true">
-                            <label for="pets">Pets Allowed</label>
-                        </div>
-                        <div class="checkbox-item">
-                            <input type="checkbox" id="luggage" name="listing[bookingRules][luggageAllowed]" value="true" checked>
-                            <label for="luggage">Luggage Allowed</label>
-                        </div>
-                        <div class="checkbox-item">
-                            <input type="checkbox" id="night" name="listing[bookingRules][nightDriving]" value="true" checked>
-                            <label for="night">Night Driving</label>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="mb-3">
-                    <label class="form-label">Payment Methods</label>
-                    <div class="checkbox-group">
-                        <div class="checkbox-item">
-                            <input type="checkbox" id="pay-cash" name="listing[paymentMethods]" value="cash">
-                            <label for="pay-cash">Cash</label>
-                        </div>
-                        <div class="checkbox-item">
-                            <input type="checkbox" id="pay-upi" name="listing[paymentMethods]" value="upi">
-                            <label for="pay-upi">UPI</label>
-                        </div>
-                        <div class="checkbox-item">
-                            <input type="checkbox" id="pay-online" name="listing[paymentMethods]" value="online">
-                            <label for="pay-online">Online</label>
-                        </div>
-                        <div class="checkbox-item">
-                            <input type="checkbox" id="pay-all" name="listing[paymentMethods]" value="all">
-                            <label for="pay-all">All</label>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="btn-group">
-                <button type="button" class="btn-prev" onclick="prevStep(7)">Previous</button>
-                <button type="submit" class="btn-submit">Submit Listing</button>
-            </div>
+      <!-- ═══ STEP 7: RULES ═══ -->
+      <div class="step-panel" id="step7">
+        <div class="step-section">
+          <h3>Booking Rules & Payment Settings</h3>
+          <div class="form-row2">
+            <div class="input-group"><label>Minimum Booking Amount (₹)</label><input class="input-field" name="listing[bookingRules][minimumBookingAmount]" placeholder="e.g. 500" type="number" min="0"></div>
+            <div class="input-group"><label>Max Passengers</label><input class="input-field" name="listing[bookingRules][maximumPassengers]" placeholder="e.g. 6" type="number" min="1"></div>
+          </div>
+          <div class="input-group"><label>Available Trip Types</label><div class="chip-grid"><% ['local','outstation','airport-pickup','railway-pickup','wedding','family-function','temple-visit','tourism','corporate'].forEach(t => { %><label class="chip-check"><input type="checkbox" name="listing[availableTripTypes]" value="<%= t %>"><span><%= t.replace(/-/g,' ').replace(/\b\w/g,c=>c.toUpperCase()) %></span></label><% }) %></div></div>
+          <div class="input-group"><label>Booking Preferences</label><div class="chip-grid"><% 
+            const prefs = [
+              { name: 'listing[bookingRules][smokingAllowed]', label: 'Smoking Allowed' },
+              { name: 'listing[bookingRules][petsAllowed]', label: 'Pets Allowed' },
+              { name: 'listing[bookingRules][luggageAllowed]', label: 'Luggage Allowed', checked: true },
+              { name: 'listing[bookingRules][nightDriving]', label: 'Night Driving', checked: true }
+            ];
+          %><% prefs.forEach(p => { %><label class="chip-check"><input type="checkbox" name="<%= p.name %>" value="true" <%= p.checked ? 'checked' : '' %>><span><%= p.label %></span></label><% }) %></div></div>
+          <div class="input-group"><label>Payment Methods</label><div class="chip-grid"><% ['cash','upi','online'].forEach(m => { %><label class="chip-check"><input type="checkbox" name="listing[paymentMethods]" value="<%= m %>"><span><%= m.charAt(0).toUpperCase() + m.slice(1) %></span></label><% }) %></div></div>
         </div>
+        <div class="step-nav"><button type="button" class="btn btn-ghost" onclick="prevStep(7)"><i class="fas fa-arrow-left"></i> Previous</button><button type="submit" class="btn btn-primary btn-lg"><i class="fas fa-check-circle"></i> Submit Listing</button></div>
+      </div>
 
-        <div class="auto-save-indicator" id="auto-save-indicator">
-            Draft auto-saved
-        </div>
+      <div class="auto-save" id="autoSave">Draft saved</div>
     </form>
+  </div>
 </div>
 
 <script>
-let currentStep = 1;
-const totalSteps = 7;
-let map;
-let marker;
+let currentStep = 1, totalSteps = 7, map, marker;
 
 function updateProgress() {
-    const progress = (currentStep / totalSteps) * 100;
-    document.getElementById('progress-fill').style.width = progress + '%';
-    
-    document.querySelectorAll('.step-indicator').forEach((indicator, index) => {
-        indicator.classList.remove('active', 'completed');
-        if (index + 1 < currentStep) {
-            indicator.classList.add('completed');
-        } else if (index + 1 === currentStep) {
-            indicator.classList.add('active');
-        }
-    });
+  const pct = (currentStep / totalSteps) * 100;
+  document.getElementById('progressFill').style.width = pct + '%';
+  document.querySelectorAll('.step-lbl').forEach((l, i) => {
+    l.classList.toggle('active', i + 1 === currentStep);
+    l.classList.toggle('done', i + 1 < currentStep);
+  });
 }
 
-function showStep(step) {
-    document.querySelectorAll('.step-content').forEach(content => {
-        content.classList.remove('active');
-    });
-    document.getElementById('step' + step).classList.add('active');
-    currentStep = step;
-    updateProgress();
-    
-    if (step === 3) {
-        initMap();
-    }
+function showStep(s) {
+  document.querySelectorAll('.step-panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('step' + s).classList.add('active');
+  currentStep = s;
+  updateProgress();
+  if (s === 3) initMap();
 }
 
-function nextStep(current) {
-    const currentStepEl = document.getElementById('step' + current);
-    const requiredFields = currentStepEl.querySelectorAll('[required]');
-    let isValid = true;
-    
-    requiredFields.forEach(field => {
-        if (!field.value.trim()) {
-            field.classList.add('is-invalid');
-            isValid = false;
-        } else {
-            field.classList.remove('is-invalid');
-        }
-    });
-    
-    if (!isValid) {
-        return;
-    }
-    
-    if (current < totalSteps) {
-        showStep(current + 1);
-        saveDraft();
-    }
+function nextStep(cur) {
+  const el = document.getElementById('step' + cur);
+  const req = el.querySelectorAll('[required]');
+  let ok = true;
+  req.forEach(f => { if (!f.value.trim()) { f.style.borderColor = '#ef4444'; ok = false; } else f.style.borderColor = ''; });
+  if (!ok) return;
+  if (cur < totalSteps) { showStep(cur + 1); saveDraft(); }
 }
 
-function prevStep(current) {
-    if (current > 1) {
-        showStep(current - 1);
-    }
+function prevStep(cur) { if (cur > 1) showStep(cur - 1); }
+
+function toggleDriver() {
+  document.getElementById('driverFields').style.display =
+    document.querySelector('input[name="listing[driverType]"]:checked').value === 'dedicated-driver' ? 'block' : 'none';
 }
 
-function toggleDriverFields() {
-    const driverType = document.querySelector('input[name="listing[driverType]"]:checked').value;
-    const dedicatedSection = document.getElementById('dedicated-driver-section');
-    
-    if (driverType === 'dedicated-driver') {
-        dedicatedSection.classList.add('active');
-    } else {
-        dedicatedSection.classList.remove('active');
-    }
-}
-
-function previewImage(input, type) {
-    const preview = document.getElementById(type + '-preview');
-    const parent = input.parentElement;
-    
-    if (input.files && input.files[0]) {
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            preview.innerHTML = '<img src="' + e.target.result + '" alt="' + type + '">';
-            parent.classList.add('has-image');
-        }
-        reader.readAsDataURL(input.files[0]);
-    }
+function previewImg(input, type) {
+  const preview = document.getElementById(type + 'Preview');
+  if (input.files && input.files[0]) {
+    const r = new FileReader();
+    r.onload = e => { preview.innerHTML = '<img src="' + e.target.result + '">'; };
+    r.readAsDataURL(input.files[0]);
+  }
 }
 
 function initMap() {
-    if (map) return;
-    
-    map = L.map('location-map').setView([20.5937, 78.9629], 5); // India center
-    
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '© OpenStreetMap contributors'
-    }).addTo(map);
-    
-    map.on('click', function(e) {
-        if (marker) {
-            map.removeLayer(marker);
-        }
-        
-        marker = L.marker(e.latlng).addTo(map);
-        
-        const coords = {
-            type: 'Point',
-            coordinates: [e.latlng.lng, e.latlng.lat]
-        };
-        
-        document.getElementById('location-coordinates').value = JSON.stringify(coords);
-        
-        // Reverse geocode
-        fetch(`/cars/reverse-geocode?lat=${e.latlng.lat}&lon=${e.latlng.lng}`)
-            .then(response => response.json())
-            .then(data => {
-                if (data.display_name) {
-                    document.getElementById('location').value = data.display_name;
-                    parseLocationDetails(data.display_name);
-                }
-            });
-    });
+  if (map) return;
+  map = L.map('locMap').setView([20.5937, 78.9629], 5);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OSM' }).addTo(map);
+  map.on('click', e => {
+    if (marker) map.removeLayer(marker);
+    marker = L.marker(e.latlng).addTo(map);
+    document.getElementById('locationCoords').value = JSON.stringify({ type: 'Point', coordinates: [e.latlng.lng, e.latlng.lat] });
+    fetch('/cars/reverse-geocode?lat=' + e.latlng.lat + '&lon=' + e.latlng.lng)
+      .then(r => r.json()).then(d => {
+        if (d.display_name) { document.getElementById('locationField').value = d.display_name; parseAddr(d.display_name); }
+      });
+  });
 }
 
 function searchLocation() {
-    const query = document.getElementById('location-search').value;
-    if (!query) return;
-    
-    fetch(`/cars/geocode?q=${encodeURIComponent(query)}`)
-        .then(response => response.json())
-        .then(data => {
-            if (data && data.length > 0) {
-                const result = data[0];
-                const lat = parseFloat(result.lat);
-                const lon = parseFloat(result.lon);
-                
-                if (map) {
-                    map.setView([lat, lon], 13);
-                    if (marker) {
-                        map.removeLayer(marker);
-                    }
-                    marker = L.marker([lat, lon]).addTo(map);
-                }
-                
-                const coords = {
-                    type: 'Point',
-                    coordinates: [lon, lat]
-                };
-                
-                document.getElementById('location-coordinates').value = JSON.stringify(coords);
-                document.getElementById('location').value = result.display_name;
-                parseLocationDetails(result.display_name);
-            }
-        });
+  const q = document.getElementById('locSearch').value.trim();
+  if (!q) return;
+  fetch('/cars/geocode?q=' + encodeURIComponent(q)).then(r => r.json()).then(d => {
+    if (!d || !d.length) return;
+    const r = d[0], lat = parseFloat(r.lat), lon = parseFloat(r.lon);
+    if (map) { map.setView([lat, lon], 13); if (marker) map.removeLayer(marker); marker = L.marker([lat, lon]).addTo(map); }
+    document.getElementById('locationCoords').value = JSON.stringify({ type: 'Point', coordinates: [lon, lat] });
+    document.getElementById('locationField').value = r.display_name;
+    parseAddr(r.display_name);
+  });
 }
 
-function parseLocationDetails(displayame) {
-    // Simple parsing - in production, use proper address parsing
-    const parts = displayame.split(',');
-    if (parts.length >= 3) {
-        document.getElementById('village').value = parts[0].trim();
-        document.getElementById('city').value = parts[parts.length - 3].trim();
-        document.getElementById('state').value = parts[parts.length - 2].trim();
-    }
+function parseAddr(name) {
+  const parts = name.split(',');
+  if (parts.length >= 3) {
+    document.getElementById('villageField').value = parts[0].trim();
+    document.getElementById('cityField').value = parts[parts.length - 3].trim();
+    document.getElementById('stateField').value = parts[parts.length - 2].trim();
+  }
 }
 
 function saveDraft() {
-    const indicator = document.getElementById('auto-save-indicator');
-    indicator.textContent = 'Saving draft...';
-    indicator.classList.add('saving');
-    
-    const formData = new FormData(document.getElementById('stepForm'));
-    
-    // Save to localStorage
-    const draftData = {};
-    formData.forEach((value, key) => {
-        draftData[key] = value;
-    });
-    
-    localStorage.setItem('vehicleListingDraft', JSON.stringify(draftData));
-    
-    setTimeout(() => {
-        indicator.textContent = 'Draft auto-saved';
-        indicator.classList.remove('saving');
-        indicator.classList.add('saved');
-    }, 500);
+  const fd = new FormData(document.getElementById('stepForm'));
+  const data = {};
+  fd.forEach((v, k) => data[k] = v);
+  localStorage.setItem('vehicleDraft', JSON.stringify(data));
+  document.getElementById('autoSave').textContent = 'Draft saved ' + new Date().toLocaleTimeString();
 }
 
-// Load draft on page load
-window.onload = function() {
-    const savedDraft = localStorage.getItem('vehicleListingDraft');
-    if (savedDraft) {
-        const draftData = JSON.parse(savedDraft);
-        // Populate form fields from draft
-        Object.keys(draftData).forEach(key => {
-            const input = document.querySelector(`[name="${key}"]`);
-            if (input) {
-                input.value = draftData[key];
-            }
-        });
-    }
-};
-
-// Initialize
-updateProgress();
+document.addEventListener('DOMContentLoaded', () => {
+  updateProgress();
+  const saved = localStorage.getItem('vehicleDraft');
+  if (saved) {
+    const data = JSON.parse(saved);
+    Object.keys(data).forEach(k => {
+      const el = document.querySelector('[name="' + k + '"]');
+      if (el) el.value = data[k];
+    });
+  }
+});
 </script>
 
-<!-- Leaflet CSS and JS for maps -->
+<style>
+.step-form-page { max-width: 780px; margin: 0 auto; padding: 32px 20px; }
+.step-form-card { background: var(--card); border: 1px solid var(--border-light); border-radius: var(--radius-xl); padding: 36px; box-shadow: var(--shadow-md); }
+.step-form-card h2 { font-size: 24px; font-weight: 800; }
+
+/* Progress */
+.step-progress { margin: 24px 0 32px; }
+.step-bar { height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; }
+.step-bar-fill { height: 100%; background: var(--gradient); border-radius: 3px; transition: width 0.4s ease; }
+.step-labels { display: flex; justify-content: space-between; margin-top: 8px; gap: 4px; }
+.step-lbl { font-size: 10px; font-weight: 500; color: var(--text-secondary); text-align: center; flex: 1; white-space: nowrap; transition: color 0.2s; }
+.step-lbl.active { color: var(--primary); font-weight: 700; }
+.step-lbl.done { color: var(--primary); }
+
+/* Panels */
+.step-panel { display: none; animation: stepFade 0.3s ease; }
+.step-panel.active { display: block; }
+@keyframes stepFade { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+.step-section { background: var(--surface); border-radius: var(--radius-lg); padding: 24px; margin-bottom: 20px; }
+.step-section h3 { font-size: 16px; font-weight: 700; margin-bottom: 20px; color: var(--text); }
+.step-nav { display: flex; justify-content: space-between; align-items: center; }
+
+/* Pricing tip */
+.pricing-tip { display: flex; gap: 12px; padding: 14px; background: var(--primary-50); border-radius: var(--radius-md); margin-bottom: 20px; font-size: 13px; color: var(--primary); line-height: 1.6; }
+.pricing-tip i { font-size: 18px; flex-shrink: 0; margin-top: 2px; }
+
+/* Location */
+.loc-search { display: flex; gap: 8px; margin-bottom: 12px; }
+.map-wrap { height: 280px; border: 2px solid var(--border); border-radius: var(--radius-md); overflow: hidden; margin-bottom: 16px; }
+#locMap { width: 100%; height: 100%; }
+
+/* Photo grid */
+.photo-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+.photo-box { border: 2px dashed var(--border); border-radius: var(--radius-lg); cursor: pointer; transition: all 0.2s; aspect-ratio: 4/3; }
+.photo-box:hover { border-color: var(--primary); background: var(--primary-50); }
+.photo-preview { width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; color: var(--text-secondary); font-size: 12px; font-weight: 500; }
+.photo-preview i { font-size: 24px; color: var(--primary); }
+.photo-preview img { width: 100%; height: 100%; object-fit: cover; border-radius: var(--radius-md); }
+
+/* Document upload */
+.doc-upload { margin-bottom: 12px; }
+.doc-upload label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; }
+.doc-upload input { }
+
+/* Chip checkboxes */
+.chip-grid { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip-check { cursor: pointer; }
+.chip-check input { display: none; }
+.chip-check span { display: inline-block; padding: 8px 16px; border: 1.5px solid var(--border); border-radius: var(--radius-full); font-size: 13px; font-weight: 500; color: var(--text-secondary); transition: all 0.15s; }
+.chip-check input:checked + span { background: var(--primary); color: #fff; border-color: var(--primary); }
+.chip-check:hover span { border-color: var(--primary); }
+
+/* Driver */
+.driver-fields { padding-top: 12px; }
+.radio-group { display: flex; gap: 24px; margin-top: 4px; }
+.radio-label { display: flex; align-items: center; gap: 8px; font-size: 14px; cursor: pointer; }
+.radio-label input[type="radio"] { accent-color: var(--primary); width: 16px; height: 16px; }
+
+/* Form row helpers */
+.form-row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.form-row3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; }
+.req { color: #ef4444; }
+
+/* Auto save */
+.auto-save { text-align: right; font-size: 11px; color: var(--text-secondary); margin-top: 12px; }
+
+@media (max-width: 640px) {
+  .step-form-card { padding: 20px; }
+  .form-row2, .form-row3 { grid-template-columns: 1fr; }
+  .photo-grid { grid-template-columns: repeat(2, 1fr); }
+  .step-labels { gap: 2px; }
+  .step-lbl { font-size: 9px; }
+}
+</style>
+
+<!-- Leaflet CSS + JS (needed for Step 3 map) -->
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>

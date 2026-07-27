@@ -65,10 +65,25 @@ const buildListingData = (incomingListing = {}) => ({
 const DEFAULT_OWNER_WHATSAPP_NUMBER = process.env.OWNER_WHATSAPP_NUMBER || "";
 
 module.exports.index = async (req, res) => {
-    const { category = "all", type, seats, search } = req.query;
+    const { category = "all", type, seats, search, tripType } = req.query;
     const filter = { websiteSource: "car-rental" };
 
-    if (seats) {
+    // Trip type → smart vehicle recommendations (case-insensitive matching)
+    const tripTypeMap = {
+        'local':           { $or: [ { vehicleType: /hatchback|sedan|compact/i }, { seats: { $lte: 5 } }, { category: /city|local|economy|hatchback|sedan/i } ] },
+        'outstation':      { $or: [ { vehicleType: /sedan|suv|muv|innova/i }, { luggageCapacity: { $in: ['medium', 'large', 'extra-large'] } }, { category: /outstation|highway|tour|sedan|suv/i } ] },
+        'wedding':         { $or: [ { vehicleType: /luxury|premium|sedan|crown/i }, { category: 'luxury' }, { seats: { $gte: 6 } } ] },
+        'airport-pickup':  { $or: [ { luggageCapacity: { $in: ['medium', 'large', 'extra-large'] } }, { vehicleType: /sedan|suv|innova/i }, { category: /airport|pickup|drop/i } ] },
+        'temple-visit':    { $or: [ { vehicleType: /sedan|suv|hatchback|innova/i }, { category: /temple|visit|religious|city/i }, { seats: { $gte: 4 } } ] },
+        'tourism':         { $or: [ { vehicleType: /suv|muv|innova|minivan/i }, { seats: { $gte: 6 } }, { category: /tour|tourism|travel|family|suv/i } ] },
+        'corporate':       { $or: [ { vehicleType: /sedan|luxury|premium/i }, { seats: { $lte: 5 } }, { category: /corporate|business|premium|sedan/i } ] },
+        'railway-pickup':  { $or: [ { luggageCapacity: { $in: ['medium', 'large', 'extra-large'] } }, { vehicleType: /sedan|suv|hatchback|innova/i }, { seats: { $gte: 4 } } ] },
+        'family':          { $or: [ { vehicleType: /suv|muv|innova|minivan/i }, { seats: { $gte: 6 } }, { category: /family|tour|travel|suv|muv/i } ] },
+    };
+
+    if (tripType && tripTypeMap[tripType]) {
+        Object.assign(filter, tripTypeMap[tripType]);
+    } else if (seats) {
         const seatsNum = Number(seats);
         if ([4, 6, 10].includes(seatsNum)) filter.seats = seatsNum;
     } else if (type) {
@@ -79,17 +94,24 @@ module.exports.index = async (req, res) => {
 
     if (search && search.trim()) {
         const searchRegex = new RegExp(escapeRegExp(search.trim()), "i");
-        filter.$or = [
+        const searchOr = [
             { title: searchRegex },
             { location: searchRegex },
             { country: searchRegex },
             { description: searchRegex },
             { category: searchRegex },
         ];
+        // Merge with existing $or from tripType filter
+        if (filter.$or) {
+            filter.$and = [{ $or: filter.$or }, { $or: searchOr }];
+            delete filter.$or;
+        } else {
+            filter.$or = searchOr;
+        }
     }
 
     const alllistings = await Listing.find(filter).sort({ _id: -1 }).populate("owner");
-    res.render("listings/index.ejs", { alllistings, currentCategory: category, currentType: type, currentSeats: seats, currentSearch: search || "" });
+    res.render("listings/index.ejs", { alllistings, currentCategory: category, currentType: type, currentSeats: seats, currentTripType: tripType || '', currentSearch: search || "" });
 };
 
 module.exports.geocode = async (req, res) => {
@@ -490,8 +512,8 @@ module.exports.autocomplete = async (req, res) => {
         try { const r = await fetch(url, { headers }); if (!r.ok) return []; return await r.json(); } catch { return []; }
     }
 
-    // Phase 1: Name search for the query
-    const nameResults = await searchN(`q=${encodeURIComponent(q)}&limit=5&dedupe=0`);
+    // Phase 1: Name search for the query — get more results
+    const nameResults = await searchN(`q=${encodeURIComponent(q)}&limit=10&dedupe=0`);
 
     let suggestions = [];
     const existing = new Set();
@@ -526,19 +548,22 @@ module.exports.autocomplete = async (req, res) => {
     const firstResult = nameResults[0];
 
     if (cityResult) {
-        const radius = q.length <= 3 ? 5000 : 10000; // 5km for short queries, 10km for specific
-        const nearby = await searchN(`q=locality|suburb|neighbourhood|village&limit=12&dedupe=0&lat=${cityResult.lat}&lon=${cityResult.lon}&radius=${radius}`);
+        const radius = q.length <= 3 ? 5000 : 10000;
+        const nearby = await searchN(`q=locality|suburb|neighbourhood|village&limit=20&dedupe=0&lat=${cityResult.lat}&lon=${cityResult.lon}&radius=${radius}`);
         nearby.forEach(addResult);
     } else if (firstResult) {
-        // Proximity around first result even if not a city
-        const nearby = await searchN(`limit=10&dedupe=0&lat=${firstResult.lat}&lon=${firstResult.lon}&radius=5000`);
+        const nearby = await searchN(`limit=15&dedupe=0&lat=${firstResult.lat}&lon=${firstResult.lon}&radius=5000`);
         nearby.forEach(addResult);
     }
 
     // Phase 3: Also search "<query> area" or "<query> locality" for better coverage
-    const areaResults = await searchN(`q=${encodeURIComponent(q + ', India')}&limit=8&dedupe=0`);
+    const areaResults = await searchN(`q=${encodeURIComponent(q + ', India')}&limit=15&dedupe=0`);
     areaResults.forEach(addResult);
 
-    // Limit final results to 15
-    res.json(suggestions.slice(0, 15));
+    // Phase 4: Fuzzy / partial match — search with just the query and "India"
+    const fuzzyResults = await searchN(`q=${encodeURIComponent(q)}&limit=10&dedupe=1`);
+    fuzzyResults.forEach(addResult);
+
+    // Limit final results to 30 (was 15)
+    res.json(suggestions.slice(0, 30));
 };

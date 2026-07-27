@@ -100,7 +100,13 @@ module.exports.bookingRequestSchema = Joi.object({
     customerPhone: Joi.string().trim().optional(),
     customerEmail: Joi.string().email().allow("", null).optional(),
     emergencyContact: Joi.string().trim().allow("", null).optional(),
-    paymentMethod: Joi.string().valid('cash', 'upi', 'online', 'cod', 'razorpay').default('cash')
+    paymentMethod: Joi.string().valid('cash', 'upi', 'online', 'cod', 'razorpay').default('cash'),
+    tripDays: Joi.number().integer().min(1).max(30).optional().default(1),
+    nightStay: Joi.string().valid('yes', 'no', '').optional().default(''),
+    pickupLat: Joi.number().optional(),
+    pickupLng: Joi.number().optional(),
+    destLat: Joi.number().optional(),
+    destLng: Joi.number().optional()
   }).required()
 });
 
