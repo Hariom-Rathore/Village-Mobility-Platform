@@ -65,8 +65,8 @@ const BookingSchema = new Schema({
   // Statuses
   bookingStatus: {
     type: String,
-    enum: ['PENDING', 'PENDING_OWNER_APPROVAL', 'COUNTER_OFFERED', 'CONFIRMED', 'CANCELLED', 'COMPLETED', 'REJECTED', 'EXPIRED'],
-    default: 'PENDING_OWNER_APPROVAL'
+    enum: ['PENDING', 'PENDING_OWNER_APPROVAL', 'COUNTER_OFFERED', 'ACCEPTED', 'CONFIRMED', 'CANCELLED', 'COMPLETED', 'REJECTED', 'EXPIRED'],
+    default: 'PENDING'
   },
   paymentStatus: {
     type: String,

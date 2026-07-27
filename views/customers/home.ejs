@@ -1,0 +1,1063 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+<title>RideLocal - Book Local Trips</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"/>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+:root{--primary:#2563eb;--primary-dark:#1d4ed8;--primary-light:#dbeafe;--bg:#f0f4f9;--card:#fff;--text:#0f172a;--text2:#475569;--text3:#94a3b8;--border:#e2e8f0;--shadow:0 2px 16px rgba(0,0,0,0.06);--radius:16px;--radius-sm:12px;}
+*{margin:0;padding:0;box-sizing:border-box;}
+html,body{height:100%;overflow:hidden;}
+body{font-family:'Inter',-apple-system,sans-serif;background:var(--bg);color:var(--text);-webkit-font-smoothing:antialiased;}
+
+/* Mobile Container */
+.app{max-width:480px;margin:0 auto;height:100vh;display:flex;flex-direction:column;background:var(--card);position:relative;overflow:hidden;}
+
+/* ── Header ── */
+.header{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:var(--card);position:relative;z-index:10;flex-shrink:0;border-bottom:1px solid rgba(0,0,0,0.04);}
+.header-logo{display:flex;align-items:center;gap:8px;}
+.header-logo .icon{width:36px;height:36px;background:linear-gradient(135deg,var(--primary),#7c3aed);border-radius:10px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:16px;}
+.header-logo span{font-size:18px;font-weight:800;color:var(--text);letter-spacing:-0.5px;}
+.header-actions{display:flex;align-items:center;gap:8px;}
+.notif-btn{width:40px;height:40px;border:none;background:var(--bg);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;color:var(--text2);cursor:pointer;position:relative;transition:all .15s;}
+.notif-btn:active{transform:scale(0.92);}
+.notif-badge{position:absolute;top:4px;right:4px;width:18px;height:18px;background:#ef4444;border-radius:50%;color:#fff;font-size:9px;font-weight:700;display:none;align-items:center;justify-content:center;border:2px solid var(--card);}
+.avatar-btn{width:40px;height:40px;border:none;border-radius:50%;background:linear-gradient(135deg,var(--primary),#7c3aed);color:#fff;font-size:16px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;overflow:hidden;}
+.avatar-btn img{width:100%;height:100%;object-fit:cover;}
+
+/* ── Scrollable Content ── */
+.scroll-area{flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;}
+.scroll-area::-webkit-scrollbar{display:none;}
+
+/* ── Welcome Section ── */
+.welcome{padding:20px 20px 8px;}
+.welcome h1{font-size:24px;font-weight:800;letter-spacing:-0.5px;line-height:1.2;}
+.welcome h1 span{background:linear-gradient(135deg,var(--primary),#7c3aed);-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+.welcome p{font-size:14px;color:var(--text3);margin-top:4px;}
+
+/* ── Quick Info Strip ── */
+.quick-strip{display:flex;gap:6px;padding:12px 20px 0;overflow-x:auto;flex-shrink:0;}
+.quick-strip::-webkit-scrollbar{display:none;}
+.quick-chip{white-space:nowrap;padding:8px 14px;border-radius:20px;font-size:12px;font-weight:600;border:none;cursor:pointer;transition:all .15s;background:var(--bg);color:var(--text2);flex-shrink:0;}
+.quick-chip i{margin-right:4px;}
+.quick-chip.active{background:var(--primary);color:#fff;}
+.quick-chip:active{transform:scale(0.95);}
+
+/* ── Search Card ── */
+.search-section{padding:12px 20px 20px;}
+.search-card{background:var(--card);border-radius:20px;padding:20px;box-shadow:0 4px 24px rgba(0,0,0,0.06);border:1px solid rgba(0,0,0,0.04);}
+.search-card .title{font-size:15px;font-weight:700;margin-bottom:16px;display:flex;align-items:center;gap:8px;}
+.search-card .title i{color:var(--primary);}
+.form-group{margin-bottom:12px;}
+.form-group:last-of-type{margin-bottom:16px;}
+.form-group label{display:block;font-size:11px;font-weight:600;color:var(--text3);margin-bottom:4px;text-transform:uppercase;letter-spacing:0.5px;}
+.input-wrap{display:flex;align-items:center;background:var(--bg);border:2px solid transparent;border-radius:var(--radius-sm);padding:0 14px;transition:all .2s;min-height:48px;}
+.input-wrap:focus-within{border-color:var(--primary);background:var(--card);box-shadow:0 0 0 4px rgba(37,99,235,0.08);}
+.input-wrap .icon{color:var(--text3);font-size:14px;width:22px;text-align:center;flex-shrink:0;}
+.input-wrap .icon.green{color:#10b981;}
+.input-wrap .icon.red{color:#ef4444;}
+.input-wrap input,.input-wrap select{flex:1;border:none;background:transparent;padding:12px 8px;font-size:14px;outline:none;font-family:inherit;color:var(--text);min-width:0;}
+.input-wrap input::placeholder{color:var(--text3);}
+.input-wrap select{appearance:none;-webkit-appearance:none;cursor:pointer;}
+.input-wrap .chevron{color:var(--text3);font-size:10px;pointer-events:none;}
+.form-row2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.pax-control{display:flex;align-items:center;gap:8px;}
+.pax-control button{width:32px;height:32px;border:none;border-radius:50%;background:var(--bg);color:var(--text2);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;flex-shrink:0;}
+.pax-control button:active{transform:scale(0.9);}
+.pax-control span{font-size:16px;font-weight:700;min-width:24px;text-align:center;}
+
+/* Current Location Button */
+.current-loc-btn{display:flex;align-items:center;gap:6px;padding:6px 12px;margin-top:4px;border:none;background:var(--primary-light);color:var(--primary);border-radius:8px;font-size:11px;font-weight:600;cursor:pointer;transition:all .15s;}
+.current-loc-btn i{font-size:12px;}
+.current-loc-btn:active{opacity:0.7;}
+.current-loc-btn:disabled{opacity:0.5;cursor:not-allowed;}
+.loc-loading{display:none;align-items:center;gap:6px;padding:6px 12px;margin-top:4px;font-size:11px;color:var(--text3);}
+.loc-loading.show{display:flex;}
+
+.btn-search{width:100%;background:linear-gradient(135deg,var(--primary),#7c3aed);color:#fff;border:none;border-radius:14px;padding:16px;font-size:16px;font-weight:700;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:8px;}
+.btn-search:active{transform:scale(0.97);opacity:0.9;}
+.btn-search:disabled{opacity:0.5;cursor:not-allowed;transform:none;}
+.btn-search i{font-size:16px;}
+
+/* ── Autocomplete Dropdown ── */
+.autocomplete-dropdown{position:absolute;left:14px;right:14px;top:100%;background:var(--card);border-radius:var(--radius-sm);box-shadow:0 8px 32px rgba(0,0,0,0.12);max-height:200px;overflow-y:auto;z-index:100;display:none;border:1px solid var(--border);}
+.autocomplete-dropdown.show{display:block;}
+.autocomplete-item{padding:12px 14px;cursor:pointer;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--border);transition:background .1s;}
+.autocomplete-item:last-child{border-bottom:none;}
+.autocomplete-item:hover,.autocomplete-item.highlighted{background:var(--bg);}
+.autocomplete-item .loc-icon{width:32px;height:32px;border-radius:50%;background:var(--bg);display:flex;align-items:center;justify-content:center;color:var(--text3);font-size:12px;flex-shrink:0;}
+.autocomplete-item .loc-text{flex:1;min-width:0;}
+.autocomplete-item .loc-primary{font-size:13px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.autocomplete-item .loc-secondary{font-size:11px;color:var(--text3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+
+/* ── Results Area ── */
+.results-area{display:none;flex-direction:column;flex:1;position:relative;}
+.results-area.show{display:flex;}
+
+/* Map Container */
+.map-container{width:100%;height:240px;flex-shrink:0;position:relative;background:#e8eef5;overflow:hidden;}
+.map-container #searchMap{width:100%;height:100%;}
+.map-overlay-info{position:absolute;top:12px;left:12px;background:rgba(255,255,255,0.95);backdrop-filter:blur(10px);border-radius:12px;padding:10px 14px;box-shadow:0 2px 12px rgba(0,0,0,0.1);z-index:1000;font-size:12px;max-width:200px;}
+.map-overlay-info .route{font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.map-overlay-info .dist{color:var(--text3);font-size:11px;margin-top:2px;}
+.map-overlay-info .dist i{color:var(--primary);margin-right:2px;}
+
+/* Bottom Sheet */
+.bottom-sheet{flex:1;display:flex;flex-direction:column;background:var(--card);border-radius:20px 20px 0 0;margin-top:-16px;position:relative;z-index:5;box-shadow:0 -4px 24px rgba(0,0,0,0.06);}
+.bottom-sheet .handle{width:36px;height:4px;border-radius:4px;background:#d1d5db;margin:10px auto 6px;flex-shrink:0;}
+.sheet-header{display:flex;align-items:center;justify-content:space-between;padding:4px 20px 8px;flex-shrink:0;}
+.sheet-header h3{font-size:16px;font-weight:700;}
+.sheet-header .count{font-size:12px;color:var(--text3);background:var(--bg);padding:4px 10px;border-radius:20px;}
+
+/* Filter Chips */
+.filter-chips{display:flex;gap:6px;padding:0 20px 10px;overflow-x:auto;flex-shrink:0;flex-wrap:nowrap;-webkit-overflow-scrolling:touch;}
+.filter-chips::-webkit-scrollbar{display:none;}
+.filter-chip{white-space:nowrap;padding:7px 14px;border-radius:20px;font-size:12px;font-weight:500;border:1.5px solid var(--border);background:var(--card);color:var(--text2);cursor:pointer;transition:all .15s;flex-shrink:0;}
+.filter-chip:active{transform:scale(0.95);}
+.filter-chip.active{background:var(--text);color:#fff;border-color:var(--text);}
+.filter-chip.more{background:var(--bg);border-color:var(--bg);display:flex;align-items:center;gap:4px;}
+.filter-chip.more i{font-size:12px;}
+.filter-chip.more .badge-count{background:var(--primary);color:#fff;font-size:9px;padding:1px 6px;border-radius:10px;display:none;}
+
+/* Vehicle List */
+.vehicle-list{flex:1;overflow-y:auto;padding:0 16px 16px;-webkit-overflow-scrolling:touch;}
+.vehicle-list::-webkit-scrollbar{display:none;}
+
+/* Skeleton */
+.skeleton-card{background:var(--card);border-radius:var(--radius);padding:14px;margin-bottom:12px;display:flex;gap:14px;border:1px solid var(--border);}
+.skeleton-img{width:80px;height:80px;border-radius:12px;background:linear-gradient(90deg,#f1f5f9 25%,#e2e8f0 50%,#f1f5f9 75%);background-size:200% 100%;animation:shimmer 1.5s infinite;flex-shrink:0;}
+.skeleton-body{flex:1;}
+.skeleton-line{height:12px;border-radius:6px;background:linear-gradient(90deg,#f1f5f9 25%,#e2e8f0 50%,#f1f5f9 75%);background-size:200% 100%;animation:shimmer 1.5s infinite;margin-bottom:8px;}
+.skeleton-line.w60{width:60%;}
+.skeleton-line.w40{width:40%;}
+.skeleton-line.w80{width:80%;}
+@keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+
+/* Vehicle Card */
+.vehicle-card{background:var(--card);border-radius:var(--radius);padding:14px;margin-bottom:10px;display:flex;gap:14px;border:1px solid var(--border);transition:all .15s;cursor:pointer;position:relative;}
+.vehicle-card:active{transform:scale(0.98);border-color:var(--primary);}
+.vehicle-card .v-img{width:100px;height:80px;border-radius:12px;object-fit:cover;background:var(--bg);flex-shrink:0;}
+.vehicle-card .v-body{flex:1;min-width:0;}
+.vehicle-card .v-name{font-size:15px;font-weight:700;color:var(--text);display:flex;align-items:center;gap:6px;}
+.vehicle-card .v-name .verified-badge{color:#10b981;font-size:12px;}
+.vehicle-card .v-type{font-size:11px;color:var(--text3);margin:1px 0 4px;display:flex;gap:8px;align-items:center;}
+.vehicle-card .v-meta{display:flex;flex-wrap:wrap;gap:4px 10px;font-size:11px;color:var(--text2);margin-bottom:4px;}
+.vehicle-card .v-meta span{display:flex;align-items:center;gap:3px;}
+.vehicle-card .v-meta i{font-size:10px;color:var(--text3);}
+.vehicle-card .v-bottom{display:flex;align-items:center;justify-content:space-between;margin-top:4px;}
+.vehicle-card .v-fare{font-size:18px;font-weight:800;color:var(--primary);}
+.vehicle-card .v-fare small{font-size:11px;font-weight:500;color:var(--text3);}
+.vehicle-card .v-avail{font-size:10px;color:#10b981;display:flex;align-items:center;gap:3px;}
+.vehicle-card .v-avail .dot{width:6px;height:6px;border-radius:50%;background:#10b981;display:inline-block;animation:pulse 2s infinite;}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
+.vehicle-card .v-rating{font-size:11px;font-weight:600;color:var(--text2);display:flex;align-items:center;gap:2px;}
+.vehicle-card .v-rating i{color:#f59e0b;font-size:10px;}
+
+.book-btn{background:var(--primary);color:#fff;border:none;border-radius:10px;padding:8px 16px;font-size:12px;font-weight:700;cursor:pointer;transition:all .15s;flex-shrink:0;}
+.book-btn:active{transform:scale(0.95);background:var(--primary-dark);}
+
+/* Empty State */
+.empty-state{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:60px 20px;text-align:center;}
+.empty-state .empty-icon{width:80px;height:80px;border-radius:50%;background:var(--bg);display:flex;align-items:center;justify-content:center;font-size:32px;color:var(--text3);margin-bottom:16px;}
+.empty-state h3{font-size:18px;font-weight:700;color:var(--text);margin-bottom:4px;}
+.empty-state p{font-size:13px;color:var(--text3);max-width:260px;}
+
+/* ── Filter Modal ── */
+.filter-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:1000;display:none;animation:fadeIn .2s;}
+.filter-overlay.show{display:block;}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+.filter-panel{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;background:var(--card);border-radius:24px 24px 0 0;z-index:1001;padding:0 0 24px;max-height:85vh;overflow-y:auto;display:none;animation:slideUp .3s ease-out;}
+.filter-panel.show{display:block;}
+@keyframes slideUp{from{transform:translateX(-50%) translateY(100%);opacity:0}to{transform:translateX(-50%) translateY(0);opacity:1}}
+.filter-panel .fp-header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--card);z-index:2;}
+.filter-panel .fp-header h3{font-size:17px;font-weight:700;}
+.filter-panel .fp-header .close-btn{width:32px;height:32px;border:none;border-radius:50%;background:var(--bg);cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--text2);font-size:14px;}
+.filter-panel .fp-body{padding:16px 20px;}
+.filter-panel .fp-section{margin-bottom:20px;}
+.filter-panel .fp-section:last-child{margin-bottom:0;}
+.filter-panel .fp-section h4{font-size:12px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px;}
+.filter-panel .fp-tags{display:flex;flex-wrap:wrap;gap:6px;}
+.filter-panel .fp-tag{padding:8px 16px;border-radius:20px;font-size:13px;font-weight:500;border:1.5px solid var(--border);background:var(--card);color:var(--text2);cursor:pointer;transition:all .15s;}
+.filter-panel .fp-tag.active{background:var(--text);color:#fff;border-color:var(--text);}
+.filter-panel .fp-tag:active{transform:scale(0.95);}
+.filter-panel .fp-row{display:flex;align-items:center;justify-content:space-between;padding:10px 0;}
+.filter-panel .fp-row label{font-size:14px;font-weight:500;color:var(--text);}
+.filter-panel .fp-row .toggle{width:44px;height:24px;border-radius:12px;background:var(--border);cursor:pointer;position:relative;transition:all .2s;flex-shrink:0;}
+.filter-panel .fp-row .toggle.active{background:var(--primary);}
+.filter-panel .fp-row .toggle::after{content:'';position:absolute;top:2px;left:2px;width:20px;height:20px;border-radius:50%;background:#fff;transition:all .2s;box-shadow:0 1px 4px rgba(0,0,0,0.15);}
+.filter-panel .fp-row .toggle.active::after{left:22px;}
+.filter-panel .fp-footer{display:flex;gap:10px;padding:16px 20px 0;border-top:1px solid var(--border);}
+.filter-panel .fp-footer button{flex:1;padding:14px;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;transition:all .15s;}
+.filter-panel .fp-reset{background:var(--bg);border:1.5px solid var(--border);color:var(--text2);}
+.filter-panel .fp-reset:active{opacity:0.7;}
+.filter-panel .fp-apply{background:linear-gradient(135deg,var(--primary),#7c3aed);border:none;color:#fff;}
+.filter-panel .fp-apply:active{transform:scale(0.97);}
+.filter-panel .fp-apply .count-badge{background:rgba(255,255,255,0.25);border-radius:10px;padding:1px 8px;font-size:11px;margin-left:6px;}
+
+/* Price Range Slider */
+.price-range{display:flex;align-items:center;gap:10px;}
+.price-range input[type=range]{flex:1;height:4px;-webkit-appearance:none;appearance:none;background:var(--border);border-radius:4px;outline:none;}
+.price-range input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:20px;height:20px;border-radius:50%;background:var(--primary);cursor:pointer;box-shadow:0 1px 6px rgba(37,99,235,0.3);}
+.price-range .price-label{font-size:13px;font-weight:600;color:var(--text);min-width:60px;text-align:center;background:var(--bg);padding:4px 8px;border-radius:8px;}
+
+/* ── Toast ── */
+.toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:var(--text);color:#fff;padding:12px 20px;border-radius:12px;font-size:13px;font-weight:500;z-index:2000;display:none;animation:toastIn .3s;max-width:90%;text-align:center;}
+.toast.show{display:block;}
+@keyframes toastIn{from{transform:translateX(-50%) translateY(20px);opacity:0}to{transform:translateX(-50%) translateY(0);opacity:1}}
+
+/* ── Bottom Navigation ── */
+.bottom-nav{display:flex;align-items:center;justify-content:space-around;background:var(--card);border-top:1px solid var(--border);padding:6px 0 env(safe-area-inset-bottom,6px);flex-shrink:0;position:relative;z-index:10;}
+.nav-item{display:flex;flex-direction:column;align-items:center;gap:2px;border:none;background:none;cursor:pointer;padding:4px 12px;transition:all .15s;text-decoration:none;}
+.nav-item i{font-size:18px;color:var(--text3);transition:color .15s;}
+.nav-item span{font-size:10px;font-weight:500;color:var(--text3);transition:color .15s;}
+.nav-item.active i,.nav-item.active span{color:var(--primary);}
+.nav-item:active{transform:scale(0.92);}
+
+/* ── Responsive ── */
+@media(min-width:768px){
+  .app{max-width:480px;border-left:1px solid var(--border);border-right:1px solid var(--border);}
+}
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <!-- Header -->
+  <header class="header">
+    <div class="header-logo">
+      <div class="icon"><i class="fas fa-car"></i></div>
+      <span>RideLocal</span>
+    </div>
+    <div class="header-actions">
+      <button class="notif-btn" onclick="window.location.href='/notifications'" aria-label="Notifications">
+        <i class="fas fa-bell"></i>
+        <span class="notif-badge" id="headerNotifBadge">0</span>
+      </button>
+      <% if(currUser) { %>
+        <button class="avatar-btn" onclick="window.location.href='/users/profile'">
+          <% if(currUser.profilePhoto && currUser.profilePhoto.url) { %>
+            <img src="<%= currUser.profilePhoto.url %>" alt="">
+          <% } else { %>
+            <%= currUser.username.charAt(0).toUpperCase() %>
+          <% } %>
+        </button>
+      <% } else { %>
+        <button class="avatar-btn" onclick="window.location.href='/users/login'" style="background:var(--bg);color:var(--text2);font-size:14px;">
+          <i class="fas fa-user"></i>
+        </button>
+      <% } %>
+    </div>
+  </header>
+
+  <!-- Scrollable Content -->
+  <div class="scroll-area" id="scrollArea">
+
+    <!-- Welcome -->
+    <div class="welcome" id="welcomeSection">
+      <h1 id="greeting"></h1>
+      <p id="greetingSub">Where would you like to go today?</p>
+    </div>
+
+    <!-- Quick Info Strip -->
+    <div class="quick-strip">
+      <button class="quick-chip" onclick="setTripType(this,'local')"><i class="fas fa-city"></i> Local</button>
+      <button class="quick-chip" onclick="setTripType(this,'outstation')"><i class="fas fa-road"></i> Outstation</button>
+      <button class="quick-chip" onclick="setTripType(this,'airport')"><i class="fas fa-plane"></i> Airport</button>
+      <button class="quick-chip" onclick="setTripType(this,'wedding')"><i class="fas fa-ring"></i> Wedding</button>
+      <button class="quick-chip" onclick="setTripType(this,'temple')"><i class="fas fa-place-of-worship"></i> Temple</button>
+    </div>
+
+    <!-- Search Card -->
+    <div class="search-section" id="searchSection">
+      <div class="search-card">
+        <div class="title"><i class="fas fa-magnifying-glass"></i> Book a Nearby Vehicle</div>
+
+        <!-- Pickup -->
+        <div class="form-group" style="position:relative;">
+          <label>Pickup Location</label>
+          <div class="input-wrap">
+            <span class="icon green"><i class="fas fa-circle-dot"></i></span>
+            <input type="text" id="pickupInput" placeholder="Enter pickup location" autocomplete="off">
+          </div>
+          <button class="current-loc-btn" id="currLocBtn" onclick="getCurrentLocation()">
+            <i class="fas fa-location-crosshairs"></i> Use Current Location
+          </button>
+          <div class="loc-loading" id="locLoading"><i class="fas fa-spinner fa-spin"></i> Detecting location...</div>
+          <div class="autocomplete-dropdown" id="pickupDropdown"></div>
+        </div>
+
+        <!-- Destination -->
+        <div class="form-group" style="position:relative;">
+          <label>Destination</label>
+          <div class="input-wrap">
+            <span class="icon red"><i class="fas fa-location-dot"></i></span>
+            <input type="text" id="destInput" placeholder="Where are you going?" autocomplete="off">
+          </div>
+          <div class="autocomplete-dropdown" id="destDropdown"></div>
+        </div>
+
+        <!-- Date & Time -->
+        <div class="form-row2">
+          <div class="form-group">
+            <label>Travel Date</label>
+            <div class="input-wrap">
+              <span class="icon"><i class="fas fa-calendar"></i></span>
+              <input type="date" id="travelDate">
+              <span class="chevron"><i class="fas fa-chevron-down"></i></span>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Pickup Time</label>
+            <div class="input-wrap">
+              <span class="icon"><i class="fas fa-clock"></i></span>
+              <input type="time" id="pickupTime">
+              <span class="chevron"><i class="fas fa-chevron-down"></i></span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Passengers & Vehicle Type -->
+        <div class="form-row2">
+          <div class="form-group">
+            <label>Passengers</label>
+            <div class="input-wrap" style="padding:6px 14px;">
+              <span class="icon"><i class="fas fa-users"></i></span>
+              <div class="pax-control" style="flex:1;justify-content:center;">
+                <button onclick="changePax(-1)" id="paxMinus">−</button>
+                <span id="paxCount">1</span>
+                <button onclick="changePax(1)" id="paxPlus">+</button>
+              </div>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Vehicle Type</label>
+            <div class="input-wrap">
+              <span class="icon"><i class="fas fa-car"></i></span>
+              <select id="vehicleType">
+                <option value="all">Any Type</option>
+                <option value="SUV">SUV</option>
+                <option value="Sedan">Sedan</option>
+                <option value="Hatchback">Hatchback</option>
+                <option value="Traveller">Traveller</option>
+                <option value="Luxury">Luxury</option>
+                <option value="MUV">MUV</option>
+                <option value="Electric">Electric</option>
+              </select>
+              <span class="chevron"><i class="fas fa-chevron-down"></i></span>
+            </div>
+          </div>
+        </div>
+
+        <button class="btn-search" id="searchBtn" onclick="performSearch()">
+          <i class="fas fa-search"></i> Search Vehicles
+        </button>
+      </div>
+    </div>
+
+    <!-- Results Area -->
+    <div class="results-area" id="resultsArea">
+
+      <!-- Map -->
+      <div class="map-container" id="mapContainer">
+        <div id="searchMap"></div>
+        <div class="map-overlay-info" id="mapOverlay">
+          <div class="route" id="mapRoute">Searching...</div>
+          <div class="dist" id="mapDist"><i class="fas fa-road"></i> <span></span></div>
+        </div>
+      </div>
+
+      <!-- Bottom Sheet -->
+      <div class="bottom-sheet">
+        <div class="handle"></div>
+        <div class="sheet-header">
+          <h3 id="resultsTitle">Available Vehicles</h3>
+          <span class="count" id="resultsCount">0 found</span>
+        </div>
+
+        <!-- Filter Chips -->
+        <div class="filter-chips" id="filterChips">
+          <button class="filter-chip active" data-sort="all" onclick="applySort('all')">All</button>
+          <button class="filter-chip" data-sort="nearest" onclick="applySort('nearest')"><i class="fas fa-location-arrow"></i> Nearest</button>
+          <button class="filter-chip" data-sort="rating" onclick="applySort('rating')"><i class="fas fa-star"></i> Best Rated</button>
+          <button class="filter-chip" data-sort="price_low" onclick="applySort('price_low')"><i class="fas fa-rupee-sign"></i> Lowest Fare</button>
+          <button class="filter-chip" data-sort="suv" onclick="applyVehicleFilter('SUV')">SUV</button>
+          <button class="filter-chip" data-sort="sedan" onclick="applyVehicleFilter('Sedan')">Sedan</button>
+          <button class="filter-chip" data-sort="traveller" onclick="applyVehicleFilter('Traveller')">Traveller</button>
+          <button class="filter-chip" data-sort="luxury" onclick="applyVehicleFilter('Luxury')">Luxury</button>
+          <button class="filter-chip filter-chip more" id="filterMoreBtn" onclick="openFilterModal()">
+            <i class="fas fa-sliders"></i> Filters
+            <span class="badge-count" id="filterBadgeCount">0</span>
+          </button>
+        </div>
+
+        <!-- Vehicle List -->
+        <div class="vehicle-list" id="vehicleList">
+          <!-- Skeletons shown during load, then populated -->
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Bottom Navigation -->
+  <nav class="bottom-nav">
+    <a class="nav-item active" href="/customers/home">
+      <i class="fas fa-home"></i><span>Home</span>
+    </a>
+    <a class="nav-item" href="/customers/my-trips">
+      <i class="fas fa-route"></i><span>My Trips</span>
+    </a>
+    <a class="nav-item" href="/notifications">
+      <i class="fas fa-bell"></i><span>Alerts</span>
+    </a>
+    <a class="nav-item" href="/users/profile">
+      <i class="fas fa-user"></i><span>Profile</span>
+    </a>
+  </nav>
+
+</div>
+
+<!-- Filter Modal -->
+<div class="filter-overlay" id="filterOverlay" onclick="closeFilterModal()"></div>
+<div class="filter-panel" id="filterPanel">
+  <div class="fp-header">
+    <h3><i class="fas fa-sliders me-2"></i>Filters</h3>
+    <button class="close-btn" onclick="closeFilterModal()"><i class="fas fa-xmark"></i></button>
+  </div>
+  <div class="fp-body">
+    <div class="fp-section">
+      <h4>Seat Capacity</h4>
+      <div class="fp-tags" id="filterSeats">
+        <span class="fp-tag active" data-value="0" onclick="selectFilterTag(this,'seats')">Any</span>
+        <span class="fp-tag" data-value="4" onclick="selectFilterTag(this,'seats')">4 Seats</span>
+        <span class="fp-tag" data-value="5" onclick="selectFilterTag(this,'seats')">5 Seats</span>
+        <span class="fp-tag" data-value="7" onclick="selectFilterTag(this,'seats')">7 Seats</span>
+        <span class="fp-tag" data-value="10" onclick="selectFilterTag(this,'seats')">10+ Seats</span>
+      </div>
+    </div>
+    <div class="fp-section">
+      <h4>Vehicle Type</h4>
+      <div class="fp-tags" id="filterVType">
+        <span class="fp-tag active" data-value="all" onclick="selectFilterTag(this,'vtype')">All</span>
+        <span class="fp-tag" data-value="SUV" onclick="selectFilterTag(this,'vtype')">SUV</span>
+        <span class="fp-tag" data-value="Sedan" onclick="selectFilterTag(this,'vtype')">Sedan</span>
+        <span class="fp-tag" data-value="Hatchback" onclick="selectFilterTag(this,'vtype')">Hatchback</span>
+        <span class="fp-tag" data-value="Traveller" onclick="selectFilterTag(this,'vtype')">Traveller</span>
+        <span class="fp-tag" data-value="Luxury" onclick="selectFilterTag(this,'vtype')">Luxury</span>
+      </div>
+    </div>
+    <div class="fp-section">
+      <h4>Max Price</h4>
+      <div class="price-range">
+        <span class="price-label" id="priceLabel">₹5000</span>
+        <input type="range" id="priceRange" min="500" max="50000" step="500" value="50000" oninput="updatePriceLabel(this.value)">
+      </div>
+    </div>
+    <div class="fp-section">
+      <h4>More Options</h4>
+      <div class="fp-row">
+        <label>AC Only</label>
+        <div class="toggle" id="filterAC" onclick="toggleFilter(this,'ac')"></div>
+      </div>
+      <div class="fp-row">
+        <label>4★ &amp; Above</label>
+        <div class="toggle" id="filterRating" onclick="toggleFilter(this,'rating')"></div>
+      </div>
+      <div class="fp-row">
+        <label>Verified Owners Only</label>
+        <div class="toggle" id="filterVerified" onclick="toggleFilter(this,'verified')"></div>
+      </div>
+    </div>
+  </div>
+  <div class="fp-footer">
+    <button class="fp-reset" onclick="resetFilters()">Reset</button>
+    <button class="fp-apply" onclick="applyFilters()">Apply Filters</button>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+// ── Configuration ──
+const SEARCH_API = '/customers/api/search';
+const AUTOCOMPLETE_API = '/cars/autocomplete';
+const GEOCODE_API = '/cars/geocode';
+let currentUser = '<%= currUser ? currUser._id : "" %>';
+let currentUserName = '<%= currUser ? currUser.username : "" %>';
+
+// ── State ──
+let state = {
+  pax: 1,
+  pickup: { text: '', lat: null, lng: null },
+  destination: { text: '', lat: null, lng: null },
+  date: '',
+  time: '',
+  vehicleType: 'all',
+  sort: 'all',
+  searchResults: [],
+  tripData: null,
+  filters: { seats: 0, vtype: 'all', maxPrice: 50000, acOnly: false, rating4: false, verified: false },
+  map: null,
+  markers: [],
+  activeFilterCount: 0
+};
+
+// ── Initialize ──
+(function init() {
+  // Set default date/time
+  const now = new Date();
+  const dateEl = document.getElementById('travelDate');
+  dateEl.value = now.toISOString().split('T')[0];
+  dateEl.min = now.toISOString().split('T')[0];
+  const timeEl = document.getElementById('pickupTime');
+  timeEl.value = String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()+30).padStart(2,'0');
+
+  state.date = dateEl.value;
+  state.time = timeEl.value;
+
+  // Greeting
+  const hour = now.getHours();
+  let greeting = 'Good Evening';
+  if (hour < 12) greeting = 'Good Morning';
+  else if (hour < 17) greeting = 'Good Afternoon';
+  const name = currentUserName || 'there';
+  document.getElementById('greeting').innerHTML = greeting + ', <span>' + name.split(' ')[0] + '</span>';
+
+  // Autocomplete
+  setupAutocomplete('pickupInput', 'pickupDropdown', (item) => {
+    state.pickup = { text: item.primary, lat: parseFloat(item.lat), lng: parseFloat(item.lon) };
+    document.getElementById('pickupInput').value = item.primary;
+  });
+  setupAutocomplete('destInput', 'destDropdown', (item) => {
+    state.destination = { text: item.primary, lat: parseFloat(item.lat), lng: parseFloat(item.lon) };
+    document.getElementById('destInput').value = item.primary;
+  });
+
+  // Fetch notification count
+  fetchNotifCount();
+})();
+
+// ── Autocomplete ──
+function setupAutocomplete(inputId, dropdownId, onSelect) {
+  const input = document.getElementById(inputId);
+  const dropdown = document.getElementById(dropdownId);
+  let timeout, selectedIndex = -1, results = [];
+
+  input.addEventListener('input', function() {
+    clearTimeout(timeout);
+    const val = this.value.trim();
+    if (val.length < 2) { dropdown.classList.remove('show'); return; }
+    timeout = setTimeout(async () => {
+      try {
+        const r = await fetch(AUTOCOMPLETE_API + '?q=' + encodeURIComponent(val));
+        results = await r.json();
+        renderDropdown(results);
+      } catch(e) { dropdown.classList.remove('show'); }
+    }, 300);
+  });
+
+  input.addEventListener('keydown', function(e) {
+    const items = dropdown.querySelectorAll('.autocomplete-item');
+    if (e.key === 'ArrowDown') { e.preventDefault(); selectedIndex = Math.min(selectedIndex + 1, items.length - 1); highlightItem(items); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); selectedIndex = Math.max(selectedIndex - 1, -1); highlightItem(items); }
+    else if (e.key === 'Enter' && selectedIndex >= 0 && results[selectedIndex]) {
+      e.preventDefault(); selectItem(results[selectedIndex]);
+    } else if (e.key === 'Escape') { dropdown.classList.remove('show'); }
+  });
+
+  document.addEventListener('click', function(e) {
+    if (!input.contains(e.target) && !dropdown.contains(e.target)) dropdown.classList.remove('show');
+  });
+
+  function renderDropdown(items) {
+    dropdown.innerHTML = '';
+    if (!items || items.length === 0) { dropdown.classList.remove('show'); return; }
+    selectedIndex = -1;
+    items.forEach((item, i) => {
+      const div = document.createElement('div');
+      div.className = 'autocomplete-item';
+      div.innerHTML = '<div class="loc-icon"><i class="fas fa-location-dot"></i></div><div class="loc-text"><div class="loc-primary">' + escapeHtml(item.primary || item.display_name) + '</div><div class="loc-secondary">' + escapeHtml(item.secondary || '') + '</div></div>';
+      div.addEventListener('click', () => selectItem(item));
+      div.addEventListener('mouseenter', () => { selectedIndex = i; highlightItem(items, true); });
+      dropdown.appendChild(div);
+    });
+    dropdown.classList.add('show');
+  }
+
+  function highlightItem(items, skipScroll) {
+    items.forEach((el, i) => el.classList.toggle('highlighted', i === selectedIndex));
+    if (!skipScroll && items[selectedIndex]) items[selectedIndex].scrollIntoView({ block: 'nearest' });
+  }
+
+  function selectItem(item) {
+    onSelect(item);
+    dropdown.classList.remove('show');
+  }
+}
+
+function escapeHtml(text) {
+  if (!text) return '';
+  const d = document.createElement('div');
+  d.textContent = text;
+  return d.innerHTML;
+}
+
+// ── Current Location ──
+function getCurrentLocation() {
+  if (!navigator.geolocation) { showToast('Geolocation not supported'); return; }
+  const btn = document.getElementById('currLocBtn');
+  const loading = document.getElementById('locLoading');
+  btn.style.display = 'none';
+  loading.classList.add('show');
+  navigator.geolocation.getCurrentPosition(async (pos) => {
+    const lat = pos.coords.latitude, lng = pos.coords.longitude;
+    state.pickup.lat = lat;
+    state.pickup.lng = lng;
+    try {
+      const r = await fetch(GEOCODE_API + '?lat=' + lat + '&lon=' + lng);
+      const data = await r.json();
+      const name = data.display_name || lat + ', ' + lng;
+      state.pickup.text = name.split(',')[0].trim();
+      document.getElementById('pickupInput').value = state.pickup.text;
+    } catch(e) {
+      document.getElementById('pickupInput').value = 'Current Location';
+      state.pickup.text = 'Current Location';
+    }
+    loading.classList.remove('show');
+    btn.style.display = 'flex';
+  }, () => {
+    loading.classList.remove('show');
+    btn.style.display = 'flex';
+    showToast('Could not get location. Please enter manually.');
+  }, { enableHighAccuracy: true, timeout: 10000 });
+}
+
+// ── Passengers ──
+function changePax(delta) {
+  state.pax = Math.max(1, Math.min(20, state.pax + delta));
+  document.getElementById('paxCount').textContent = state.pax;
+}
+
+// ── Quick Trip Types ──
+function setTripType(btn, type) {
+  document.querySelectorAll('.quick-chip').forEach(c => c.classList.remove('active'));
+  btn.classList.add('active');
+  // Pre-fill based on type
+  const destinations = {
+    local: 'City Center',
+    outstation: 'Nearby City',
+    airport: 'Airport',
+    wedding: 'Wedding Venue',
+    temple: 'Temple'
+  };
+  if (type !== 'local' && state.pickup.text) {
+    document.getElementById('destInput').value = destinations[type] || '';
+    state.destination.text = destinations[type] || '';
+  }
+  if (type === 'airport') {
+    document.getElementById('vehicleType').value = 'Sedan';
+    state.vehicleType = 'Sedan';
+  }
+}
+
+// ── Search ──
+async function performSearch() {
+  const pickupText = document.getElementById('pickupInput').value.trim();
+  const destText = document.getElementById('destInput').value.trim();
+  if (!pickupText) { showToast('Please enter pickup location'); return; }
+  if (!destText) { showToast('Please enter destination'); return; }
+
+  showSkeletons();
+  const resultsArea = document.getElementById('resultsArea');
+  resultsArea.classList.add('show');
+
+  // Scroll to results smoothly
+  document.getElementById('scrollArea').scrollTo({ top: 0, behavior: 'smooth' });
+
+  const body = {
+    pickup: pickupText,
+    destination: destText,
+    pickupLat: state.pickup.lat,
+    pickupLng: state.pickup.lng,
+    destLat: state.destination.lat,
+    destLng: state.destination.lng,
+    passengers: state.pax,
+    vehicleType: state.vehicleType,
+    sort: state.sort === 'all' ? 'nearest' : state.sort,
+    acOnly: state.filters.acOnly,
+    verifiedOnly: state.filters.verified,
+    minRating: state.filters.rating4 ? 4 : 0,
+    maxPrice: state.filters.maxPrice < 50000 ? state.filters.maxPrice : 0,
+    seatCapacity: state.filters.seats || 0
+  };
+
+  try {
+    const res = await fetch(SEARCH_API, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    const data = await res.json();
+    if (!data.success) { showToast(data.error || 'Search failed'); hideSkeletons(); return; }
+
+    state.searchResults = data.vehicles || [];
+    state.tripData = data.trip;
+    renderResults(data);
+  } catch(e) {
+    showToast('Search failed. Please try again.');
+    hideSkeletons();
+  }
+}
+
+function showSkeletons() {
+  const list = document.getElementById('vehicleList');
+  let html = '';
+  for (let i = 0; i < 4; i++) {
+    html += '<div class="skeleton-card"><div class="skeleton-img"></div><div class="skeleton-body"><div class="skeleton-line w80"></div><div class="skeleton-line w60"></div><div class="skeleton-line w40"></div></div></div>';
+  }
+  list.innerHTML = html;
+  document.getElementById('resultsCount').textContent = 'Searching...';
+  document.getElementById('resultsTitle').textContent = 'Finding vehicles...';
+}
+
+function hideSkeletons() {
+  // handled by renderResults
+}
+
+function renderResults(data) {
+  const list = document.getElementById('vehicleList');
+  const vehicles = data.vehicles || [];
+  const trip = data.trip;
+
+  document.getElementById('resultsTitle').textContent = 'Available Vehicles';
+  document.getElementById('resultsCount').textContent = vehicles.length + ' found';
+
+  // Map overlay
+  if (trip) {
+    document.getElementById('mapRoute').textContent = trip.pickup.substring(0, 25) + ' → ' + trip.destination.substring(0, 25);
+    document.getElementById('mapDist').querySelector('span').textContent = trip.distanceKm + ' km · ~' + Math.round(trip.estimatedDuration/60) + ' min';
+  }
+
+  if (vehicles.length === 0) {
+    list.innerHTML = '<div class="empty-state"><div class="empty-icon"><i class="fas fa-car"></i></div><h3>No vehicles found</h3><p>Try changing your pickup location or filters</p></div>';
+    initMap(trip, []);
+    return;
+  }
+
+  // Build vehicle cards
+  let html = '';
+  vehicles.forEach(v => {
+    const badges = [];
+    if (v.verified) badges.push('<span class="verified-badge"><i class="fas fa-check-circle"></i></span>');
+    if (v.acAvailable) badges.push('<span class="text3">❄️ AC</span>');
+
+    html += '<div class="vehicle-card" onclick="bookVehicle(\'' + v._id + '\')">' +
+      '<img class="v-img" src="' + (v.image || 'https://images.pexels.com/photos/11129937/pexels-photo-11129937.jpeg') + '" loading="lazy" onerror="this.src=\'https://images.pexels.com/photos/11129937/pexels-photo-11129937.jpeg\'" alt="">' +
+      '<div class="v-body">' +
+        '<div class="v-name">' + escapeHtml(v.vehicleName || v.title) + ' ' + (v.verified ? '<i class="fas fa-check-circle" style="color:#10b981;font-size:12px;"></i>' : '') + '</div>' +
+        '<div class="v-type">' + escapeHtml(v.vehicleType) + ' · ' + v.seats + ' seats' + (v.acAvailable ? ' · ❄️ AC' : '') + '</div>' +
+        '<div class="v-meta">' +
+          '<span><i class="fas fa-location-dot"></i> ' + v.distanceFromPickup + ' km</span>' +
+          '<span><i class="fas fa-clock"></i> ~' + v.etaMin + ' min</span>' +
+          '<span><i class="fas fa-star" style="color:#f59e0b;"></i> ' + v.rating.toFixed(1) + '</span>' +
+        '</div>' +
+        '<div class="v-bottom">' +
+          '<div class="v-fare">₹' + v.estimatedFare.toLocaleString('en-IN') + ' <small>est.</small></div>' +
+          '<div class="v-avail"><span class="dot"></span> Available</div>' +
+        '</div>' +
+      '</div>' +
+    '</div>';
+  });
+  list.innerHTML = html;
+
+  // Init map
+  initMap(trip, vehicles);
+
+  // Smooth scroll to results
+  setTimeout(() => {
+    document.getElementById('resultsArea').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, 100);
+}
+
+// ── Map ──
+function initMap(trip, vehicles) {
+  const container = document.getElementById('searchMap');
+  if (!trip) return;
+
+  if (state.map) {
+    state.map.remove();
+    state.map = null;
+    state.markers = [];
+  }
+
+  const pickupLat = trip.pickupLat, pickupLng = trip.pickupLng;
+  const destLat = trip.destLat || pickupLat + 0.01, destLng = trip.destLng || pickupLng + 0.01;
+
+  state.map = L.map(container, {
+    center: [(pickupLat + destLat) / 2, (pickupLng + destLng) / 2],
+    zoom: 13,
+    zoomControl: false,
+    attributionControl: false,
+    dragging: true
+  });
+
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19
+  }).addTo(state.map);
+
+  // Custom icons
+  const pickupIcon = L.divIcon({
+    html: '<div style="background:#10b981;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-size:12px;border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,0.2);"><i class="fas fa-circle-dot"></i></div>',
+    className: '',
+    iconSize: [28, 28],
+    iconAnchor: [14, 14]
+  });
+
+  const destIcon = L.divIcon({
+    html: '<div style="background:#ef4444;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-size:12px;border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,0.2);"><i class="fas fa-flag"></i></div>',
+    className: '',
+    iconSize: [28, 28],
+    iconAnchor: [14, 14]
+  });
+
+  // Pickup marker
+  L.marker([pickupLat, pickupLng], { icon: pickupIcon }).addTo(state.map)
+    .bindPopup('Pickup: ' + (trip.pickup || '').substring(0, 30));
+
+  // Destination marker
+  L.marker([destLat, destLng], { icon: destIcon }).addTo(state.map)
+    .bindPopup('Destination: ' + (trip.destination || '').substring(0, 30));
+
+  // Vehicle markers
+  const vehicleIcon = L.divIcon({
+    html: '<div style="background:#2563eb;width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-size:10px;border:2px solid #fff;box-shadow:0 1px 6px rgba(0,0,0,0.2);"><i class="fas fa-car"></i></div>',
+    className: '',
+    iconSize: [22, 22],
+    iconAnchor: [11, 11]
+  });
+
+  vehicles.forEach(v => {
+    if (v.lat && v.lng) {
+      const marker = L.marker([v.lat, v.lng], { icon: vehicleIcon }).addTo(state.map);
+      marker.bindPopup('<b>' + (v.vehicleName || 'Vehicle') + '</b><br>₹' + v.estimatedFare + ' · ' + v.distanceFromPickup + ' km');
+      state.markers.push(marker);
+    }
+  });
+
+  // Fit bounds
+  if (vehicles.length > 0) {
+    const bounds = [[pickupLat, pickupLng], [destLat, destLng]];
+    vehicles.forEach(v => { if (v.lat && v.lng) bounds.push([v.lat, v.lng]); });
+    state.map.fitBounds(bounds, { padding: [40, 40], maxZoom: 15 });
+  }
+
+  setTimeout(() => state.map.invalidateSize(), 300);
+}
+
+// ── Sorting & Filtering ──
+function applySort(sort) {
+  state.sort = sort;
+  document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+  const chips = document.querySelectorAll('.filter-chip');
+  chips.forEach(c => { if (c.dataset.sort === sort) c.classList.add('active'); });
+
+  let results = [...state.searchResults];
+  if (sort === 'nearest') results.sort((a,b) => a.distanceFromPickup - b.distanceFromPickup);
+  else if (sort === 'rating') results.sort((a,b) => b.rating - a.rating);
+  else if (sort === 'price_low') results.sort((a,b) => a.estimatedFare - b.estimatedFare);
+  else if (sort === 'price_high') results.sort((a,b) => b.estimatedFare - a.estimatedFare);
+  else if (['suv','sedan','traveller','luxury'].includes(sort)) {
+    const typeMap = { suv: 'SUV', sedan: 'Sedan', traveller: 'Traveller', luxury: 'Luxury' };
+    results = results.filter(v => v.vehicleType.toLowerCase() === typeMap[sort].toLowerCase());
+  }
+
+  renderList(results);
+}
+
+function applyVehicleFilter(type) {
+  let results = [...state.searchResults].filter(v => v.vehicleType === type);
+  renderList(results);
+  // Highlight the chip
+  document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+}
+
+function renderList(vehicles) {
+  const list = document.getElementById('vehicleList');
+  document.getElementById('resultsCount').textContent = vehicles.length + ' found';
+  if (vehicles.length === 0) {
+    list.innerHTML = '<div class="empty-state"><div class="empty-icon"><i class="fas fa-car"></i></div><h3>No vehicles match</h3><p>Try changing your filters</p></div>';
+    return;
+  }
+  let html = '';
+  vehicles.forEach(v => {
+    html += '<div class="vehicle-card" onclick="bookVehicle(\'' + v._id + '\')">' +
+      '<img class="v-img" src="' + (v.image || 'https://images.pexels.com/photos/11129937/pexels-photo-11129937.jpeg') + '" loading="lazy" onerror="this.src=\'https://images.pexels.com/photos/11129937/pexels-photo-11129937.jpeg\'" alt="">' +
+      '<div class="v-body">' +
+        '<div class="v-name">' + escapeHtml(v.vehicleName || v.title) + ' ' + (v.verified ? '<i class="fas fa-check-circle" style="color:#10b981;font-size:12px;"></i>' : '') + '</div>' +
+        '<div class="v-type">' + escapeHtml(v.vehicleType) + ' · ' + v.seats + ' seats' + (v.acAvailable ? ' · ❄️ AC' : '') + '</div>' +
+        '<div class="v-meta">' +
+          '<span><i class="fas fa-location-dot"></i> ' + v.distanceFromPickup + ' km</span>' +
+          '<span><i class="fas fa-clock"></i> ~' + v.etaMin + ' min</span>' +
+          '<span><i class="fas fa-star" style="color:#f59e0b;"></i> ' + v.rating.toFixed(1) + '</span>' +
+        '</div>' +
+        '<div class="v-bottom">' +
+          '<div class="v-fare">₹' + v.estimatedFare.toLocaleString('en-IN') + ' <small>est.</small></div>' +
+          '<div class="v-avail"><span class="dot"></span> Available</div>' +
+        '</div>' +
+      '</div>' +
+    '</div>';
+  });
+  list.innerHTML = html;
+}
+
+// ── Filter Modal ──
+function openFilterModal() {
+  document.getElementById('filterOverlay').classList.add('show');
+  document.getElementById('filterPanel').classList.add('show');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeFilterModal() {
+  document.getElementById('filterOverlay').classList.remove('show');
+  document.getElementById('filterPanel').classList.remove('show');
+  document.body.style.overflow = '';
+}
+
+function selectFilterTag(el, group) {
+  const parent = el.parentElement;
+  parent.querySelectorAll('.fp-tag').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+}
+
+function toggleFilter(el, type) {
+  el.classList.toggle('active');
+}
+
+function updatePriceLabel(val) {
+  document.getElementById('priceLabel').textContent = '₹' + Number(val).toLocaleString('en-IN');
+}
+
+function resetFilters() {
+  document.querySelectorAll('.fp-tag').forEach(t => {
+    if (t.dataset.value === '0' || t.dataset.value === 'all') t.classList.add('active');
+    else t.classList.remove('active');
+  });
+  document.querySelectorAll('.toggle').forEach(t => t.classList.remove('active'));
+  document.getElementById('priceRange').value = 50000;
+  document.getElementById('priceLabel').textContent = '₹50,000';
+  state.filters = { seats: 0, vtype: 'all', maxPrice: 50000, acOnly: false, rating4: false, verified: false };
+  updateFilterBadge();
+}
+
+function applyFilters() {
+  const seatsTag = document.querySelector('#filterSeats .fp-tag.active');
+  const vtypeTag = document.querySelector('#filterVType .fp-tag.active');
+  state.filters = {
+    seats: parseInt(seatsTag ? seatsTag.dataset.value : 0),
+    vtype: vtypeTag ? vtypeTag.dataset.value : 'all',
+    maxPrice: parseInt(document.getElementById('priceRange').value),
+    acOnly: document.getElementById('filterAC').classList.contains('active'),
+    rating4: document.getElementById('filterRating').classList.contains('active'),
+    verified: document.getElementById('filterVerified').classList.contains('active')
+  };
+
+  let count = 0;
+  if (state.filters.seats > 0) count++;
+  if (state.filters.vtype !== 'all') count++;
+  if (state.filters.maxPrice < 50000) count++;
+  if (state.filters.acOnly) count++;
+  if (state.filters.rating4) count++;
+  if (state.filters.verified) count++;
+  state.activeFilterCount = count;
+  updateFilterBadge();
+
+  // Re-search with filters
+  closeFilterModal();
+  performSearch();
+}
+
+function updateFilterBadge() {
+  const badge = document.getElementById('filterBadgeCount');
+  if (state.activeFilterCount > 0) {
+    badge.textContent = state.activeFilterCount;
+    badge.style.display = 'inline';
+  } else {
+    badge.style.display = 'none';
+  }
+}
+
+// ── Booking ──
+function bookVehicle(vehicleId) {
+  const trip = state.tripData;
+  const params = new URLSearchParams({
+    pickup: trip ? trip.pickup : '',
+    destination: trip ? trip.destination : '',
+    pickupLat: trip ? trip.pickupLat : '',
+    pickupLng: trip ? trip.pickupLng : '',
+    destLat: trip ? trip.destLat : '',
+    destLng: trip ? trip.destLng : '',
+    distance: trip ? trip.distanceKm : '',
+    date: state.date,
+    time: state.time,
+    passengers: state.pax
+  });
+
+  // Find vehicle fare
+  const vehicle = state.searchResults.find(v => v._id === vehicleId);
+  if (vehicle) params.set('fare', vehicle.estimatedFare);
+
+  window.location.href = '/cars/book/' + vehicleId + '?' + params.toString();
+}
+
+// ── Notification Count ──
+async function fetchNotifCount() {
+  if (!currentUser) return;
+  try {
+    const r = await fetch('/owners/api/unread-count');
+    const d = await r.json();
+    if (d.success && d.unreadCount > 0) {
+      const badge = document.getElementById('headerNotifBadge');
+      badge.textContent = d.unreadCount > 99 ? '99+' : d.unreadCount;
+      badge.style.display = 'flex';
+    }
+  } catch(e) {}
+}
+
+// ── Toast ──
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(t._hide);
+  t._hide = setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+// ── Socket.IO for real-time ──
+(function() {
+  if (!currentUser) return;
+  try {
+    const socket = io();
+    socket.on('connect', function() {
+      socket.emit('join', currentUser);
+    });
+    socket.on('new_notification', function() {
+      fetchNotifCount();
+    });
+  } catch(e) {}
+})();
+
+// ── Date/Time change handlers ──
+document.getElementById('travelDate').addEventListener('change', function() { state.date = this.value; });
+document.getElementById('pickupTime').addEventListener('change', function() { state.time = this.value; });
+document.getElementById('vehicleType').addEventListener('change', function() { state.vehicleType = this.value; });
+</script>
+</body>
+</html>

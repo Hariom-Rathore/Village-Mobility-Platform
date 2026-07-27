@@ -1,0 +1,187 @@
+<% layout("/listings/layouts/boilerplate") %>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { background:#f0f2f5; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif; }
+
+.page { max-width:640px; margin:0 auto; padding:16px; }
+
+/* Header */
+.page-hdr { display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; }
+.page-hdr h1 { font-size:22px; font-weight:800; color:#0f172a; }
+.page-hdr .count { font-size:13px; color:#94a3b8; }
+
+/* Add Button - changes text based on count */
+.btn-add { display:flex; align-items:center; justify-content:center; gap:8px; width:100%; background:#2563eb; color:#fff; border:none; border-radius:14px; padding:16px; font-size:16px; font-weight:700; cursor:pointer; transition:all .15s; margin-bottom:16px; }
+.btn-add:hover { background:#1d4ed8; transform:translateY(-1px); box-shadow:0 4px 16px rgba(37,99,235,0.25); }
+.btn-add i { font-size:18px; }
+
+/* Vehicle Grid */
+.v-grid { display:grid; grid-template-columns:1fr; gap:14px; }
+
+/* Vehicle Card - Image Card Style */
+.v-card { background:#fff; border-radius:18px; overflow:hidden; box-shadow:0 2px 8px rgba(0,0,0,0.04); border:1px solid #f1f5f9; }
+.v-card-img-wrap { position:relative; height:180px; background:#e2e8f0; }
+.v-card-img-wrap img { width:100%; height:100%; object-fit:cover; }
+.v-card-badge { position:absolute; top:10px; right:10px; padding:4px 10px; border-radius:8px; font-size:11px; font-weight:600; }
+.v-card-badge.active { background:#dcfce7; color:#166534; }
+.v-card-badge.inactive { background:#fee2e2; color:#991b1b; }
+
+.v-card-body { padding:14px; }
+.v-card-name { font-size:17px; font-weight:700; color:#0f172a; margin-bottom:2px; }
+.v-card-type { font-size:12px; color:#94a3b8; margin-bottom:8px; }
+
+.v-card-details { display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-bottom:10px; }
+.v-card-detail { font-size:12px; color:#64748b; }
+.v-card-detail strong { display:block; font-size:11px; color:#94a3b8; font-weight:500; }
+
+.v-card-price { font-size:16px; font-weight:700; color:#2563eb; margin-bottom:12px; }
+
+.v-card-actions { display:flex; gap:8px; }
+.v-card-actions button { flex:1; padding:8px; border-radius:10px; font-size:12px; font-weight:600; border:none; cursor:pointer; transition:all .1s; }
+.btn-edit { background:#f1f5f9; color:#334155; }
+.btn-edit:hover { background:#e2e8f0; }
+.btn-toggle { background:#eff6ff; color:#2563eb; }
+.btn-toggle:hover { background:#dbeafe; }
+.btn-delete { background:#fef2f2; color:#dc2626; }
+.btn-delete:hover { background:#fee2e2; }
+
+/* Empty State */
+.empty-state { text-align:center; padding:60px 20px; }
+.empty-state i { font-size:56px; color:#cbd5e1; margin-bottom:12px; }
+.empty-state h3 { font-size:18px; font-weight:700; color:#334155; margin-bottom:4px; }
+.empty-state p { font-size:13px; color:#94a3b8; margin-bottom:20px; }
+
+/* Skeleton */
+.skel-card { background:#fff; border-radius:18px; overflow:hidden; margin-bottom:14px; }
+.skel-img { height:180px; background:linear-gradient(90deg,#f0f0f0 25%,#e8e8e8 50%,#f0f0f0 75%); background-size:200% 100%; animation:shimmer 1.5s infinite; }
+.skel-body { padding:14px; }
+.skel-line { height:14px; background:#eee; border-radius:6px; margin-bottom:8px; }
+.skel-line.w60 { width:60%; } .skel-line.w40 { width:40%; } .skel-line.w30 { width:30%; }
+@keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
+
+@media(min-width:480px) { .v-grid { grid-template-columns:1fr 1fr; gap:14px; } }
+</style>
+
+<div class="page">
+  <div class="page-hdr">
+    <h1>My Vehicles</h1>
+    <span class="count" id="vehicleCount">0 vehicles</span>
+  </div>
+
+  <!-- Dynamic Add Button -->
+  <button class="btn-add" id="addBtn" onclick="window.location.href='/cars/new-step'">
+    <i class="fas fa-plus"></i> <span id="addBtnText">Add Your First Vehicle</span>
+  </button>
+
+  <!-- Skeleton -->
+  <div id="skeletonArea">
+    <div class="skel-card"><div class="skel-img"></div><div class="skel-body"><div class="skel-line w60"></div><div class="skel-line w40"></div><div class="skel-line w30"></div></div></div>
+    <div class="skel-card"><div class="skel-img"></div><div class="skel-body"><div class="skel-line w60"></div><div class="skel-line w40"></div><div class="skel-line w30"></div></div></div>
+  </div>
+
+  <!-- Vehicle Grid -->
+  <div class="v-grid" id="vehicleGrid"></div>
+
+  <!-- Empty State (hidden by default) -->
+  <div class="empty-state" id="emptyState" style="display:none;">
+    <i class="fas fa-car-side"></i>
+    <h3>No vehicles yet</h3>
+    <p>Add your first vehicle and start earning with RideLocal</p>
+    <button class="btn-add" style="display:inline-flex;width:auto;padding:12px 24px;margin-top:8px;" onclick="window.location.href='/cars/new-step'">
+      <i class="fas fa-plus"></i> Add Your First Vehicle
+    </button>
+  </div>
+</div>
+
+<script>
+async function loadVehicles() {
+  const grid = document.getElementById('vehicleGrid');
+  const empty = document.getElementById('emptyState');
+  const skeleton = document.getElementById('skeletonArea');
+  const countEl = document.getElementById('vehicleCount');
+  const addBtnText = document.getElementById('addBtnText');
+
+  try {
+    const res = await fetch('/owners/api/vehicles');
+    const data = await res.json();
+    skeleton.style.display = 'none';
+
+    if (!data.success || !data.vehicles || data.vehicles.length === 0) {
+      grid.innerHTML = '';
+      empty.style.display = 'block';
+      countEl.textContent = '0 vehicles';
+      addBtnText.textContent = 'Add Your First Vehicle';
+      return;
+    }
+
+    empty.style.display = 'none';
+    const vehicles = data.vehicles;
+    countEl.textContent = vehicles.length + ' vehicle' + (vehicles.length > 1 ? 's' : '');
+
+    // Dynamic button text
+    if (vehicles.length === 1) addBtnText.textContent = 'Add Second Vehicle';
+    else addBtnText.textContent = 'Add Another Vehicle';
+
+    grid.innerHTML = '';
+    vehicles.forEach(v => {
+      const img = v.images?.[0]?.url || v.image?.url || 'https://images.pexels.com/photos/11129937/pexels-photo-11129937.jpeg';
+      const name = v.vehicleName || v.title || 'Vehicle';
+      const active = v.availabilityStatus === 'AVAILABLE';
+      const fare = v.baseFare || v.price || 0;
+      const perKm = v.pricePerKm || v.ratePerKm || 0;
+
+      const card = document.createElement('div');
+      card.className = 'v-card';
+      card.innerHTML =
+        '<div class="v-card-img-wrap">' +
+          '<img src="' + img + '" onerror="this.src=\'https://images.pexels.com/photos/11129937/pexels-photo-11129937.jpeg\'">' +
+          '<span class="v-card-badge ' + (active ? 'active' : 'inactive') + '">' + (active ? '● Active' : '○ Inactive') + '</span>' +
+        '</div>' +
+        '<div class="v-card-body">' +
+          '<div class="v-card-name">' + esc(name) + '</div>' +
+          '<div class="v-card-type">' + (v.carType || 'Sedan') + ' · ' + (v.fuelType || 'Petrol') + '</div>' +
+          '<div class="v-card-details">' +
+            '<div class="v-card-detail"><strong>Seats</strong>' + (v.seats || 'N/A') + '</div>' +
+            '<div class="v-card-detail"><strong>Location</strong>' + (v.city || v.location || 'N/A') + '</div>' +
+            '<div class="v-card-detail"><strong>Transmission</strong>' + (v.transmission === 'automatic' ? 'Automatic' : 'Manual') + '</div>' +
+            '<div class="v-card-detail"><strong>AC</strong>' + (v.acAvailable ? 'Yes' : 'No') + '</div>' +
+          '</div>' +
+          '<div class="v-card-price">₹' + fare + ' <span style="font-size:12px;font-weight:400;color:#94a3b8;">+ ₹' + perKm + '/km</span></div>' +
+          '<div class="v-card-actions">' +
+            '<button class="btn-edit" onclick="window.location.href=\'/cars/' + v._id + '/edit\'"><i class="fas fa-edit"></i> Edit</button>' +
+            '<button class="btn-toggle" onclick="toggleStatus(\'' + v._id + '\',' + active + ')"><i class="fas fa-power-off"></i> ' + (active ? 'Hide' : 'Show') + '</button>' +
+            '<button class="btn-delete" onclick="deleteVehicle(\'' + v._id + '\')"><i class="fas fa-trash"></i> Delete</button>' +
+          '</div>' +
+        '</div>';
+      grid.appendChild(card);
+    });
+  } catch(e) {
+    skeleton.style.display = 'none';
+    empty.style.display = 'block';
+    console.error('Load error:', e);
+  }
+}
+
+function esc(s) { if(!s) return ''; return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+async function toggleStatus(id, isActive) {
+  const action = isActive ? 'HIDDEN' : 'AVAILABLE';
+  if (!confirm(isActive ? 'Hide this vehicle from search results?' : 'Show this vehicle in search results?')) return;
+  try {
+    const r = await fetch('/cars/' + id, { method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify({listing:{availabilityStatus:action}}) });
+    if (r.ok) { alert(isActive ? 'Vehicle hidden' : 'Vehicle is now visible'); loadVehicles(); }
+    else alert('Failed to update');
+  } catch { alert('Error updating status'); }
+}
+
+async function deleteVehicle(id) {
+  if (!confirm('Delete this vehicle permanently? This cannot be undone.')) return;
+  try {
+    const r = await fetch('/cars/' + id + '?_method=DELETE', { method:'POST' });
+    if (r.ok) { alert('Vehicle deleted'); loadVehicles(); }
+    else alert('Failed to delete');
+  } catch { alert('Error deleting vehicle'); }
+}
+
+document.addEventListener('DOMContentLoaded', loadVehicles);
+</script>

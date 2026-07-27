@@ -1,0 +1,547 @@
+<% layout("../layouts/boilerplate") %>
+
+<style>
+.notifications-page {
+    padding: 20px;
+    max-width: 1000px;
+    margin: 0 auto;
+}
+
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+}
+
+.page-title {
+    font-size: 28px;
+    font-weight: 700;
+    color: #333;
+    margin-bottom: 8px;
+}
+
+.page-subtitle {
+    color: #666;
+    font-size: 14px;
+}
+
+.notification-bell {
+    position: relative;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.notification-bell:hover {
+    transform: scale(1.1);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.unread-badge {
+    position: absolute;
+    top: -4px;
+    right: -4px;
+    background: #ef4444;
+    color: white;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 700;
+    border: 2px solid white;
+}
+
+.actions-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.filter-buttons {
+    display: flex;
+    gap: 8px;
+}
+
+.filter-btn {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s;
+    background: #f3f4f6;
+    color: #666;
+}
+
+.filter-btn:hover {
+    background: #e5e7eb;
+}
+
+.filter-btn.active {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+
+.action-btn {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s;
+    background: #667eea;
+    color: white;
+}
+
+.action-btn:hover {
+    background: #5a67d8;
+}
+
+.notifications-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.notification-card {
+    background: white;
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    transition: all 0.3s;
+    border-left: 4px solid transparent;
+    cursor: pointer;
+}
+
+.notification-card:hover {
+    box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+    transform: translateX(4px);
+}
+
+.notification-card.unread {
+    background: #f0f9ff;
+    border-left-color: #667eea;
+}
+
+.notification-card.booking-submitted {
+    border-left-color: #667eea;
+}
+
+.notification-card.booking-accepted {
+    border-left-color: #10b981;
+}
+
+.notification-card.booking-rejected {
+    border-left-color: #ef4444;
+}
+
+.notification-card.counter-offer {
+    border-left-color: #f59e0b;
+}
+
+.notification-card.trip-reminder {
+    border-left-color: #8b5cf6;
+}
+
+.notification-card.trip-completed {
+    border-left-color: #3b82f6;
+}
+
+.notification-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 12px;
+}
+
+.notification-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: #333;
+    margin-bottom: 4px;
+}
+
+.notification-type {
+    font-size: 12px;
+    color: #999;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.notification-time {
+    font-size: 12px;
+    color: #999;
+    white-space: nowrap;
+}
+
+.notification-message {
+    font-size: 14px;
+    color: #666;
+    line-height: 1.5;
+    margin-bottom: 12px;
+}
+
+.notification-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.notification-action {
+    padding: 6px 12px;
+    border: none;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s;
+    background: #f3f4f6;
+    color: #666;
+}
+
+.notification-action:hover {
+    background: #e5e7eb;
+}
+
+.notification-action.primary {
+    background: #667eea;
+    color: white;
+}
+
+.notification-action.primary:hover {
+    background: #5a67d8;
+}
+
+.notification-action.danger {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+.notification-action.danger:hover {
+    background: #fecaca;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: #999;
+}
+
+.empty-state i {
+    font-size: 48px;
+    margin-bottom: 16px;
+}
+
+.loading-skeleton {
+    background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+    background-size: 200% 100%;
+    animation: loading 1.5s infinite;
+    border-radius: 8px;
+}
+
+@keyframes loading {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+}
+
+@media (max-width: 768px) {
+    .notifications-page {
+        padding: 12px;
+    }
+    
+    .page-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 16px;
+    }
+    
+    .actions-bar {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 12px;
+    }
+    
+    .filter-buttons {
+        overflow-x: auto;
+        padding-bottom: 4px;
+    }
+    
+    .filter-btn {
+        white-space: nowrap;
+    }
+    
+    .notification-header {
+        flex-direction: column;
+        gap: 8px;
+    }
+    
+    .notification-actions {
+        flex-direction: column;
+    }
+    
+    .notification-action {
+        width: 100%;
+    }
+}
+</style>
+
+<div class="notifications-page">
+    <div class="page-header">
+        <div>
+            <h1 class="page-title">Notifications</h1>
+            <p class="page-subtitle">Stay updated with your bookings and trips</p>
+        </div>
+        <div class="notification-bell" onclick="loadNotifications()">
+            <i class="fas fa-bell"></i>
+            <span class="unread-badge" id="unreadBadge" style="display: none;">0</span>
+        </div>
+    </div>
+
+    <!-- Actions Bar -->
+    <div class="actions-bar">
+        <div class="filter-buttons">
+            <button class="filter-btn active" onclick="filterNotifications('all')">All</button>
+            <button class="filter-btn" onclick="filterNotifications('unread')">Unread</button>
+            <button class="filter-btn" onclick="filterNotifications('bookings')">Bookings</button>
+            <button class="filter-btn" onclick="filterNotifications('trips')">Trips</button>
+        </div>
+        <button class="action-btn" onclick="markAllAsRead()">
+            <i class="fas fa-check-double"></i> Mark All as Read
+        </button>
+    </div>
+
+    <!-- Notifications List -->
+    <div id="notificationsContainer" class="notifications-list">
+        <!-- Notifications will be loaded here -->
+    </div>
+    
+    <div id="emptyState" class="empty-state" style="display: none;">
+        <i class="fas fa-bell-slash"></i>
+        <h3>No notifications</h3>
+        <p>You're all caught up!</p>
+    </div>
+    
+    <div id="loadingState" class="empty-state" style="display: none;">
+        <i class="fas fa-spinner fa-spin"></i>
+        <h3>Loading notifications...</h3>
+    </div>
+</div>
+
+<script>
+let currentFilter = 'all';
+
+async function loadNotifications() {
+    const container = document.getElementById('notificationsContainer');
+    const emptyState = document.getElementById('emptyState');
+    const loadingState = document.getElementById('loadingState');
+    
+    loadingState.style.display = 'block';
+    container.innerHTML = '';
+    
+    try {
+        let url = '/notifications';
+        if (currentFilter === 'unread') {
+            url += '?unreadOnly=true';
+        }
+        
+        const response = await fetch(url);
+        const data = await response.json();
+        
+        loadingState.style.display = 'none';
+        
+        if (!data.success || !data.notifications || data.notifications.length === 0) {
+            emptyState.style.display = 'block';
+            updateUnreadBadge(0);
+            return;
+        }
+        
+        // Filter by type if needed
+        let filteredNotifications = data.notifications;
+        if (currentFilter === 'bookings') {
+            filteredNotifications = data.notifications.filter(n => 
+                n.type.includes('BOOKING') || n.type.includes('COUNTER')
+            );
+        } else if (currentFilter === 'trips') {
+            filteredNotifications = data.notifications.filter(n => 
+                n.type.includes('TRIP')
+            );
+        }
+        
+        if (filteredNotifications.length === 0) {
+            emptyState.style.display = 'block';
+            updateUnreadBadge(data.unreadCount || 0);
+            return;
+        }
+        
+        filteredNotifications.forEach(notification => {
+            const notificationCard = createNotificationCard(notification);
+            container.appendChild(notificationCard);
+        });
+        
+        updateUnreadBadge(data.unreadCount || 0);
+    } catch (error) {
+        console.error('Error loading notifications:', error);
+        loadingState.style.display = 'none';
+        emptyState.style.display = 'block';
+    }
+}
+
+function createNotificationCard(notification) {
+    const card = document.createElement('div');
+    card.className = `notification-card ${notification.isRead ? '' : 'unread'} ${getNotificationTypeClass(notification.type)}`;
+    
+    const timeAgo = getTimeAgo(notification.createdAt);
+    
+    card.innerHTML = `
+        <div class="notification-header">
+            <div>
+                <h3 class="notification-title">${notification.title}</h3>
+                <span class="notification-type">${formatNotificationType(notification.type)}</span>
+            </div>
+            <span class="notification-time">${timeAgo}</span>
+        </div>
+        
+        <p class="notification-message">${notification.message}</p>
+        
+        <div class="notification-actions">
+            ${!notification.isRead ? `
+                <button class="notification-action primary" onclick="markAsRead('${notification._id}')">
+                    <i class="fas fa-check"></i> Mark as Read
+                </button>
+            ` : ''}
+            ${notification.relatedBooking ? `
+                <button class="notification-action" onclick="viewBooking('${notification.relatedBooking}')">
+                    <i class="fas fa-eye"></i> View Booking
+                </button>
+            ` : ''}
+            <button class="notification-action danger" onclick="deleteNotification('${notification._id}')">
+                <i class="fas fa-trash"></i> Delete
+            </button>
+        </div>
+    `;
+    
+    return card;
+}
+
+function getNotificationTypeClass(type) {
+    const typeMap = {
+        'BOOKING_SUBMITTED': 'booking-submitted',
+        'BOOKING_ACCEPTED': 'booking-accepted',
+        'BOOKING_REJECTED': 'booking-rejected',
+        'COUNTER_OFFER': 'counter-offer',
+        'TRIP_REMINDER': 'trip-reminder',
+        'TRIP_COMPLETED': 'trip-completed'
+    };
+    return typeMap[type] || '';
+}
+
+function formatNotificationType(type) {
+    return type.replace(/_/g, ' ').toLowerCase();
+}
+
+function getTimeAgo(date) {
+    const seconds = Math.floor((new Date() - new Date(date)) / 1000);
+    
+    if (seconds < 60) return 'Just now';
+    if (seconds < 3600) return Math.floor(seconds / 60) + ' min ago';
+    if (seconds < 86400) return Math.floor(seconds / 3600) + ' hours ago';
+    if (seconds < 604800) return Math.floor(seconds / 86400) + ' days ago';
+    return new Date(date).toLocaleDateString();
+}
+
+function updateUnreadBadge(count) {
+    const badge = document.getElementById('unreadBadge');
+    if (count > 0) {
+        badge.textContent = count > 99 ? '99+' : count;
+        badge.style.display = 'flex';
+    } else {
+        badge.style.display = 'none';
+    }
+}
+
+function filterNotifications(filter) {
+    currentFilter = filter;
+    
+    // Update button styles
+    document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+    event.target.classList.add('active');
+    
+    loadNotifications();
+}
+
+async function markAsRead(notificationId) {
+    try {
+        const response = await fetch(`/notifications/${notificationId}/read`, {
+            method: 'PUT'
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            loadNotifications();
+        }
+    } catch (error) {
+        console.error('Error marking notification as read:', error);
+    }
+}
+
+async function markAllAsRead() {
+    if (!confirm('Mark all notifications as read?')) return;
+    
+    try {
+        const response = await fetch('/notifications/mark-all-read', {
+            method: 'PUT'
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            loadNotifications();
+        }
+    } catch (error) {
+        console.error('Error marking all as read:', error);
+    }
+}
+
+async function deleteNotification(notificationId) {
+    if (!confirm('Delete this notification?')) return;
+    
+    try {
+        const response = await fetch(`/notifications/${notificationId}`, {
+            method: 'DELETE'
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            loadNotifications();
+        }
+    } catch (error) {
+        console.error('Error deleting notification:', error);
+    }
+}
+
+function viewBooking(bookingId) {
+    window.location.href = `/bookings/${bookingId}`;
+}
+
+// Load notifications on page load
+document.addEventListener('DOMContentLoaded', loadNotifications);
+
+// Auto-refresh notifications every 30 seconds
+setInterval(loadNotifications, 30000);
+</script>

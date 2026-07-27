@@ -138,7 +138,7 @@ module.exports.bookingRequestSchema = Joi.object({
         pickupCoordinates: Joi.array().items(Joi.number()).length(2).optional(), // [lng, lat]
         destination: Joi.string().trim().required(),
         destinationCoordinates: Joi.array().items(Joi.number()).length(2).optional(), // [lng, lat]
-        pickupDate: Joi.date().iso().min('now').required(),
+        pickupDate: Joi.date().iso().required(),
         pickupTime: Joi.string().pattern(/^([01]\d|2[0-3]):?([0-5]\d)$/).required(),
         passengers: Joi.number().integer().min(1).required(),
         tripType: Joi.string().valid('local', 'outstation', 'airport-pickup', 'railway-pickup', 'wedding', 'family-function', 'temple-visit', 'tourism', 'corporate', 'other').required(),

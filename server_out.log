@@ -1,2 +1,4 @@
-server is listening to port 8080
-connected to Db
+◇ injected env (12) from .env // tip: ◈ encrypted .env [www.dotenvx.com]
+Server is running on port 8080
+Database connected
+CAR ROUTER => GET /

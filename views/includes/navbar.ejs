@@ -1,213 +1,74 @@
-<style>
-  .btn-search{
-    background-color: #fe424d;
-    color: #fff;
-    border-radius: 25px;
-    padding: 0 1rem 0 1 rem;
-  }
-  .btn-search:hover{
-    background-color: #fe424d;
-    color: #fff;
-    
-  }
-
-  .btn-search i{
-    display:inline ;
-    margin:0.5rem ;
-  }
-
-  .search-input {
-    border-radius: 25px;
-    text-align: left;
-    padding-left: 1rem;
-    padding-right: 1rem;
-  }
-
-  .search-input::placeholder {
-    text-align: left;
-  }
-
-  /* Mobile Responsive Search */
-  @media (max-width: 575.98px) {
-    .d-flex.role-search {
-      flex-direction: column !important;
-      width: 100%;
-    }
-
-    .search-input {
-      font-size: 0.85rem;
-      padding-left: 0.75rem;
-      padding-right: 0.75rem;
-      margin-right: 0.5rem !important;
-      margin-bottom: 0.5rem;
-    }
-
-    .btn-search {
-      font-size: 0.85rem;
-      padding: 0.35rem 0.75rem !important;
-      width: 100%;
-    }
-
-    .btn-search i {
-      margin: 0.25rem !important;
-    }
-
-    .navbar-brand {
-      margin-right: 0.5rem !important;
-    }
-
-    .nav-link {
-      font-size: 0.9rem;
-      padding: 0.4rem 0.5rem !important;
-    }
-  }
-
-  @media (min-width: 576px) and (max-width: 767.98px) {
-    .search-input {
-      font-size: 0.9rem;
-      max-width: 150px;
-    }
-
-    .btn-search {
-      font-size: 0.9rem;
-    }
-  }
-
-  @media (min-width: 768px) and (max-width: 991.98px) {
-    .search-input {
-      max-width: 200px;
-    }
-  }
-</style>
-
-
-
-<nav class="navbar navbar-expand-md bg-body-light border-bottom sticky-top">
-  <div class="container-fluid">
-    <a class="navbar-brand" href="/cars"><i class="fa-regular fa-compass"></i></a>
-    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNavAltMarkup"
-      aria-controls="navbarNavAltMarkup" aria-expanded="false" aria-label="Toggle navigation">
+<nav class="navbar navbar-expand-md bg-white border-bottom sticky-top" style="height:64px;">
+  <div class="container-fluid px-3">
+    <a class="navbar-brand fw-bold fs-5" href="/" style="color:#2563eb;">
+      <i class="fa-solid fa-car me-1"></i> RideLocal
+    </a>
+    <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
       <span class="navbar-toggler-icon"></span>
     </button>
-    <div class="collapse navbar-collapse" id="navbarNavAltMarkup">
-      <div class="navbar-nav">
-       
-        <a class="nav-link" href="/cars">Explore</a>
-        <a class="nav-link" href="/chatbot">Chat with AI</a>
-
-      </div>
-
-      <div class="navbar-nav ms-auto">
-        <form class="d-flex position-relative" role="search" method="GET" action="/cars" autocomplete="off">
-      <input id="nav-search-input" class="form-control me-2 search-input" type="search" name="search" value="<%= typeof currentSearch !== 'undefined' ? currentSearch : '' %>" placeholder="Search car name" aria-label="Search"/>
-      <button class="btn btn-search" type="submit">
-        <i class="fa-solid fa-magnifying-glass"></i>Search</button>
-      <div id="suggestions-list" class="list-group" style="position:absolute; z-index:2000; left:0; right:0; top:100%; display:none; max-height:300px; overflow:auto;"></div>
-    </form>
-      </div>
-
-      <div class="navbar-nav ms-auto">
-        <a class="nav-link" href="/cars/new-step">Add new car</a>
+    <div class="collapse navbar-collapse" id="navbarNav">
+      <ul class="navbar-nav me-auto gap-1">
         <% if(!currUser) { %>
-          <a class="nav-link " href="/signup"><b>Sign up</b></a>
-          <a class="nav-link" href="/login"><b>Log in</b></a>
-        <% } else { %>
-          <a class="nav-link" href="/logout">Log out</a>
+          <li class="nav-item"><a class="nav-link rounded-pill px-3" href="/customers/home"><i class="fas fa-home me-1"></i>Home</a></li>
+          <li class="nav-item"><a class="nav-link rounded-pill px-3" href="/cars">Vehicles</a></li>
+        <% } else if(currUser.role === 'customer') { %>
+          <li class="nav-item"><a class="nav-link rounded-pill px-3 <%= req.path === '/customers/home' ? 'active bg-light fw-semibold' : '' %>" href="/customers/home"><i class="fas fa-home me-1"></i>Home</a></li>
+          <li class="nav-item"><a class="nav-link rounded-pill px-3 <%= req.path === '/customers/my-trips' ? 'active bg-light fw-semibold' : '' %>" href="/customers/my-trips"><i class="fas fa-route me-1"></i>My Trips</a></li>
+          <li class="nav-item"><a class="nav-link rounded-pill px-3 position-relative" href="/notifications"><i class="fas fa-bell me-1"></i>Notifications <span class="badge bg-danger rounded-pill" id="navUnreadCount" style="display:none;font-size:10px;">0</span></a></li>
+          <li class="nav-item"><a class="nav-link rounded-pill px-3 <%= req.path === '/users/profile' ? 'active bg-light fw-semibold' : '' %>" href="/users/profile"><i class="fas fa-user me-1"></i>Profile</a></li>
+        <% } else if(currUser.role === 'owner') { %>
+          <li class="nav-item"><a class="nav-link rounded-pill px-3 <%= req.path === '/owners/dashboard' ? 'active bg-light fw-semibold' : '' %>" href="/owners/dashboard"><i class="fas fa-chart-simple me-1"></i>Dashboard</a></li>
+          <li class="nav-item"><a class="nav-link rounded-pill px-3 <%= req.path === '/owners/my-vehicles' ? 'active bg-light fw-semibold' : '' %>" href="/owners/my-vehicles"><i class="fas fa-car me-1"></i>My Vehicles</a></li>
+          <li class="nav-item"><a class="nav-link rounded-pill px-3 <%= req.path === '/owners/bookings' ? 'active bg-light fw-semibold' : '' %>" href="/owners/bookings"><i class="fas fa-calendar-check me-1"></i>Bookings</a></li>
+          <li class="nav-item"><a class="nav-link rounded-pill px-3 position-relative" href="/notifications"><i class="fas fa-bell me-1"></i>Notifications <span class="badge bg-danger rounded-pill" id="navUnreadCount" style="display:none;font-size:10px;">0</span></a></li>
+          <li class="nav-item"><a class="nav-link rounded-pill px-3 <%= req.path === '/users/profile' ? 'active bg-light fw-semibold' : '' %>" href="/users/profile"><i class="fas fa-user me-1"></i>Profile</a></li>
         <% } %>
-
+      </ul>
+      <div class="d-flex align-items-center gap-2 mt-2 mt-md-0">
+        <% if(!currUser) { %>
+           <a class="btn btn-outline-primary btn-sm rounded-pill px-4" href="/users/login">Log in</a>
+           <a class="btn btn-primary btn-sm rounded-pill px-4" href="/users/signup">Sign up</a>
+        <% } else { %>
+          <span class="text-muted small me-2 d-none d-md-inline"><%= currUser.username %></span>
+           <a class="btn btn-outline-secondary btn-sm rounded-pill" href="/users/logout">Log out</a>
+        <% } %>
       </div>
     </div>
   </div>
 </nav>
 
-<!-- Autocomplete suggestions container -->
-<div id="search-suggestions" style="position:relative; max-width:600px; margin:0 auto;">
-  <div id="suggestions-list" class="list-group" style="position:absolute; z-index:2000; width:100%; display:none;
-    max-height:300px; overflow:auto;
-  "></div>
-</div>
-
+<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
 <script>
-  (function(){
-    const input = document.getElementById('nav-search-input');
-    const suggestionsList = document.getElementById('suggestions-list');
-    const form = input ? input.closest('form') : null;
-    let timeout = null;
-    let selected = -1;
+(function() {
+  const badge = document.getElementById('navUnreadCount');
+  if (!badge) return;
 
-    if (!input || !suggestionsList || !form) return;
-
-    function clearSuggestions(){
-      suggestionsList.innerHTML = '';
-      suggestionsList.style.display = 'none';
-      selected = -1;
-    }
-
-    function renderSuggestions(items){
-      suggestionsList.innerHTML = '';
-      if (!items || items.length === 0) { clearSuggestions(); return; }
-      items.forEach((it, idx)=>{
-        const a = document.createElement('a');
-        a.className = 'list-group-item list-group-item-action';
-        a.href = '#';
-        a.dataset.title = it.title;
-        a.dataset.id = it.id;
-        a.innerHTML = `<div class="d-flex w-100 justify-content-between"><h6 class="mb-1">${it.title}</h6><small>${it.price != null ? it.price : ''}</small></div>`;
-        a.addEventListener('click', (e)=>{
-          e.preventDefault();
-          input.value = a.dataset.title || '';
-          clearSuggestions();
-          form.submit();
-        });
-        suggestionsList.appendChild(a);
-      });
-      suggestionsList.style.display = 'block';
-    }
-
-    input.addEventListener('input', (e)=>{
-      const q = input.value.trim();
-      if (timeout) clearTimeout(timeout);
-      if (!q) { clearSuggestions(); return; }
-      timeout = setTimeout(async ()=>{
-        try{
-          const res = await fetch('/cars/autocomplete?q=' + encodeURIComponent(q));
-          if (!res.ok) { clearSuggestions(); return; }
-          const data = await res.json();
-          renderSuggestions(data);
-        }catch(err){
-          clearSuggestions();
-        }
-      }, 200);
-    });
-
-    // keyboard navigation
-    input.addEventListener('keydown', (e)=>{
-      const items = suggestionsList.querySelectorAll('.list-group-item');
-      if (!items.length) return;
-      if (e.key === 'ArrowDown'){
-        e.preventDefault(); selected = Math.min(selected+1, items.length-1);
-        items.forEach((el,i)=> el.classList.toggle('active', i===selected));
-      } else if (e.key === 'ArrowUp'){
-        e.preventDefault(); selected = Math.max(selected-1, 0);
-        items.forEach((el,i)=> el.classList.toggle('active', i===selected));
-      } else if (e.key === 'Enter'){
-        const active = items[selected];
-        if (active){
-          e.preventDefault();
-          input.value = active.dataset.title || '';
-          clearSuggestions();
-          form.submit();
-        }
-      } else if (e.key === 'Escape'){
-        clearSuggestions();
+  async function fetchUnreadCount() {
+    try {
+      const res = await fetch('/owners/api/unread-count');
+      const data = await res.json();
+      if (data.success && data.unreadCount > 0) {
+        badge.textContent = data.unreadCount > 99 ? '99+' : data.unreadCount;
+        badge.style.display = 'inline-block';
+      } else {
+        badge.style.display = 'none';
       }
-    });
+    } catch(e) {}
+  }
 
-    // click outside closes
-    document.addEventListener('click', (e)=>{
-      if (!suggestionsList.contains(e.target) && e.target !== input){
-        clearSuggestions();
-      }
+  fetchUnreadCount();
+  setInterval(fetchUnreadCount, 15000);
+
+  // Socket.IO real-time updates
+  try {
+    const socket = io();
+    socket.on('connect', function() {
+      const userId = '<%= (currUser && currUser._id) || "" %>';
+      if (userId) socket.emit('join', userId);
     });
-  })();
+    socket.on('new_notification', function() {
+      fetchUnreadCount();
+    });
+  } catch(e) {}
+})();
 </script>

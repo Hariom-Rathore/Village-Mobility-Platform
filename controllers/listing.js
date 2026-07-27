@@ -477,12 +477,68 @@ module.exports.reverseGeocode = async (req, res) => {
 
 module.exports.autocomplete = async (req, res) => {
     const q = (req.query.q || '').trim();
-    if (!q) return res.json([]);
-    const searchRegex = new RegExp(escapeRegExp(q), 'i');
-    const results = await Listing.find({ title: searchRegex })
-        .limit(10)
-        .select('title price image');
-    // return minimal info for suggestions
-    const suggestions = results.map(r => ({ id: r._id, title: r.title, price: r.price, image: r.image && (r.image.url || r.image) }));
-    res.json(suggestions);
+    if (!q || q.length < 2) return res.json([]);
+
+    const headers = {
+        Accept: "application/json",
+        "Accept-Language": "en",
+        "User-Agent": "PROJECT_CAR_DELTA/1.0"
+    };
+
+    async function searchN(params) {
+        const url = `https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&countrycodes=in&${params}`;
+        try { const r = await fetch(url, { headers }); if (!r.ok) return []; return await r.json(); } catch { return []; }
+    }
+
+    // Phase 1: Name search for the query
+    const nameResults = await searchN(`q=${encodeURIComponent(q)}&limit=5&dedupe=0`);
+
+    let suggestions = [];
+    const existing = new Set();
+
+    function addResult(r) {
+        if (existing.has(r.display_name)) return;
+        existing.add(r.display_name);
+        const addr = r.address || {};
+        const parts = r.display_name.split(',');
+        const primary = parts[0]?.trim() || '';
+        const city = addr.city || addr.town || addr.village || addr.municipality || addr.county || '';
+        const state = addr.state || '';
+        const secondary = [city, state].filter(Boolean).join(', ');
+        suggestions.push({
+            display_name: r.display_name,
+            primary: primary,
+            secondary: secondary,
+            lat: r.lat,
+            lon: r.lon,
+            type: r.type || 'place',
+            category: r.category || ''
+        });
+    }
+
+    nameResults.forEach(addResult);
+
+    // Phase 2: If we found a city, do proximity search for nearby localities
+    const cityResult = nameResults.find(r =>
+        ['city', 'town'].includes(r.type) &&
+        r.address && (r.address.city || r.address.town || r.address.municipality)
+    );
+    const firstResult = nameResults[0];
+
+    if (cityResult) {
+        const radius = q.length <= 3 ? 5000 : 10000; // 5km for short queries, 10km for specific
+        const nearby = await searchN(`q=locality|suburb|neighbourhood|village&limit=12&dedupe=0&lat=${cityResult.lat}&lon=${cityResult.lon}&radius=${radius}`);
+        nearby.forEach(addResult);
+    } else if (firstResult) {
+        // Proximity around first result even if not a city
+        const nearby = await searchN(`limit=10&dedupe=0&lat=${firstResult.lat}&lon=${firstResult.lon}&radius=5000`);
+        nearby.forEach(addResult);
+    }
+
+    // Phase 3: Also search "<query> area" or "<query> locality" for better coverage
+    const areaResults = await searchN(`q=${encodeURIComponent(q + ', India')}&limit=8&dedupe=0`);
+    areaResults.forEach(addResult);
+
+    // Limit final results to 15
+    res.json(suggestions.slice(0, 15));
 };

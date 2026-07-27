@@ -1,30 +1,75 @@
 <% layout("/listings/layouts/boilerplate") %>
-<div class="row mt-3">
-    <h1 class="col-6 offset-3">SignUp on Wanderlust </h1>
-</div>
+<style>
+.signup-page { min-height: 80vh; display: flex; align-items: center; justify-content: center; padding: 20px; }
+.signup-card { background: white; border-radius: 24px; padding: 40px; box-shadow: 0 4px 24px rgba(0,0,0,0.08); width: 100%; max-width: 440px; }
+.signup-card h1 { font-size: 28px; font-weight: 700; text-align: center; margin-bottom: 8px; }
+.signup-card .subtitle { text-align: center; color: #666; font-size: 14px; margin-bottom: 32px; }
+.form-group { margin-bottom: 20px; }
+.form-group label { display: block; font-size: 14px; font-weight: 600; color: #333; margin-bottom: 8px; }
+.form-group input, .form-group select { width: 100%; padding: 14px 16px; border: 2px solid #e5e7eb; border-radius: 12px; font-size: 15px; transition: all 0.2s; background: #f9fafb; }
+.form-group input:focus, .form-group select:focus { outline: none; border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37,99,235,0.1); background: white; }
+.btn-signup { width: 100%; background: #2563eb; color: white; border: none; border-radius: 12px; padding: 16px; font-size: 16px; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+.btn-signup:hover { background: #1d4ed8; transform: translateY(-1px); }
+.role-selector { display: flex; gap: 12px; margin-bottom: 20px; }
+.role-option { flex: 1; padding: 16px; border: 2px solid #e5e7eb; border-radius: 12px; text-align: center; cursor: pointer; transition: all 0.2s; background: #f9fafb; }
+.role-option:hover { border-color: #93c5fd; }
+.role-option.active { border-color: #2563eb; background: #eff6ff; }
+.role-option i { font-size: 24px; color: #2563eb; margin-bottom: 8px; }
+.role-option span { display: block; font-size: 14px; font-weight: 600; color: #333; }
+.login-link { text-align: center; margin-top: 20px; font-size: 14px; color: #666; }
+.login-link a { color: #2563eb; font-weight: 600; text-decoration: none; }
+</style>
 
-<div class="row  mt-3">
-    <div class="col-6 offset-3">
-        <form action="/signup" method="POST" class="needs-validation" novalidate>
-<div class="mb-3">
-                <label for="username" class="form-label">username</label>
-                <input id="username"  name="username" type="text" class="form-control" required />
-                <div class="valid-feedback">Looks good</div>
-            </div>
-
-            <div class="mb-3">
-                <label for="email" class="form-label">Email</label>
-                <input id="email"  name="email" type="text" class="form-control" required />
-            
-            </div>
-
-                 <div class="mb-3">
-                <label for="password" class="form-label">Password</label>
-                <input id="password"  name="password" type="password" class="form-control" required />
-            
-            </div>
-            <button class="btn btn-success">SignUp</button>
-
-        </form>
+<div class="signup-page">
+  <div class="signup-card">
+    <h1>Create Account</h1>
+    <p class="subtitle">Choose how you want to use the platform</p>
+    <form action="/users/signup" method="POST">
+      <div class="role-selector">
+        <div class="role-option active" onclick="selectRole(this, 'customer')">
+          <i class="fas fa-user"></i>
+          <span>Customer</span>
+          <small style="display:block;font-size:11px;color:#999;margin-top:4px;">Book trips</small>
+        </div>
+        <div class="role-option" onclick="selectRole(this, 'owner')">
+          <i class="fas fa-car"></i>
+          <span>Owner</span>
+          <small style="display:block;font-size:11px;color:#999;margin-top:4px;">List vehicles</small>
+        </div>
+      </div>
+      <input type="hidden" name="role" id="roleInput" value="customer">
+      <div class="form-group">
+        <label>Username</label>
+        <input type="text" name="username" placeholder="Enter your name" required>
+      </div>
+      <div class="form-group">
+        <label>Email</label>
+        <input type="email" name="email" placeholder="Enter your email" required>
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <input type="password" name="password" placeholder="Create a password" required minlength="6">
+      </div>
+      <button type="submit" class="btn-signup">Create Account</button>
+    </form>
+    <div class="login-link">
+      Already have an account? <a href="/login">Log in</a>
     </div>
+  </div>
 </div>
+
+<script>
+function selectRole(el, role) {
+  document.querySelectorAll('.role-option').forEach(r => r.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('roleInput').value = role;
+}
+
+// Auto-select role from URL query param (e.g. ?role=owner)
+const urlParams = new URLSearchParams(window.location.search);
+const roleParam = urlParams.get('role');
+if (roleParam === 'owner') {
+  const ownerEl = document.querySelector('.role-option[onclick*="owner"]');
+  if (ownerEl) selectRole(ownerEl, 'owner');
+}
+</script>

@@ -9,7 +9,19 @@ const NotificationSchema = new Schema({
   },
   type: {
     type: String,
-    enum: ['BOOKING_CONFIRMED', 'BOOKING_CANCELLED', 'BOOKING_COMPLETED', 'VEHICLE_AVAILABLE', 'REVIEW_RECEIVED', 'PAYMENT_RECEIVED'],
+    enum: [
+      'BOOKING_SUBMITTED',
+      'BOOKING_ACCEPTED',
+      'BOOKING_REJECTED',
+      'COUNTER_OFFER',
+      'TRIP_REMINDER',
+      'TRIP_COMPLETED',
+      'BOOKING_CANCELLED',
+      'BOOKING_COMPLETED',
+      'VEHICLE_AVAILABLE',
+      'REVIEW_RECEIVED',
+      'PAYMENT_RECEIVED'
+    ],
     required: true
   },
   title: {

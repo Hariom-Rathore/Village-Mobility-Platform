@@ -1,0 +1,148 @@
+<% layout("/listings/layouts/boilerplate") %>
+<style>
+.owner-dashboard { padding: 16px; max-width: 800px; margin: 0 auto; }
+.page-header { margin-bottom: 20px; }
+.page-title { font-size: 24px; font-weight: 700; }
+.page-subtitle { color: #64748b; font-size: 14px; }
+.stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 24px; }
+.stat-card { background: white; border-radius: 16px; padding: 20px; box-shadow: 0 1px 4px rgba(0,0,0,0.06); }
+.stat-icon { width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 18px; margin-bottom: 12px; color: white; }
+.stat-icon.blue { background: #2563eb; }
+.stat-icon.amber { background: #f59e0b; }
+.stat-icon.green { background: #10b981; }
+.stat-icon.purple { background: #8b5cf6; }
+.stat-value { font-size: 28px; font-weight: 700; }
+.stat-label { font-size: 13px; color: #64748b; }
+.section-card { background: white; border-radius: 16px; padding: 20px; box-shadow: 0 1px 4px rgba(0,0,0,0.06); margin-bottom: 16px; }
+.section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+.section-title { font-size: 16px; font-weight: 700; margin: 0; }
+.booking-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid #f1f5f9; }
+.booking-item:last-child { border-bottom: none; }
+.bi-left { flex: 1; }
+.bi-name { font-size: 14px; font-weight: 600; }
+.bi-route { font-size: 12px; color: #64748b; }
+.bi-fare { font-size: 14px; font-weight: 700; color: #2563eb; }
+.bi-status { font-size: 11px; padding: 2px 8px; border-radius: 10px; font-weight: 600; }
+.bi-status.pending { background: #fef3c7; color: #92400e; }
+.notif-item { padding: 12px 0; border-bottom: 1px solid #f1f5f9; font-size: 13px; }
+.notif-item:last-child { border-bottom: none; }
+.notif-title { font-weight: 600; }
+.notif-time { font-size: 11px; color: #94a3b8; }
+.empty-state { text-align: center; padding: 32px; color: #94a3b8; font-size: 14px; }
+.btn-sm { font-size: 12px; padding: 4px 12px; border-radius: 8px; border: none; cursor: pointer; font-weight: 600; }
+.btn-success-sm { background: #10b981; color: white; }
+.btn-danger-sm { background: #ef4444; color: white; }
+.btn-warning-sm { background: #f59e0b; color: white; }
+</style>
+
+<div class="owner-dashboard">
+  <div class="page-header">
+    <h1 class="page-title">Dashboard</h1>
+    <p class="page-subtitle">Welcome back, <%= currUser ? currUser.username : 'Owner' %></p>
+  </div>
+
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-icon blue"><i class="fas fa-car"></i></div>
+      <div class="stat-value" id="statVehicles">0</div>
+      <div class="stat-label">My Vehicles</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon amber"><i class="fas fa-clock"></i></div>
+      <div class="stat-value" id="statPending">0</div>
+      <div class="stat-label">Pending Bookings</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon green"><i class="fas fa-calendar-check"></i></div>
+      <div class="stat-value" id="statUpcoming">0</div>
+      <div class="stat-label">Upcoming Trips</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon purple"><i class="fas fa-star"></i></div>
+      <div class="stat-value" id="statRating">0.0</div>
+      <div class="stat-label">Average Rating</div>
+    </div>
+  </div>
+
+  <div class="section-card">
+    <div class="section-header">
+      <h2 class="section-title">Recent Booking Requests</h2>
+      <a href="/owners/bookings" class="btn btn-primary btn-sm rounded-pill">View All</a>
+    </div>
+    <div id="bookingsContainer"></div>
+    <div id="emptyBookings" class="empty-state" style="display:none;"><i class="fas fa-inbox me-2"></i>No booking requests</div>
+  </div>
+
+  <div class="section-card">
+    <div class="section-header">
+      <h2 class="section-title">Recent Notifications</h2>
+      <a href="/notifications" class="btn btn-outline-secondary btn-sm rounded-pill">View All</a>
+    </div>
+    <div id="notificationsContainer"></div>
+    <div id="emptyNotifications" class="empty-state" style="display:none;"><i class="fas fa-bell me-2"></i>No notifications</div>
+  </div>
+</div>
+
+<script>
+async function loadStats() {
+  try {
+    const res = await fetch('/owners/api/stats');
+    const d = await res.json();
+    if (d.success) {
+      document.getElementById('statVehicles').textContent = d.stats.totalVehicles;
+      document.getElementById('statPending').textContent = d.stats.pendingBookings;
+      document.getElementById('statUpcoming').textContent = d.stats.upcomingTrips;
+      document.getElementById('statRating').textContent = d.stats.averageRating.toFixed(1);
+    }
+  } catch(e) {}
+}
+
+async function loadRecentBookings() {
+  const el = document.getElementById('bookingsContainer');
+  const empty = document.getElementById('emptyBookings');
+  try {
+    const res = await fetch('/bookings/owner?status=PENDING,PENDING_OWNER_APPROVAL,COUNTER_OFFERED');
+    const d = await res.json();
+    if (!d.success || !d.bookings?.length) { empty.style.display = 'block'; return; }
+    d.bookings.slice(0, 5).forEach(b => {
+      const c = b.renterId || {};
+      const div = document.createElement('div'); div.className = 'booking-item';
+      div.innerHTML = `
+        <div class="bi-left">
+          <div class="bi-name">${c.username || 'Customer'}</div>
+          <div class="bi-route">${b.pickup || ''} → ${b.destination || ''}</div>
+        </div>
+        <div class="bi-fare me-2">₹${b.totalPrice || b.estimatedFare || 0}</div>
+        <span class="bi-status pending">Pending</span>
+      `;
+      el.appendChild(div);
+    });
+  } catch(e) { empty.style.display = 'block'; }
+}
+
+async function loadRecentNotifications() {
+  const el = document.getElementById('notificationsContainer');
+  const empty = document.getElementById('emptyNotifications');
+  try {
+    const res = await fetch('/notifications?unreadOnly=true');
+    const d = await res.json();
+    if (!d.success || !d.notifications?.length) { empty.style.display = 'block'; return; }
+    d.notifications.slice(0, 5).forEach(n => {
+      const div = document.createElement('div'); div.className = 'notif-item';
+      const ago = getTimeAgo(n.createdAt);
+      div.innerHTML = `<div class="notif-title">${n.title}</div><div>${n.message}</div><div class="notif-time">${ago}</div>`;
+      el.appendChild(div);
+    });
+  } catch(e) { empty.style.display = 'block'; }
+}
+
+function getTimeAgo(date) {
+  const s = Math.floor((Date.now() - new Date(date)) / 1000);
+  if (s < 60) return 'Just now';
+  if (s < 3600) return Math.floor(s/60) + 'm ago';
+  if (s < 86400) return Math.floor(s/3600) + 'h ago';
+  return Math.floor(s/86400) + 'd ago';
+}
+
+document.addEventListener('DOMContentLoaded', () => { loadStats(); loadRecentBookings(); loadRecentNotifications(); });
+</script>

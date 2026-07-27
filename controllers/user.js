@@ -9,18 +9,22 @@ module.exports.renderSignup = (req, res) => {
 // Sign up user
 module.exports.signup = async (req, res, next) => {
   try {
-    let { username, email, password } = req.body;
-    const newUser = new User({ email, username });
+    let { username, email, password, role } = req.body;
+    const newUser = new User({ email, username, role: role || "customer" });
     const registeredUser = await User.register(newUser, password);
 
     req.login(registeredUser, (err) => {
       if (err) return next(err);
       req.flash("success", "User registered Successfully!");
-      res.redirect("/cars");
+      if (registeredUser.role === "owner") {
+        res.redirect("/owners/dashboard");
+      } else {
+        res.redirect("/customers/home");
+      }
     });
   } catch (err) {
     req.flash("error", err.message);
-    res.redirect("/signup");
+    res.redirect("/users/signup");
   }
 };
 
@@ -32,7 +36,7 @@ module.exports.renderLogin = (req, res) => {
 // Login redirect
 module.exports.loginRedirect = (req, res) => {
   req.flash("success", `Welcome back ${req.user.username}!`);
-  let redirectUrl = res.locals.redirectUrl || "/cars";
+  let redirectUrl = res.locals.redirectUrl || (req.user.role === "owner" ? "/owners/dashboard" : "/customers/home");
   res.redirect(redirectUrl);
 };
 
@@ -41,6 +45,28 @@ module.exports.logout = (req, res, next) => {
   req.logout((err) => {
     if (err) return next(err);
     req.flash("success", "You are logged out!");
-    res.redirect("/cars");
+    res.redirect("/");
   });
+};
+
+// Profile update
+module.exports.updateProfile = async (req, res) => {
+  try {
+    const { phoneNumber, address } = req.body;
+    const updateData = {};
+    if (phoneNumber !== undefined) updateData.phoneNumber = phoneNumber;
+    if (address !== undefined) updateData.address = address;
+    if (req.file) {
+      updateData.profilePhoto = {
+        url: req.file.path,
+        filename: req.file.filename
+      };
+    }
+    await User.findByIdAndUpdate(req.user._id, updateData);
+    req.flash("success", "Profile updated successfully!");
+    res.redirect("/users/profile");
+  } catch (err) {
+    req.flash("error", err.message);
+    res.redirect("/users/profile");
+  }
 };

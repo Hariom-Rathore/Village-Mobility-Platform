@@ -38,10 +38,16 @@ const reviews=require("./routes/review.js");
 const userRouter=require("./routes/user.js");
 const chatbotRouter=require("./routes/chatbot.js");
 const dashboardRouter=require("./routes/dashboard.js");
+const bookingRouter=require("./routes/booking.js");
+const notificationRouter=require("./routes/notification.js");
+const customerRouter=require("./routes/customer.js");
+const ownerRouter=require("./routes/owner.js");
 
 const passport=require("passport");
 const localStrategy=require("passport-local");
 const User= require("./models/user.js");
+const http = require('http');
+const { Server } = require('socket.io');
 
 //session(user ke bare me ki user kitni der baad aaya website pe vesi information) ki inforamtion abb atlas me store hogi jiska dburl le liya h because express sessison me some time data leak ho jata h
 const store=new MongoStore({
@@ -224,11 +230,13 @@ app.use((req, res, next) => {
     res.locals.success = req.flash("success");
     res.locals.error = req.flash("error");
     res.locals.currUser = req.user;
+    res.locals.req = req;
     next();
 });
 
 app.get("/", (req, res) => {
-    res.redirect("/cars");
+    if (req.user && req.user.role === "owner") return res.redirect("/owners/dashboard");
+    res.redirect("/customers/home");
 });
 
 //make a demo user for checking all things works 
@@ -245,8 +253,12 @@ app.get("/", (req, res) => {
 app.use("/cars",listings);//cars and /cars/:id/reviews this is common part into the all router so this fixed first and after place of this use only /
 app.use("/cars/:id/reviews",reviews);
 app.use("/chatbot",chatbotRouter);
-app.use("/",userRouter);
+app.use("/users",userRouter);
 app.use("/dashboard",dashboardRouter);
+app.use("/bookings",bookingRouter);
+app.use("/notifications",notificationRouter);
+app.use("/customers",customerRouter);
+app.use("/owners",ownerRouter);
 
 
 app.all(/.*/,(req,res,next)=>{
@@ -279,6 +291,35 @@ app.use((err,req,res,next)=>{
     return res.status(statusCode).render("error.ejs", { statusCode, errorMsg });
 });
 
-app.listen(8080,()=>{
-    console.log("server is listening to port 8080");
+// Socket.IO setup
+const server = http.createServer(app);
+const io = new Server(server);
+
+// Make io accessible to routes
+app.set('io', io);
+
+// Socket.IO connection handling
+io.on('connection', (socket) => {
+    console.log('User connected:', socket.id);
+
+    // Join user's personal room
+    socket.on('join', (userId) => {
+        socket.join(userId);
+        console.log(`User ${userId} joined their room`);
+    });
+
+    // Leave user's personal room
+    socket.on('leave', (userId) => {
+        socket.leave(userId);
+        console.log(`User ${userId} left their room`);
+    });
+
+    socket.on('disconnect', () => {
+        console.log('User disconnected:', socket.id);
+    });
+});
+
+const PORT = process.env.PORT || 8080;
+server.listen(PORT, () => {
+    console.log(`Server is running on port ${PORT}`);
 });

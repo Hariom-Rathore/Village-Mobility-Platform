@@ -2,8 +2,12 @@ const Razorpay = require('razorpay');
 const crypto = require('crypto');
 const Listing = require('../models/listing');
 const Booking = require('../models/booking');
+const BookingTimeline = require('../models/bookingTimeline');
+const Notification = require('../models/notification');
+const VehicleAvailability = require('../models/vehicleAvailability');
 const bookingService = require('../services/bookingService');
 const notificationService = require('../services/notificationService');
+const { emitBookingUpdate, emitToUser } = require('../utils/socket');
 
 const WHATSAPP_PHONE_NUMBER_ID = process.env.WHATSAPP_PHONE_NUMBER_ID || '';
 const WHATSAPP_ACCESS_TOKEN = process.env.WHATSAPP_ACCESS_TOKEN || '';
@@ -94,17 +98,33 @@ async function sendWhatsAppTextMessage(phoneNumber, message) {
 }
 
 module.exports.renderBooking = async (req, res) => {
-    console.log('bookingController.renderBooking called, params:', req.params);
     const { id } = req.params;
     const listing = await Listing.findById(id);
     if (!listing) {
         return res.redirect(`/cars/${id}`);
     }
+
+    // Pass search query params to pre-fill the booking form
+    const searchParams = {
+        pickup: req.query.pickup || '',
+        destination: req.query.destination || '',
+        pickupLat: req.query.pickupLat || '',
+        pickupLng: req.query.pickupLng || '',
+        destLat: req.query.destLat || '',
+        destLng: req.query.destLng || '',
+        distance: req.query.distance || '',
+        fare: req.query.fare || '',
+        date: req.query.date || '',
+        time: req.query.time || '',
+        passengers: req.query.passengers || ''
+    };
+
     res.render('listings/book.ejs', {
         listing,
         razorpayKey: process.env.RAZORPAY_KEY_ID || '',
         orsKey: process.env.ORS_API_KEY || '',
         ownerWhatsappNumber: listing.whatsappNumber || '',
+        searchParams
     });
 };
 
@@ -428,8 +448,11 @@ module.exports.cancelBooking = async (req, res) => {
 
         await booking.save();
 
-        // Update vehicle availability
-        await bookingService.updateVehicleAvailability(booking.vehicleId);
+        // Remove vehicle availability record
+        await removeVehicleAvailability(bookingId);
+
+        // Create timeline entry
+        await createBookingTimeline(bookingId, 'CANCELLED', req.user._id, booking.renterId.toString() === req.user._id.toString() ? 'customer' : 'owner', reason || 'Booking cancelled');
 
         // Send notifications
         await notificationService.notifyBookingCancelled(bookingId);
@@ -574,6 +597,14 @@ module.exports.createBookingRequest = async (req, res) => {
             pickupDateTime.setHours(parseInt(hours), parseInt(minutes), 0, 0);
         }
 
+        // Check vehicle availability
+        const endDate = booking.returnDate ? new Date(booking.returnDate) : pickupDateTime;
+        const isAvailable = await checkVehicleAvailability(id, pickupDateTime, endDate);
+        
+        if (!isAvailable) {
+            return res.status(400).json({ success: false, error: 'Vehicle is not available for the selected dates' });
+        }
+
         // Basic price logic for estimates
         const distanceKm = Number(booking.distanceKm) || 0;
         const ratePerKm = Number(listing.pricePerKm || listing.ratePerKm || 0);
@@ -622,12 +653,44 @@ module.exports.createBookingRequest = async (req, res) => {
             totalDays,
             
             paymentMethod: booking.paymentMethod || 'cash',
-            bookingStatus: 'PENDING_OWNER_APPROVAL',
+            bookingStatus: 'PENDING',
             paymentStatus: 'PENDING',
             ownerWhatsappNumber: ownerWhatsAppNumber
         });
 
         await newBooking.save();
+
+        // Create timeline entry
+        await createBookingTimeline(newBooking._id, 'PENDING', req.user._id, 'customer', 'Customer submitted booking request');
+        
+        // Create notification for owner
+        await createNotification(
+            listing.owner,
+            'BOOKING_SUBMITTED',
+            'New Booking Request',
+            `You have received a new booking request for ${listing.title}. Pickup: ${booking.pickupLocation}, Destination: ${booking.destination}. Fare: ₹${estimatedFare}`,
+            newBooking._id,
+            id
+        );
+
+        // Emit real-time notification via Socket.IO
+        const io = req.app.get('io');
+        if (io) {
+            emitToUser(io, listing.owner, 'new_notification', {
+                type: 'BOOKING_SUBMITTED',
+                title: 'New Booking Request',
+                message: `You have received a new booking request for ${listing.title}. Pickup: ${booking.pickupLocation}, Destination: ${booking.destination}. Fare: ₹${estimatedFare}`,
+                bookingId: newBooking._id,
+                vehicleId: id
+            });
+            
+            emitBookingUpdate(io, req.user._id, listing.owner, 'booking_created', {
+                bookingId: newBooking._id,
+                status: 'PENDING',
+                customerId: req.user._id,
+                ownerId: listing.owner
+            });
+        }
 
         // Optional: Send initial Whatsapp message to owner about the pending request
         
@@ -643,6 +706,88 @@ module.exports.createBookingRequest = async (req, res) => {
     }
 };
 
+// Helper function to create booking timeline entry
+async function createBookingTimeline(bookingId, status, userId, role, notes = '', metadata = {}) {
+    try {
+        const timeline = new BookingTimeline({
+            booking: bookingId,
+            status,
+            changedBy: userId,
+            changedByRole: role,
+            notes,
+            metadata
+        });
+        await timeline.save();
+        return timeline;
+    } catch (error) {
+        console.error('Error creating booking timeline:', error);
+    }
+}
+
+// Helper function to create notification
+async function createNotification(recipientId, type, title, message, relatedBooking = null, relatedVehicle = null) {
+    try {
+        const notification = new Notification({
+            recipient: recipientId,
+            type,
+            title,
+            message,
+            relatedBooking,
+            relatedVehicle
+        });
+        await notification.save();
+        return notification;
+    } catch (error) {
+        console.error('Error creating notification:', error);
+    }
+}
+
+// Helper function to create vehicle availability
+async function createVehicleAvailability(vehicleId, bookingId, startDate, endDate, status = 'booked') {
+    try {
+        const availability = new VehicleAvailability({
+            vehicle: vehicleId,
+            booking: bookingId,
+            startDate,
+            endDate,
+            status
+        });
+        await availability.save();
+        return availability;
+    } catch (error) {
+        console.error('Error creating vehicle availability:', error);
+    }
+}
+
+// Helper function to check vehicle availability
+async function checkVehicleAvailability(vehicleId, startDate, endDate) {
+    try {
+        const conflictingBookings = await VehicleAvailability.find({
+            vehicle: vehicleId,
+            status: 'booked',
+            $or: [
+                { startDate: { $lte: endDate }, endDate: { $gte: startDate } },
+                { startDate: { $gte: startDate, $lte: endDate } },
+                { endDate: { $gte: startDate, $lte: endDate } }
+            ]
+        });
+        
+        return conflictingBookings.length === 0;
+    } catch (error) {
+        console.error('Error checking vehicle availability:', error);
+        return false;
+    }
+}
+
+// Helper function to remove vehicle availability
+async function removeVehicleAvailability(bookingId) {
+    try {
+        await VehicleAvailability.deleteOne({ booking: bookingId });
+    } catch (error) {
+        console.error('Error removing vehicle availability:', error);
+    }
+}
+
 module.exports.acceptBooking = async (req, res) => {
     try {
         const { bookingId } = req.params;
@@ -653,15 +798,58 @@ module.exports.acceptBooking = async (req, res) => {
             return res.status(403).json({ success: false, error: 'Unauthorized' });
         }
         
-        if (booking.bookingStatus !== 'PENDING_OWNER_APPROVAL') {
+        if (booking.bookingStatus !== 'PENDING' && booking.bookingStatus !== 'PENDING_OWNER_APPROVAL') {
             return res.status(400).json({ success: false, error: 'Booking is not pending approval' });
         }
         
-        booking.bookingStatus = 'CONFIRMED';
+        const previousStatus = booking.bookingStatus;
+        booking.bookingStatus = 'ACCEPTED';
         booking.bookingUpdatedAt = Date.now();
         await booking.save();
         
-        // Notify customer here
+        // Create timeline entry
+        await createBookingTimeline(bookingId, 'ACCEPTED', req.user._id, 'owner', 'Owner accepted the booking request');
+        
+        // Create notification for customer
+        await createNotification(
+            booking.customerId,
+            'BOOKING_ACCEPTED',
+            'Booking Accepted',
+            `Your booking request has been accepted by the owner. Your trip is confirmed!`,
+            bookingId,
+            booking.vehicleId
+        );
+
+        // Emit real-time notification via Socket.IO
+        const io = req.app.get('io');
+        if (io) {
+            emitToUser(io, booking.customerId, 'new_notification', {
+                type: 'BOOKING_ACCEPTED',
+                title: 'Booking Accepted',
+                message: `Your booking request has been accepted by the owner. Your trip is confirmed!`,
+                bookingId,
+                vehicleId: booking.vehicleId
+            });
+            
+            emitBookingUpdate(io, booking.customerId, booking.ownerId, 'booking_accepted', {
+                bookingId,
+                status: 'ACCEPTED',
+                customerId: booking.customerId,
+                ownerId: booking.ownerId
+            });
+        }
+        
+        // Create vehicle availability record
+        if (booking.pickupDate && booking.pickupDateTime) {
+            const endDate = booking.returnDate || booking.pickupDate;
+            await createVehicleAvailability(
+                booking.vehicleId,
+                bookingId,
+                booking.pickupDateTime,
+                new Date(endDate),
+                'booked'
+            );
+        }
         
         return res.json({ success: true, message: 'Booking accepted successfully', booking });
     } catch (e) {
@@ -685,6 +873,41 @@ module.exports.rejectBooking = async (req, res) => {
         booking.cancellationReason = reason || 'Owner rejected request';
         booking.bookingUpdatedAt = Date.now();
         await booking.save();
+        
+        // Remove vehicle availability record if it exists
+        await removeVehicleAvailability(bookingId);
+        
+        // Create timeline entry
+        await createBookingTimeline(bookingId, 'REJECTED', req.user._id, 'owner', reason || 'Owner rejected the booking request');
+        
+        // Create notification for customer
+        await createNotification(
+            booking.customerId,
+            'BOOKING_REJECTED',
+            'Booking Rejected',
+            `Your booking request has been rejected by the owner. ${reason ? 'Reason: ' + reason : ''}`,
+            bookingId,
+            booking.vehicleId
+        );
+
+        // Emit real-time notification via Socket.IO
+        const io = req.app.get('io');
+        if (io) {
+            emitToUser(io, booking.customerId, 'new_notification', {
+                type: 'BOOKING_REJECTED',
+                title: 'Booking Rejected',
+                message: `Your booking request has been rejected by the owner. ${reason ? 'Reason: ' + reason : ''}`,
+                bookingId,
+                vehicleId: booking.vehicleId
+            });
+            
+            emitBookingUpdate(io, booking.customerId, booking.ownerId, 'booking_rejected', {
+                bookingId,
+                status: 'REJECTED',
+                customerId: booking.customerId,
+                ownerId: booking.ownerId
+            });
+        }
         
         return res.json({ success: true, message: 'Booking rejected successfully' });
     } catch (e) {
@@ -713,6 +936,19 @@ module.exports.sendCounterOffer = async (req, res) => {
         };
         booking.bookingUpdatedAt = Date.now();
         await booking.save();
+        
+        // Create timeline entry
+        await createBookingTimeline(bookingId, 'COUNTER_OFFERED', req.user._id, 'owner', message || 'Owner sent counter offer', { originalFare: booking.totalPrice, newFare: totalFare });
+        
+        // Create notification for customer
+        await createNotification(
+            booking.customerId,
+            'COUNTER_OFFER',
+            'Counter Offer Received',
+            `Owner has sent a counter offer for your booking. Original: ₹${booking.totalPrice}, New: ₹${totalFare}. ${message || ''}`,
+            bookingId,
+            booking.vehicleId
+        );
         
         return res.json({ success: true, message: 'Counter offer sent to customer' });
     } catch (e) {
@@ -743,11 +979,53 @@ module.exports.respondToCounterOffer = async (req, res) => {
             booking.basePrice = booking.counterOffer.baseFare;
             booking.totalPrice = booking.counterOffer.totalFare;
             booking.estimatedFare = booking.counterOffer.totalFare;
-            booking.bookingStatus = 'CONFIRMED';
+            booking.bookingStatus = 'ACCEPTED';
+            
+            // Create timeline entry
+            await createBookingTimeline(bookingId, 'ACCEPTED', req.user._id, 'customer', 'Customer accepted counter offer', { newFare: booking.counterOffer.totalFare });
+            
+            // Create notification for owner
+            await createNotification(
+                booking.ownerId,
+                'BOOKING_ACCEPTED',
+                'Counter Offer Accepted',
+                `Customer accepted your counter offer of ₹${booking.counterOffer.totalFare}. Booking is confirmed!`,
+                bookingId,
+                booking.vehicleId
+            );
+            
+            // Create vehicle availability record
+            if (booking.pickupDate && booking.pickupDateTime) {
+                const endDate = booking.returnDate || booking.pickupDate;
+                await createVehicleAvailability(
+                    booking.vehicleId,
+                    bookingId,
+                    booking.pickupDateTime,
+                    new Date(endDate),
+                    'booked'
+                );
+            }
+            
         } else if (action === 'reject') {
             booking.counterOffer.status = 'REJECTED';
             booking.bookingStatus = 'REJECTED';
             booking.cancellationReason = 'Customer rejected counter offer';
+            
+            // Remove vehicle availability record if it exists
+            await removeVehicleAvailability(bookingId);
+            
+            // Create timeline entry
+            await createBookingTimeline(bookingId, 'REJECTED', req.user._id, 'customer', 'Customer rejected counter offer');
+            
+            // Create notification for owner
+            await createNotification(
+                booking.ownerId,
+                'BOOKING_REJECTED',
+                'Counter Offer Rejected',
+                'Customer rejected your counter offer. Booking has been cancelled.',
+                bookingId,
+                booking.vehicleId
+            );
         } else {
             return res.status(400).json({ success: false, error: 'Invalid action' });
         }

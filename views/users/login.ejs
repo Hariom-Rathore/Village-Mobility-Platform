@@ -1,26 +1,36 @@
 <% layout("/listings/layouts/boilerplate") %>
-<div class="row mt-3">
-    <h1 class="col-6 offset-3">Login </h1>
-</div>
+<style>
+.login-page { min-height: 80vh; display: flex; align-items: center; justify-content: center; padding: 20px; }
+.login-card { background: white; border-radius: 24px; padding: 40px; box-shadow: 0 4px 24px rgba(0,0,0,0.08); width: 100%; max-width: 400px; }
+.login-card h1 { font-size: 28px; font-weight: 700; text-align: center; margin-bottom: 8px; }
+.login-card .subtitle { text-align: center; color: #666; font-size: 14px; margin-bottom: 32px; }
+.form-group { margin-bottom: 20px; }
+.form-group label { display: block; font-size: 14px; font-weight: 600; color: #333; margin-bottom: 8px; }
+.form-group input { width: 100%; padding: 14px 16px; border: 2px solid #e5e7eb; border-radius: 12px; font-size: 15px; transition: all 0.2s; background: #f9fafb; }
+.form-group input:focus { outline: none; border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37,99,235,0.1); background: white; }
+.btn-login { width: 100%; background: #2563eb; color: white; border: none; border-radius: 12px; padding: 16px; font-size: 16px; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+.btn-login:hover { background: #1d4ed8; transform: translateY(-1px); }
+.signup-link { text-align: center; margin-top: 20px; font-size: 14px; color: #666; }
+.signup-link a { color: #2563eb; font-weight: 600; text-decoration: none; }
+</style>
 
-<div class="row  mt-3">
-    <div class="col-6 offset-3">
-        <form action="/login" method="POST" class="needs-validation" novalidate>
-<div class="mb-3">
-                <label for="username" class="form-label">username</label>
-                <input id="username"  name="username" type="text" class="form-control" required />
-                
-            </div>
-
-            
-
-                 <div class="mb-3">
-                <label for="password" class="form-label">Password</label>
-                <input id="password"  name="password" type="password" class="form-control" required />
-            
-            </div>
-            <button class="btn btn-success">Login</button>
-
-        </form>
+<div class="login-page">
+  <div class="login-card">
+    <h1>Welcome Back</h1>
+    <p class="subtitle">Log in to continue your journey</p>
+    <form action="/users/login" method="POST">
+      <div class="form-group">
+        <label>Username</label>
+        <input type="text" name="username" placeholder="Enter your username" required>
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <input type="password" name="password" placeholder="Enter your password" required>
+      </div>
+      <button type="submit" class="btn-login">Log In</button>
+    </form>
+    <div class="signup-link">
+      Don't have an account? <a href="/signup">Sign up</a>
     </div>
+  </div>
 </div>

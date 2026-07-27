@@ -1,662 +1,268 @@
-<% layout('/listings/layouts/boilerplate') %>
-
-<!-- Leaflet CSS & JS for Map -->
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
-
-
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+<title>Book - RideLocal</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <style>
-/* Modern 3-Step Booking UI Styles */
-.booking-container {
-    max-width: 900px;
-    margin: 2rem auto;
-    background: #ffffff;
-    border-radius: 20px;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.08);
-    overflow: hidden;
+:root{--primary:#2563eb;--primary-dark:#1d4ed8;--primary-light:#dbeafe;--bg:#f0f4f9;--card:#fff;--text:#0f172a;--text2:#475569;--text3:#94a3b8;--border:#e2e8f0;--success:#10b981;--warning:#f59e0b;--radius:16px;}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Inter',-apple-system,sans-serif;background:var(--bg);color:var(--text);-webkit-font-smoothing:antialiased;}
+.app{max-width:480px;margin:0 auto;min-height:100vh;background:var(--card);}
+
+/* Header */
+.top-bar{display:flex;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--card);z-index:10;}
+.top-bar .back{width:36px;height:36px;border:none;border-radius:50%;background:var(--bg);display:flex;align-items:center;justify-content:center;color:var(--text2);font-size:14px;cursor:pointer;transition:all .15s;text-decoration:none;}
+.top-bar .back:active{transform:scale(0.9);}
+.top-bar h1{font-size:17px;font-weight:700;flex:1;}
+
+/* Content */
+.content{padding:16px;}
+
+/* Vehicle Hero Card */
+.v-hero{background:linear-gradient(135deg,#f8fafc,#fff);border-radius:20px;padding:16px;display:flex;gap:14px;margin-bottom:16px;border:1px solid var(--border);}
+.v-hero img{width:100px;height:76px;border-radius:12px;object-fit:cover;background:var(--bg);flex-shrink:0;}
+.v-hero-body{flex:1;min-width:0;}
+.v-hero-body h2{font-size:16px;font-weight:700;}
+.v-hero-body .meta{font-size:12px;color:var(--text3);margin:2px 0 4px;display:flex;gap:8px;flex-wrap:wrap;}
+.v-hero-body .meta span{display:flex;align-items:center;gap:3px;}
+.v-hero-body .price-badge{display:inline-block;background:var(--primary-light);color:var(--primary);padding:4px 12px;border-radius:20px;font-size:13px;font-weight:700;}
+
+/* Section Card */
+.section-card{background:var(--card);border-radius:var(--radius);padding:16px;margin-bottom:12px;border:1px solid var(--border);}
+.section-card h3{font-size:13px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:0.3px;margin-bottom:12px;display:flex;align-items:center;gap:6px;}
+.section-card h3 i{color:var(--primary);}
+
+.info-row{display:flex;align-items:flex-start;gap:10px;padding:8px 0;}
+.info-row:not(:last-child){border-bottom:1px solid var(--border);}
+.info-row .i-icon{width:32px;height:32px;border-radius:10px;background:var(--bg);display:flex;align-items:center;justify-content:center;color:var(--text2);font-size:13px;flex-shrink:0;}
+.info-row .i-icon.green{background:#d1fae5;color:#059669;}
+.info-row .i-icon.red{background:#fee2e2;color:#dc2626;}
+.info-row .i-label{font-size:11px;color:var(--text3);}
+.info-row .i-value{font-size:13px;font-weight:600;color:var(--text);}
+
+/* Fare Breakdown */
+.fare-card{background:var(--card);border-radius:var(--radius);padding:16px;margin-bottom:16px;border:1px solid var(--border);}
+.fare-card h3{font-size:13px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:0.3px;margin-bottom:10px;display:flex;align-items:center;gap:6px;}
+.fare-card h3 i{color:var(--primary);}
+.fare-row{display:flex;justify-content:space-between;padding:5px 0;font-size:13px;color:var(--text2);}
+.fare-row .val{font-weight:600;color:var(--text);}
+.fare-divider{height:1px;background:var(--border);margin:8px 0;}
+.fare-row.total{font-size:16px;font-weight:700;color:var(--text);}
+.fare-row.total .val{color:var(--primary);font-size:18px;}
+
+/* Form */
+.form-group{margin-bottom:14px;}
+.form-group label{display:block;font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;}
+.input-wrap{display:flex;align-items:center;background:var(--bg);border:2px solid transparent;border-radius:12px;padding:0 14px;transition:all .2s;min-height:48px;}
+.input-wrap:focus-within{border-color:var(--primary);background:var(--card);box-shadow:0 0 0 4px rgba(37,99,235,0.08);}
+.input-wrap .icon{width:22px;text-align:center;flex-shrink:0;font-size:13px;color:var(--text3);}
+.input-wrap input,.input-wrap select,.input-wrap textarea{flex:1;border:none;background:transparent;padding:12px 8px;font-size:14px;outline:none;font-family:inherit;color:var(--text);}
+.input-wrap input::placeholder,.input-wrap textarea::placeholder{color:var(--text3);}
+.input-wrap textarea{resize:vertical;min-height:60px;}
+.form-row2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+
+.btn-primary{width:100%;background:linear-gradient(135deg,var(--primary),#7c3aed);color:#fff;border:none;border-radius:14px;padding:16px;font-size:16px;font-weight:700;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:8px;}
+.btn-primary:active{transform:scale(0.97);opacity:0.9;}
+.btn-primary:disabled{opacity:0.5;cursor:not-allowed;transform:none;}
+.btn-primary i{font-size:15px;}
+
+/* Status Badge */
+.status-badge{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:20px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.3px;}
+.status-pending{background:#fef3c7;color:#92400e;}
+.status-confirmed{background:#d1fae5;color:#065f46;}
+
+/* Mobile */
+@media(max-width:400px){
+  .form-row2{grid-template-columns:1fr;}
+  .v-hero{flex-direction:column;}
+  .v-hero img{width:100%;height:160px;}
 }
 
-.step-indicator {
-    display: flex;
-    justify-content: space-between;
-    padding: 2rem 3rem;
-    background: #f8f9fa;
-    border-bottom: 1px solid #eee;
-}
-
-.step {
-    flex: 1;
-    text-align: center;
-    position: relative;
-    color: #adb5bd;
-    font-weight: 600;
-}
-
-.step:not(:last-child)::after {
-    content: '';
-    position: absolute;
-    top: 15px;
-    left: 60%;
-    right: -40%;
-    height: 3px;
-    background: #e9ecef;
-    z-index: 1;
-}
-
-.step.active {
-    color: #0d6efd;
-}
-
-.step.completed {
-    color: #198754;
-}
-
-.step.completed:not(:last-child)::after {
-    background: #198754;
-}
-
-.step-icon {
-    width: 35px;
-    height: 35px;
-    background: #fff;
-    border: 2px solid #e9ecef;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin: 0 auto 10px;
-    position: relative;
-    z-index: 2;
-    font-weight: bold;
-}
-
-.step.active .step-icon {
-    border-color: #0d6efd;
-    background: #0d6efd;
-    color: #fff;
-    box-shadow: 0 0 0 4px rgba(13, 110, 253, 0.2);
-}
-
-.step.completed .step-icon {
-    border-color: #198754;
-    background: #198754;
-    color: #fff;
-}
-
-.step-content {
-    display: none;
-    padding: 2rem 3rem;
-    animation: fadeIn 0.4s ease;
-}
-
-.step-content.active {
-    display: block;
-}
-
-@keyframes fadeIn {
-    from { opacity: 0; transform: translateY(10px); }
-    to { opacity: 1; transform: translateY(0); }
-}
-
-.form-floating > label {
-    color: #6c757d;
-}
-
-.map-container {
-    height: 300px;
-    border-radius: 12px;
-    overflow: hidden;
-    margin-bottom: 1.5rem;
-    border: 1px solid #dee2e6;
-}
-
-.price-card {
-    background: #f8f9fa;
-    border-radius: 12px;
-    padding: 1.5rem;
-    border: 1px solid #e9ecef;
-}
-
-.price-row {
-    display: flex;
-    justify-content: space-between;
-    margin-bottom: 0.5rem;
-    color: #495057;
-}
-
-.price-total {
-    display: flex;
-    justify-content: space-between;
-    margin-top: 1rem;
-    padding-top: 1rem;
-    border-top: 2px dashed #dee2e6;
-    font-weight: 700;
-    font-size: 1.2rem;
-    color: #212529;
-}
-
-.btn-navigation {
-    padding: 0.75rem 2rem;
-    font-weight: 600;
-    border-radius: 50rem;
-    transition: all 0.2s;
-}
-
-.autocomplete-suggestions {
-    position: absolute;
-    z-index: 1000;
-    background: white;
-    width: 100%;
-    max-height: 200px;
-    overflow-y: auto;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-    border-radius: 0 0 8px 8px;
-    display: none;
-}
-.autocomplete-item {
-    padding: 10px;
-    cursor: pointer;
-    border-bottom: 1px solid #eee;
-}
-.autocomplete-item:hover {
-    background: #f8f9fa;
-}
-
-@media (max-width: 768px) {
-    .step-indicator, .step-content {
-        padding: 1rem;
-    }
-    .step-title {
-        font-size: 0.8rem;
-    }
-}
+/* Animation */
+@keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.content>*{animation:fadeUp .3s ease-out both;}
+.content>*:nth-child(2){animation-delay:0.05s}
+.content>*:nth-child(3){animation-delay:0.1s}
+.content>*:nth-child(4){animation-delay:0.15s}
 </style>
+</head>
+<body>
+<div class="app">
+  <div class="top-bar">
+    <a class="back" href="/customers/home"><i class="fas fa-arrow-left"></i></a>
+    <h1>Book Your Ride</h1>
+  </div>
 
-<div class="container mb-5">
-    <div class="booking-container">
-        <!-- Progress Indicator -->
-        <div class="step-indicator">
-            <div class="step active" id="step1-ind">
-                <div class="step-icon">1</div>
-                <div class="step-title">Trip Details</div>
-            </div>
-            <div class="step" id="step2-ind">
-                <div class="step-icon">2</div>
-                <div class="step-title">Route & Price</div>
-            </div>
-            <div class="step" id="step3-ind">
-                <div class="step-icon">3</div>
-                <div class="step-title">Confirm</div>
-            </div>
+  <div class="content">
+    <!-- Vehicle Hero -->
+    <div class="v-hero">
+      <img src="<%= listing.images?.[0]?.url || listing.image?.url || 'https://images.pexels.com/photos/11129937/pexels-photo-11129937.jpeg' %>"
+           onerror="this.src='https://images.pexels.com/photos/11129937/pexels-photo-11129937.jpeg'">
+      <div class="v-hero-body">
+        <h2><%= listing.vehicleName || listing.title %></h2>
+        <div class="meta">
+          <span><i class="fas fa-car"></i> <%= listing.vehicleType || listing.carType || 'Sedan' %></span>
+          <span><i class="fas fa-users"></i> <%= listing.seats || 4 %> seats</span>
+          <span><i class="fas fa-snowflake"></i> <%= listing.acAvailable ? 'AC' : 'Non-AC' %></span>
+          <span><i class="fas fa-gear"></i> <%= listing.transmission === 'automatic' ? 'Auto' : 'Manual' %></span>
+        </div>
+        <% if(searchParams?.fare) { %>
+          <div class="price-badge">₹<%= searchParams.fare.toLocaleString('en-IN') %> est.</div>
+        <% } %>
+      </div>
+    </div>
+
+    <!-- Trip Details -->
+    <div class="section-card">
+      <h3><i class="fas fa-route"></i> Trip Details</h3>
+      <div class="info-row">
+        <div class="i-icon green"><i class="fas fa-circle-dot"></i></div>
+        <div><div class="i-label">Pickup</div><div class="i-value"><%= searchParams?.pickup || '—' %></div></div>
+      </div>
+      <div class="info-row">
+        <div class="i-icon red"><i class="fas fa-location-dot"></i></div>
+        <div><div class="i-label">Destination</div><div class="i-value"><%= searchParams?.destination || '—' %></div></div>
+      </div>
+      <% if(searchParams?.distance) { %>
+      <div class="info-row">
+        <div class="i-icon"><i class="fas fa-road"></i></div>
+        <div><div class="i-label">Distance</div><div class="i-value"><%= searchParams.distance %> km</div></div>
+      </div>
+      <% } %>
+      <div class="info-row">
+        <div class="i-icon"><i class="fas fa-calendar"></i></div>
+        <div><div class="i-label">Date &amp; Time</div><div class="i-value"><%= searchParams?.date || 'Today' %> · <%= searchParams?.time || 'Now' %></div></div>
+      </div>
+      <div class="info-row">
+        <div class="i-icon"><i class="fas fa-users"></i></div>
+        <div><div class="i-label">Passengers</div><div class="i-value"><%= searchParams?.passengers || 1 %> person(s)</div></div>
+      </div>
+    </div>
+
+    <!-- Fare Breakdown -->
+    <div class="fare-card">
+      <h3><i class="fas fa-receipt"></i> Fare Estimate</h3>
+      <div class="fare-row">
+        <span>Base Fare</span>
+        <span class="val">₹<%= (listing.baseFare || listing.price || 0).toLocaleString('en-IN') %></span>
+      </div>
+      <div class="fare-row">
+        <span>Distance Charge (<%= searchParams?.distance || 0 %> km × ₹<%= listing.pricePerKm || listing.ratePerKm || 0 %>/km)</span>
+        <span class="val">₹<%= ((searchParams?.distance || 0) * (listing.pricePerKm || listing.ratePerKm || 0)).toLocaleString('en-IN') %></span>
+      </div>
+      <div class="fare-divider"></div>
+      <div class="fare-row total">
+        <span>Estimated Total</span>
+        <span class="val" id="totalFare">₹<%= (searchParams?.fare || Math.ceil((listing.baseFare || listing.price || 0) + ((searchParams?.distance || 0) * (listing.pricePerKm || listing.ratePerKm || 0)))).toLocaleString('en-IN') %></span>
+      </div>
+    </div>
+
+    <!-- Booking Form -->
+    <form id="bookingForm" action="/book/<%= listing._id %>/request" method="POST">
+      <div class="section-card">
+        <h3><i class="fas fa-pen"></i> Confirm Booking</h3>
+
+        <div class="form-group">
+          <label>Pickup Location</label>
+          <div class="input-wrap">
+            <span class="icon green"><i class="fas fa-circle-dot"></i></span>
+            <input type="text" name="booking[pickupLocation]" value="<%= searchParams?.pickup || '' %>" placeholder="Pickup location" required>
+          </div>
         </div>
 
-        <form id="tripBookingForm">
-            <!-- STEP 1: Trip Details -->
-            <div class="step-content active" id="step1-content">
-                <h4 class="mb-4 fw-bold">Where are you heading?</h4>
-                
-                <div class="row g-3">
-                    <div class="col-md-6 position-relative">
-                        <label class="form-label fw-bold">Pickup Location <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control form-control-lg" id="pickupLocation" required placeholder="Search pickup area..." autocomplete="off">
-                        <div id="pickupSuggestions" class="autocomplete-suggestions"></div>
-                    </div>
-                    
-                    <div class="col-md-6 position-relative">
-                        <label class="form-label fw-bold">Destination <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control form-control-lg" id="destinationLocation" required placeholder="Search destination..." autocomplete="off">
-                        <div id="destSuggestions" class="autocomplete-suggestions"></div>
-                    </div>
+        <div class="form-group">
+          <label>Destination</label>
+          <div class="input-wrap">
+            <span class="icon red"><i class="fas fa-location-dot"></i></span>
+            <input type="text" name="booking[destination]" value="<%= searchParams?.destination || '' %>" placeholder="Destination" required>
+          </div>
+        </div>
 
-                    <div class="col-md-6">
-                        <label class="form-label fw-bold">Pickup Date <span class="text-danger">*</span></label>
-                        <input type="date" class="form-control form-control-lg" id="pickupDate" required>
-                    </div>
-
-                    <div class="col-md-6">
-                        <label class="form-label fw-bold">Pickup Time <span class="text-danger">*</span></label>
-                        <input type="time" class="form-control form-control-lg" id="pickupTime" required>
-                    </div>
-
-                    <div class="col-md-6">
-                        <label class="form-label fw-bold">Number of Passengers <span class="text-danger">*</span></label>
-                        <input type="number" class="form-control form-control-lg" id="passengers" min="1" max="<%= listing.seats || 7 %>" required placeholder="e.g. 4">
-                        <small class="text-muted">Max capacity: <%= listing.seats || 7 %> seats</small>
-                    </div>
-
-                    <div class="col-md-6">
-                        <label class="form-label fw-bold">Trip Type <span class="text-danger">*</span></label>
-                        <select class="form-select form-control-lg" id="tripType" required>
-                            <option value="" disabled selected>Select trip type...</option>
-                            <option value="local">Local Trip</option>
-                            <option value="outstation">Outstation</option>
-                            <option value="airport-pickup">Airport Pickup</option>
-                            <option value="railway-pickup">Railway Pickup</option>
-                            <option value="wedding">Wedding</option>
-                            <option value="family-function">Family Function</option>
-                            <option value="temple-visit">Temple Visit</option>
-                            <option value="tourism">Tourism</option>
-                            <option value="corporate">Corporate</option>
-                            <option value="other">Other</option>
-                        </select>
-                    </div>
-
-                    <div class="col-12">
-                        <label class="form-label fw-bold">Special Instructions (Optional)</label>
-                        <textarea class="form-control" id="specialInstructions" rows="2" placeholder="e.g. Need extra luggage space, senior citizens travelling..."></textarea>
-                    </div>
-                </div>
-
-                <div class="d-flex justify-content-end mt-4">
-                    <button type="button" class="btn btn-primary btn-navigation" onclick="nextStep(2)">Calculate Route & Price &rarr;</button>
-                </div>
+        <div class="form-row2">
+          <div class="form-group">
+            <label>Travel Date</label>
+            <div class="input-wrap">
+              <span class="icon"><i class="fas fa-calendar"></i></span>
+              <input type="date" name="booking[pickupDate]" value="<%= searchParams?.date || '' %>" required>
             </div>
-
-            <!-- STEP 2: Distance & Price -->
-            <div class="step-content" id="step2-content">
-                <h4 class="mb-4 fw-bold">Route & Estimated Fare</h4>
-                
-                <div class="row">
-                    <div class="col-lg-7">
-                        <div class="map-container" id="map"></div>
-                        
-                        <div class="alert alert-info d-flex align-items-center" role="alert">
-                            <i class="fa-solid fa-circle-info me-2"></i>
-                            <div>
-                                Toll, Parking and State Tax (if applicable) will be charged separately unless included by the vehicle owner.
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="col-lg-5">
-                        <div class="price-card">
-                            <h5 class="fw-bold mb-3">Fare Breakdown</h5>
-                            
-                            <div class="price-row">
-                                <span><i class="fa-solid fa-route me-2"></i>Distance</span>
-                                <span id="displayDistance" class="fw-bold">0 km</span>
-                            </div>
-                            
-                            <div class="price-row">
-                                <span><i class="fa-regular fa-clock me-2"></i>Est. Duration</span>
-                                <span id="displayDuration" class="fw-bold">0 mins</span>
-                            </div>
-                            
-                            <hr>
-                            
-                            <div class="price-row">
-                                <span>Base Fare</span>
-                                <span id="displayBaseFare">₹<%= listing.baseFare || listing.price || 0 %></span>
-                            </div>
-                            
-                            <div class="price-row">
-                                <span>Per KM Rate</span>
-                                <span id="displayPerKm">₹<%= listing.pricePerKm || listing.ratePerKm || 0 %> / km</span>
-                            </div>
-                            
-                            <div class="price-total">
-                                <span>Estimated Total</span>
-                                <span id="displayTotalFare" class="text-primary fs-3">₹0</span>
-                            </div>
-                            <small class="text-muted text-end d-block mt-2">Subject to owner approval</small>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="d-flex justify-content-between mt-4">
-                    <button type="button" class="btn btn-outline-secondary btn-navigation" onclick="prevStep(1)">&larr; Back</button>
-                    <button type="button" class="btn btn-primary btn-navigation" onclick="nextStep(3)">Continue to Details &rarr;</button>
-                </div>
+          </div>
+          <div class="form-group">
+            <label>Pickup Time</label>
+            <div class="input-wrap">
+              <span class="icon"><i class="fas fa-clock"></i></span>
+              <input type="time" name="booking[pickupTime]" value="<%= searchParams?.time || '' %>" required>
             </div>
+          </div>
+        </div>
 
-            <!-- STEP 3: Customer Information & Summary -->
-            <div class="step-content" id="step3-content">
-                <h4 class="mb-4 fw-bold">Booking Summary & Details</h4>
-                
-                <div class="row">
-                    <div class="col-md-5 order-md-2 mb-4">
-                        <div class="card border-0 shadow-sm rounded-4">
-                            <% if(listing.image && listing.image.url) { %>
-                            <img src="<%= listing.image.url %>" class="card-img-top rounded-top-4" style="height: 150px; object-fit: cover;" alt="<%= listing.title %>">
-                            <% } %>
-                            <div class="card-body">
-                                <h5 class="card-title fw-bold"><%= listing.title %></h5>
-                                <p class="text-muted mb-3"><i class="fa-solid fa-user-tie me-2"></i>Driven by: <span class="fw-bold text-dark"><%= listing.driverType === 'owner' ? 'Vehicle Owner' : 'Dedicated Driver' %></span></p>
-                                
-                                <ul class="list-unstyled mb-0 small">
-                                    <li class="mb-2"><strong>Pickup:</strong> <span id="sumPickup"></span></li>
-                                    <li class="mb-2"><strong>Destination:</strong> <span id="sumDestination"></span></li>
-                                    <li class="mb-2"><strong>Date & Time:</strong> <span id="sumDateTime"></span></li>
-                                    <li class="mb-2"><strong>Passengers:</strong> <span id="sumPassengers"></span></li>
-                                    <li class="mb-2 text-primary fw-bold border-top pt-2 mt-2">Est. Fare: <span id="sumFare" class="fs-5"></span></li>
-                                </ul>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="col-md-7 order-md-1">
-                        <div class="mb-4">
-                            <h5 class="fw-bold mb-3">Your Details</h5>
-                            <div class="row g-3">
-                                <div class="col-12">
-                                    <label class="form-label">Full Name <span class="text-danger">*</span></label>
-                                    <input type="text" class="form-control" id="customerName" value="<%= currUser ? currUser.username : '' %>" required>
-                                </div>
-                                <div class="col-md-6">
-                                    <label class="form-label">Phone Number <span class="text-danger">*</span></label>
-                                    <input type="tel" class="form-control" id="customerPhone" value="<%= currUser ? currUser.phone : '' %>" required>
-                                </div>
-                                <div class="col-md-6">
-                                    <label class="form-label">Email (Optional)</label>
-                                    <input type="email" class="form-control" id="customerEmail" value="<%= currUser ? currUser.email : '' %>">
-                                </div>
-                                <div class="col-12">
-                                    <label class="form-label">Emergency Contact (Optional)</label>
-                                    <input type="tel" class="form-control" id="emergencyContact">
-                                </div>
-                            </div>
-                        </div>
+        <div class="form-group">
+          <label>Passengers</label>
+          <div class="input-wrap">
+            <span class="icon"><i class="fas fa-users"></i></span>
+            <input type="number" name="booking[passengers]" min="1" max="<%= listing.seats || 10 %>" value="<%= searchParams?.passengers || 1 %>" required>
+          </div>
+        </div>
 
-                        <div class="mb-4">
-                            <h5 class="fw-bold mb-3">Payment Preference</h5>
-                            <p class="text-muted small mb-2">No payment will be collected now. The owner will confirm the booking first.</p>
-                            <select class="form-select form-control-lg" id="paymentMethod">
-                                <option value="cash">Cash to Driver</option>
-                                <option value="upi">UPI (GPay, PhonePe, Paytm)</option>
-                                <option value="online">Online Payment Link</option>
-                            </select>
-                        </div>
-                    </div>
-                </div>
+        <div class="form-group">
+          <label>Special Note (Optional)</label>
+          <div class="input-wrap">
+            <span class="icon"><i class="fas fa-pen"></i></span>
+            <textarea name="booking[specialInstructions]" placeholder="Any special requests for the driver..."></textarea>
+          </div>
+        </div>
+      </div>
 
-                <div class="d-flex justify-content-between mt-4">
-                    <button type="button" class="btn btn-outline-secondary btn-navigation" onclick="prevStep(2)">&larr; Back</button>
-                    <button type="submit" class="btn btn-success btn-navigation fs-5" id="submitBtn">
-                        <i class="fa-solid fa-paper-plane me-2"></i> Send Trip Request
-                    </button>
-                </div>
-            </div>
-        </form>
-    </div>
+      <input type="hidden" name="booking[tripType]" value="one-way">
+      <input type="hidden" name="booking[distanceKm]" value="<%= searchParams?.distance || 0 %>">
+      <input type="hidden" name="booking[estimatedDuration]" value="">
+      <input type="hidden" name="booking[estimatedFare]" value="<%= searchParams?.fare || Math.ceil((listing.baseFare || listing.price || 0) + ((searchParams?.distance || 0) * (listing.pricePerKm || listing.ratePerKm || 0))) %>">
+      <input type="hidden" name="booking[paymentMethod]" value="cash">
+      <% if(searchParams?.pickupLat) { %>
+      <input type="hidden" name="booking[pickupLat]" value="<%= searchParams.pickupLat %>">
+      <input type="hidden" name="booking[pickupLng]" value="<%= searchParams.pickupLng %>">
+      <% } %>
+      <% if(searchParams?.destLat) { %>
+      <input type="hidden" name="booking[destLat]" value="<%= searchParams.destLat %>">
+      <input type="hidden" name="booking[destLng]" value="<%= searchParams.destLng %>">
+      <% } %>
+
+      <button type="submit" class="btn-primary" id="submitBtn">
+        <i class="fas fa-paper-plane"></i> Send Booking Request
+      </button>
+
+      <div style="text-align:center;margin-top:10px;padding-bottom:20px;">
+        <span class="status-badge status-pending"><i class="fas fa-clock"></i> Booking stays PENDING until owner confirms</span>
+      </div>
+    </form>
+  </div>
 </div>
 
-<script type="application/json" id="listing-data"><%- JSON.stringify(listing) %></script>
-<script type="application/json" id="booking-config"><%- JSON.stringify({ orsKey: typeof orsKey !== 'undefined' ? orsKey : '' }) %></script>
-
 <script>
-// Data Setup
-const listing = JSON.parse(document.getElementById('listing-data').textContent);
-const bookingConfig = JSON.parse(document.getElementById('booking-config').textContent);
-const orsKey = bookingConfig.orsKey || '';
-
-let map;
-let pickupMarker, destMarker, routeLine;
-let pickupCoords = null, destCoords = null;
-let routeDistanceKm = 0, routeDurationSeconds = 0, estimatedTotalFare = 0;
-
-// Min Date Setup
-document.getElementById('pickupDate').min = new Date().toISOString().split('T')[0];
-
-// Step Navigation Logic
-function nextStep(step) {
-    if(step === 2) {
-        if(!validateStep1()) return;
-        renderMapAndCalculateRoute();
+// Set default date/time
+(function() {
+  const d = new Date();
+  document.querySelectorAll('input[type="date"]').forEach(el => {
+    if (!el.value) {
+      el.value = d.toISOString().split('T')[0];
+      el.min = d.toISOString().split('T')[0];
     }
-    if(step === 3) {
-        updateSummary();
+  });
+  document.querySelectorAll('input[type="time"]').forEach(el => {
+    if (!el.value) {
+      el.value = String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()+30).padStart(2,'0');
     }
-    showStep(step);
-}
+  });
+})();
 
-function prevStep(step) {
-    showStep(step);
-}
-
-function showStep(step) {
-    document.querySelectorAll('.step-content').forEach(el => el.classList.remove('active'));
-    document.getElementById(`step${step}-content`).classList.add('active');
-    
-    document.querySelectorAll('.step').forEach((el, index) => {
-        el.classList.remove('active', 'completed');
-        if(index + 1 < step) el.classList.add('completed');
-        if(index + 1 === step) el.classList.add('active');
-    });
-
-    if(step === 2 && map) {
-        setTimeout(() => { map.invalidateSize(); }, 300); // Fix map render issue in hidden div
-    }
-}
-
-function validateStep1() {
-    const pLoc = document.getElementById('pickupLocation').value;
-    const dLoc = document.getElementById('destinationLocation').value;
-    const pDate = document.getElementById('pickupDate').value;
-    const pTime = document.getElementById('pickupTime').value;
-    const pass = document.getElementById('passengers').value;
-    const tType = document.getElementById('tripType').value;
-    
-    if(!pLoc || !dLoc || !pDate || !pTime || !pass || !tType) {
-        alert("Please fill all required fields in Step 1.");
-        return false;
-    }
-    if(pLoc.toLowerCase() === dLoc.toLowerCase()) {
-        alert("Pickup and Destination cannot be the same.");
-        return false;
-    }
-    const maxSeats = listing.seats || 7;
-    if(parseInt(pass) > maxSeats) {
-        alert(`Maximum passenger capacity is ${maxSeats}.`);
-        return false;
-    }
-    return true;
-}
-
-// Location Autocomplete (Nominatim)
-let pTimer, dTimer;
-document.getElementById('pickupLocation').addEventListener('input', function() {
-    clearTimeout(pTimer);
-    pTimer = setTimeout(() => searchLocation(this.value, 'pickupSuggestions', (item) => {
-        pickupCoords = [parseFloat(item.lat), parseFloat(item.lon)];
-        this.value = item.display_name;
-        document.getElementById('pickupSuggestions').style.display = 'none';
-    }), 400);
-});
-document.getElementById('destinationLocation').addEventListener('input', function() {
-    clearTimeout(dTimer);
-    dTimer = setTimeout(() => searchLocation(this.value, 'destSuggestions', (item) => {
-        destCoords = [parseFloat(item.lat), parseFloat(item.lon)];
-        this.value = item.display_name;
-        document.getElementById('destSuggestions').style.display = 'none';
-    }), 400);
-});
-
-async function searchLocation(query, containerId, onSelect) {
-    const container = document.getElementById(containerId);
-    if(!query || query.length < 3) { container.style.display = 'none'; return; }
-    
-    try {
-        const res = await fetch(`/cars/geocode?q=${encodeURIComponent(query)}`, {headers:{'Accept':'application/json'}});
-        const data = await res.json();
-        container.innerHTML = '';
-        if(data.length) {
-            data.forEach(item => {
-                const div = document.createElement('div');
-                div.className = 'autocomplete-item';
-                div.innerText = item.display_name;
-                div.onclick = () => onSelect(item);
-                container.appendChild(div);
-            });
-            container.style.display = 'block';
-        } else {
-            container.style.display = 'none';
-        }
-    } catch(e) { console.error(e); }
-}
-
-// Hide autocomplete when clicking outside
-document.addEventListener('click', (e) => {
-    if(!e.target.closest('.position-relative')) {
-        document.getElementById('pickupSuggestions').style.display = 'none';
-        document.getElementById('destSuggestions').style.display = 'none';
-    }
-});
-
-// Map & Routing
-function initMap() {
-    if(map) return;
-    map = L.map('map').setView([20.5937, 78.9629], 5);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        maxZoom: 19, attribution: '&copy; OpenStreetMap'
-    }).addTo(map);
-}
-
-async function renderMapAndCalculateRoute() {
-    initMap();
-    if(!pickupCoords || !destCoords) {
-        // Fallback geocode if user didn't select from dropdown
-        if(!pickupCoords) pickupCoords = await fetchGeocode(document.getElementById('pickupLocation').value);
-        if(!destCoords) destCoords = await fetchGeocode(document.getElementById('destinationLocation').value);
-    }
-    
-    if(!pickupCoords || !destCoords) {
-        alert("Could not find coordinates for locations. Please select from dropdown.");
-        return prevStep(1);
-    }
-
-    if(pickupMarker) pickupMarker.remove();
-    if(destMarker) destMarker.remove();
-    if(routeLine) routeLine.remove();
-
-    pickupMarker = L.marker(pickupCoords).addTo(map).bindPopup('Pickup');
-    destMarker = L.marker(destCoords).addTo(map).bindPopup('Destination');
-
-    // Fetch Route
-    try {
-        const osrmUrl = `https://router.project-osrm.org/route/v1/driving/${pickupCoords[1]},${pickupCoords[0]};${destCoords[1]},${destCoords[0]}?overview=full&geometries=geojson`;
-        const res = await fetch(osrmUrl);
-        const data = await res.json();
-        const route = data.routes[0];
-        
-        routeDistanceKm = route.distance / 1000;
-        routeDurationSeconds = route.duration;
-        
-        const coords = route.geometry.coordinates.map(([lng, lat]) => [lat, lng]);
-        routeLine = L.polyline(coords, {color: '#0d6efd', weight: 5}).addTo(map);
-        map.fitBounds(routeLine.getBounds(), {padding: [30,30]});
-        
-    } catch(e) {
-        // Fallback straight line
-        routeDistanceKm = getHaversine(pickupCoords, destCoords);
-        routeDurationSeconds = 0;
-        routeLine = L.polyline([pickupCoords, destCoords], {color: 'red', weight: 5, dashArray: '5, 10'}).addTo(map);
-        map.fitBounds(routeLine.getBounds());
-    }
-
-    calculateFare();
-}
-
-async function fetchGeocode(query) {
-    try {
-        const res = await fetch(`/cars/geocode?q=${encodeURIComponent(query)}`);
-        const data = await res.json();
-        return data.length ? [parseFloat(data[0].lat), parseFloat(data[0].lon)] : null;
-    } catch(e) { return null; }
-}
-
-function getHaversine([lat1, lon1], [lat2, lon2]) {
-    const R = 6371;
-    const dLat = (lat2-lat1)*Math.PI/180;
-    const dLon = (lon2-lon1)*Math.PI/180;
-    const a = Math.sin(dLat/2)*Math.sin(dLat/2) + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)*Math.sin(dLon/2);
-    return R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)));
-}
-
-function formatTime(secs) {
-    if(!secs) return 'N/A';
-    const h = Math.floor(secs/3600);
-    const m = Math.round((secs%3600)/60);
-    return h > 0 ? `${h}h ${m}m` : `${m}m`;
-}
-
-function calculateFare() {
-    const baseFare = Number(listing.baseFare || listing.price || 0);
-    const ratePerKm = Number(listing.pricePerKm || listing.ratePerKm || 0);
-    
-    document.getElementById('displayDistance').innerText = `${routeDistanceKm.toFixed(1)} km`;
-    document.getElementById('displayDuration').innerText = formatTime(routeDurationSeconds);
-    
-    // Total = Base + (Distance * Rate)
-    const distanceCost = routeDistanceKm * ratePerKm;
-    estimatedTotalFare = Math.ceil(baseFare + distanceCost);
-    
-    document.getElementById('displayTotalFare').innerText = `₹${estimatedTotalFare.toLocaleString('en-IN')}`;
-}
-
-function updateSummary() {
-    document.getElementById('sumPickup').innerText = document.getElementById('pickupLocation').value;
-    document.getElementById('sumDestination').innerText = document.getElementById('destinationLocation').value;
-    document.getElementById('sumDateTime').innerText = `${document.getElementById('pickupDate').value} at ${document.getElementById('pickupTime').value}`;
-    document.getElementById('sumPassengers').innerText = document.getElementById('passengers').value;
-    document.getElementById('sumFare').innerText = `₹${estimatedTotalFare.toLocaleString('en-IN')}`;
-}
-
-// Submission
-document.getElementById('tripBookingForm').addEventListener('submit', async function(e) {
-    e.preventDefault();
-    const btn = document.getElementById('submitBtn');
-    btn.disabled = true;
-    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span> Sending...';
-    
-    const payload = {
-        booking: {
-            pickupLocation: document.getElementById('pickupLocation').value,
-            pickupCoordinates: [pickupCoords[1], pickupCoords[0]], // store as [lng, lat]
-            destination: document.getElementById('destinationLocation').value,
-            destinationCoordinates: [destCoords[1], destCoords[0]],
-            pickupDate: document.getElementById('pickupDate').value,
-            pickupTime: document.getElementById('pickupTime').value,
-            passengers: parseInt(document.getElementById('passengers').value),
-            tripType: document.getElementById('tripType').value,
-            specialInstructions: document.getElementById('specialInstructions').value,
-            
-            distanceKm: routeDistanceKm,
-            estimatedDuration: formatTime(routeDurationSeconds),
-            basePrice: Number(listing.baseFare || listing.price || 0),
-            pricePerKM: Number(listing.pricePerKm || listing.ratePerKm || 0),
-            estimatedFare: estimatedTotalFare,
-            
-            customerName: document.getElementById('customerName').value,
-            customerPhone: document.getElementById('customerPhone').value,
-            customerEmail: document.getElementById('customerEmail').value,
-            emergencyContact: document.getElementById('emergencyContact').value,
-            paymentMethod: document.getElementById('paymentMethod').value,
-            driverType: listing.driverType || 'dedicated-driver'
-        }
-    };
-    
-    try {
-        const res = await fetch(`/cars/book/${listing._id}/request`, {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify(payload)
-        });
-        const data = await res.json();
-        
-        if(data.success) {
-            // SweetAlert or native alert
-            alert(data.message || 'Trip request sent successfully!');
-            window.location.href = `/dashboard`; // redirect to user dashboard
-        } else {
-            alert(data.error || 'Failed to submit request');
-            btn.disabled = false;
-            btn.innerHTML = '<i class="fa-solid fa-paper-plane me-2"></i> Send Trip Request';
-        }
-    } catch(err) {
-        console.error(err);
-        alert('An error occurred. Please try again.');
-        btn.disabled = false;
-        btn.innerHTML = '<i class="fa-solid fa-paper-plane me-2"></i> Send Trip Request';
-    }
+// Form submit
+document.getElementById('bookingForm')?.addEventListener('submit', function(e) {
+  const btn = document.getElementById('submitBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending Request...';
 });
 </script>
+</body>
+</html>

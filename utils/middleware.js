@@ -29,7 +29,7 @@ const isLoggedIn = (req, res, next) => {
     //redirectUrl save becoze after the changes or some work this is come on the same page
     req.session.redirectUrl=req.originalUrl;
         req.flash("error", "You must be logged in to create listing");
-        return res.redirect("/login");
+        return res.redirect("/users/login");
     }
     next();
 };
