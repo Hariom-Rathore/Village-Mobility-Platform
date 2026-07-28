@@ -68,6 +68,16 @@
 .accepted-details .detail-item label { color: #6b7280; display: block; font-size: 11px; }
 .accepted-details .detail-item span { font-weight: 600; color: #111; }
 
+/* Modal for timeline */
+.modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; padding: 20px; backdrop-filter: blur(4px); }
+.modal-overlay.active { display: flex; }
+.modal { background: white; border-radius: 20px; width: 100%; max-width: 480px; max-height: 90vh; overflow-y: auto; padding: 0; animation: modalIn 0.2s ease; }
+@keyframes modalIn { from { transform: scale(0.95); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+.modal-header { padding: 20px 24px 0; display: flex; justify-content: space-between; align-items: center; }
+.modal-header h3 { font-size: 18px; font-weight: 700; color: #111; margin: 0; }
+.modal-close { background: none; border: none; font-size: 24px; color: #9ca3af; cursor: pointer; padding: 4px; line-height: 1; }
+.modal-close:hover { color: #111; }
+.modal-body { padding: 20px 24px; }
 @media (max-width: 768px) {
 .my-trips { padding: 12px; }
 .trip-header { flex-direction: column; }
@@ -105,6 +115,7 @@
     </div>
 </div>
 
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
 <script>
 let currentTab = 'upcoming';
 
@@ -118,9 +129,9 @@ async function loadTrips(tab) {
     container.innerHTML = '';
 
     let statusQuery = '';
-    if (tab === 'upcoming') statusQuery = 'PENDING,ACCEPTED,COUNTER_OFFER_SENT,COUNTER_OFFER_ACCEPTED,TRIP_STARTED';
+    if (tab === 'upcoming') statusQuery = 'PENDING,ACCEPTED,PAYMENT_PENDING,CONFIRMED,COUNTER_OFFER_SENT,COUNTER_OFFER_ACCEPTED,TRIP_STARTED';
     else if (tab === 'completed') statusQuery = 'TRIP_COMPLETED';
-    else if (tab === 'cancelled') statusQuery = 'CANCELLED,REJECTED';
+    else if (tab === 'cancelled') statusQuery = 'CANCELLED,REJECTED,EXPIRED';
 
     try {
         const response = await fetch(`/bookings/user?status=${statusQuery}`);
@@ -156,7 +167,8 @@ function createTripCard(booking) {
     const statusClass = getStatusClass(booking.bookingStatus);
     const statusText = formatStatus(booking.bookingStatus);
     const isCounterOffer = booking.bookingStatus === 'COUNTER_OFFER_SENT';
-    const isAccepted = ['ACCEPTED', 'COUNTER_OFFER_ACCEPTED'].includes(booking.bookingStatus);
+    const isAccepted = ['ACCEPTED', 'COUNTER_OFFER_ACCEPTED', 'CONFIRMED', 'PAYMENT_PENDING'].includes(booking.bookingStatus);
+    const isPayRequired = booking.bookingStatus === 'ACCEPTED' && booking.paymentStatus !== 'PAID';
 
     let html = `
         <div class="trip-header">
@@ -167,7 +179,14 @@ function createTripCard(booking) {
                     <p><i class="fas fa-user"></i> ${owner.username || 'Owner'}</p>
                 </div>
             </div>
-            <span class="status-badge ${statusClass}">${statusText}</span>
+            <div style="text-align:right">
+                <span class="status-badge ${statusClass}">${statusText}</span>
+                ${booking.bookingStatus === 'PENDING' && booking.expiresAt ? `
+                    <div class="timer-badge" data-expires="${new Date(booking.expiresAt).getTime()}" style="margin-top:4px;font-size:11px;font-weight:600;color:#dc2626;display:flex;align-items:center;gap:4px;justify-content:flex-end">
+                        <i class="fas fa-hourglass-half"></i> <span class="timer-count">--:--</span>
+                    </div>
+                ` : ''}
+            </div>
         </div>
     `;
 
@@ -201,15 +220,37 @@ function createTripCard(booking) {
 
     if (isAccepted && booking.acceptedInfo) {
         const info = booking.acceptedInfo;
+        const ownerPhone = info.ownerPhone || (owner.phoneNumber || '');
+        const driverPhone = info.driverPhone || '';
         html += `
             <div class="accepted-info">
                 <h5><i class="fas fa-check-circle"></i> Trip Confirmed</h5>
                 <div class="accepted-details">
                     <div class="detail-item"><label>Owner</label><span>${info.ownerName || owner.username || 'Owner'}</span></div>
                     <div class="detail-item"><label>Driver</label><span>${info.driverName || 'Owner will drive'}</span></div>
-                    <div class="detail-item"><label>Driver Phone</label><span>${info.driverPhone || 'N/A'}</span></div>
                     <div class="detail-item"><label>Vehicle No.</label><span>${info.vehicleNumber || 'N/A'}</span></div>
                 </div>
+                ${ownerPhone ? `<div style="margin-top:12px"><a href="tel:${ownerPhone}" class="btn-action btn-success" style="text-decoration:none"><i class="fas fa-phone"></i> Call ${info.ownerName || 'Owner'}</a></div>` : ''}
+                ${driverPhone && driverPhone !== ownerPhone ? `<div style="margin-top:8px"><a href="tel:${driverPhone}" class="btn-action btn-info" style="text-decoration:none"><i class="fas fa-phone"></i> Call Driver</a></div>` : ''}
+            </div>
+        `;
+    }
+
+    if (isPayRequired) {
+        const totalFare = booking.totalPrice || booking.estimatedFare || 0;
+        const advanceAmount = Math.max(1, Math.round(totalFare * 0.2));
+        html += `
+            <div style="background:linear-gradient(135deg,#eff6ff,#dbeafe);border-radius:12px;padding:16px;margin-bottom:16px;border:1px solid #bfdbfe">
+                <h5 style="font-size:14px;font-weight:700;color:#1e40af;margin:0 0 12px;display:flex;align-items:center;gap:8px">
+                    <i class="fas fa-credit-card"></i> Advance Payment Required
+                </h5>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">
+                    <div class="detail-item"><label>Total Fare</label><span style="font-size:18px;font-weight:700;color:#1e40af">₹${totalFare.toLocaleString('en-IN')}</span></div>
+                    <div class="detail-item"><label>Advance (20%)</label><span style="font-size:18px;font-weight:700;color:#059669">₹${advanceAmount.toLocaleString('en-IN')}</span></div>
+                </div>
+                <button class="btn-action btn-primary" onclick="payAdvance('${booking._id}')" style="width:100%;justify-content:center;font-size:15px;padding:14px">
+                    <i class="fas fa-credit-card"></i> Pay Advance ₹${advanceAmount.toLocaleString('en-IN')}
+                </button>
             </div>
         `;
     }
@@ -251,34 +292,109 @@ function createTripCard(booking) {
 function getTripActions(booking) {
     switch (booking.bookingStatus) {
         case 'PENDING':
-            return `<div class="trip-actions"><button class="btn-action btn-danger" onclick="cancelTrip('${booking._id}')"><i class="fas fa-times"></i> Cancel Request</button></div>`;
-        case 'TRIP_STARTED':
+            return `<div class="trip-actions"><button class="btn-action btn-secondary" onclick="showCustomerTimeline('${booking._id}')"><i class="fas fa-history"></i> Status</button><button class="btn-action btn-danger" onclick="cancelTrip('${booking._id}')"><i class="fas fa-times"></i> Cancel</button></div>`;
         case 'ACCEPTED':
+            return `<div class="trip-actions"><button class="btn-action btn-primary" onclick="payAdvance('${booking._id}')"><i class="fas fa-credit-card"></i> Pay Advance</button><button class="btn-action btn-secondary" onclick="showCustomerTimeline('${booking._id}')"><i class="fas fa-history"></i> Status</button><button class="btn-action btn-danger" onclick="cancelTrip('${booking._id}')"><i class="fas fa-times"></i> Cancel</button></div>`;
+        case 'PAYMENT_PENDING':
+            return `<div class="trip-actions"><button class="btn-action btn-secondary" onclick="showCustomerTimeline('${booking._id}')"><i class="fas fa-history"></i> Status</button></div>`;
+        case 'CONFIRMED':
+        case 'TRIP_STARTED':
         case 'COUNTER_OFFER_ACCEPTED':
-            return `<div class="trip-actions"><button class="btn-action btn-danger" onclick="cancelTrip('${booking._id}')"><i class="fas fa-times"></i> Cancel Trip</button></div>`;
+            return `<div class="trip-actions"><button class="btn-action btn-secondary" onclick="showCustomerTimeline('${booking._id}')"><i class="fas fa-history"></i> Status</button><button class="btn-action btn-danger" onclick="cancelTrip('${booking._id}')"><i class="fas fa-times"></i> Cancel</button></div>`;
         case 'TRIP_COMPLETED':
-            return `<div class="trip-actions"><button class="btn-action btn-primary" onclick="bookAgain('${booking.vehicleId}')"><i class="fas fa-redo"></i> Book Again</button></div>`;
+            return `<div class="trip-actions"><button class="btn-action btn-primary" onclick="bookAgain('${booking.vehicleId?._id || booking.vehicleId}')"><i class="fas fa-redo"></i> Book Again</button></div>`;
         default:
-            return '';
+            return `<div class="trip-actions"><button class="btn-action btn-secondary" onclick="showCustomerTimeline('${booking._id}')"><i class="fas fa-history"></i> View Details</button></div>`;
     }
+}
+
+async function showCustomerTimeline(id) {
+    try {
+        const r = await fetch(`/bookings/${id}/timeline`);
+        const d = await r.json();
+        if (d.success && d.timeline) {
+            let html = '<div style="padding:4px 0">';
+            d.timeline.forEach((t, i) => {
+                const date = new Date(t.createdAt).toLocaleString('en-IN', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' });
+                const icon = t.status === 'PENDING' ? 'fa-clock' : t.status === 'ACCEPTED' ? 'fa-check-circle' : t.status === 'REJECTED' ? 'fa-times-circle' : t.status === 'EXPIRED' ? 'fa-hourglass-end' : t.status === 'TRIP_STARTED' ? 'fa-play' : t.status === 'TRIP_COMPLETED' ? 'fa-flag-checkered' : 'fa-circle';
+                const color = ['ACCEPTED','TRIP_COMPLETED'].includes(t.status) ? '#059669' : ['REJECTED','CANCELLED','EXPIRED'].includes(t.status) ? '#dc2626' : t.status === 'TRIP_STARTED' ? '#2563eb' : '#d97706';
+                html += `
+                    <div style="display:flex;gap:12px;padding:0 0 16px 0">
+                        <div style="display:flex;flex-direction:column;align-items:center;width:24px;flex-shrink:0">
+                            <div style="width:24px;height:24px;border-radius:50%;background:${color};color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;z-index:1"><i class="fas ${icon}"></i></div>
+                            ${i < d.timeline.length-1 ? '<div style="width:2px;flex:1;background:#e5e7eb;margin:4px 0"></div>' : ''}
+                        </div>
+                        <div style="flex:1">
+                            <div style="font-weight:600;font-size:14px;color:#111">${t.status.replace(/_/g,' ').replace(/\b\w/g,l=>l.toUpperCase())}</div>
+                            <div style="font-size:12px;color:#6b7280;margin:2px 0">${t.notes||''}</div>
+                            <div style="font-size:11px;color:#9ca3af">${date}</div>
+                        </div>
+                    </div>
+                `;
+            });
+            html += '</div>';
+            const modal = document.createElement('div');
+            modal.className = 'modal-overlay active';
+            modal.style.display = 'flex';
+            modal.innerHTML = `
+                <div class="modal" style="max-width:500px">
+                    <div class="modal-header">
+                        <h3><i class="fas fa-history" style="color:#2563eb"></i> Trip Timeline</h3>
+                        <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">&times;</button>
+                    </div>
+                    <div class="modal-body">${html}</div>
+                </div>
+            `;
+            modal.addEventListener('click', (e) => { if (e.target === modal) modal.remove(); });
+            document.body.appendChild(modal);
+        }
+    } catch(e) { showToast('Failed to load timeline', 'error'); }
 }
 
 function getStatusClass(status) {
     const map = {
-        'PENDING': 'status-pending', 'ACCEPTED': 'status-accepted',
+        'PENDING': 'status-pending', 'ACCEPTED': 'status-accepted', 'EXPIRED': 'status-cancelled',
         'COUNTER_OFFER_SENT': 'status-counter', 'COUNTER_OFFER_ACCEPTED': 'status-accepted',
         'CANCELLED': 'status-cancelled', 'REJECTED': 'status-rejected',
-        'TRIP_STARTED': 'status-trip-started', 'TRIP_COMPLETED': 'status-completed'
+        'TRIP_STARTED': 'status-trip-started', 'TRIP_COMPLETED': 'status-completed',
+        'PAYMENT_PENDING': 'status-accepted', 'CONFIRMED': 'status-accepted'
     };
     return map[status] || 'status-pending';
+}
+
+function formatTimer(secs) {
+    if (secs <= 0) return 'Expired';
+    const m = Math.floor(secs / 60);
+    const s = secs % 60;
+    return m + ':' + String(s).padStart(2, '0');
+}
+
+let cTimerInterval = null;
+function startCustomerTimer() {
+    if (cTimerInterval) clearInterval(cTimerInterval);
+    cTimerInterval = setInterval(() => {
+        document.querySelectorAll('.timer-badge').forEach(el => {
+            const expiresAt = parseInt(el.dataset.expires);
+            if (!expiresAt) return;
+            const remaining = Math.max(0, Math.floor((expiresAt - Date.now()) / 1000));
+            const countSpan = el.querySelector('.timer-count');
+            if (countSpan) countSpan.textContent = formatTimer(remaining);
+            if (remaining <= 0) {
+                el.innerHTML = '<i class="fas fa-clock"></i> Expired';
+                el.style.color = '#6b7280';
+                setTimeout(() => { if (currentTab === 'upcoming') loadTrips('upcoming'); }, 2000);
+            }
+        });
+    }, 1000);
 }
 
 function formatStatus(status) {
     const map = {
         'PENDING': 'Pending', 'ACCEPTED': 'Accepted',
         'COUNTER_OFFER_SENT': 'Counter Offer', 'COUNTER_OFFER_ACCEPTED': 'Accepted',
-        'CANCELLED': 'Cancelled', 'REJECTED': 'Rejected',
-        'TRIP_STARTED': 'Trip Started', 'TRIP_COMPLETED': 'Completed'
+        'CANCELLED': 'Cancelled', 'REJECTED': 'Rejected', 'EXPIRED': 'Expired',
+        'TRIP_STARTED': 'Trip Started', 'TRIP_COMPLETED': 'Completed',
+        'PAYMENT_PENDING': 'Payment Pending', 'CONFIRMED': 'Confirmed'
     };
     return map[status] || status;
 }
@@ -325,6 +441,47 @@ async function rejectCounterOffer(bookingId) {
 
 function bookAgain(vehicleId) { window.location.href = `/cars/book/${vehicleId}`; }
 
+async function payAdvance(bookingId) {
+    try {
+        const r = await fetch(`/bookings/pay-advance/${bookingId}`, { method: 'POST' });
+        const d = await r.json();
+        if (!d.success) { showToast(d.error || 'Failed to initiate payment', 'error'); return; }
+        if (!d.order) { showToast('Payment gateway not configured', 'error'); return; }
+
+        const options = {
+            key: d.key,
+            amount: d.order.amount,
+            currency: d.order.currency,
+            name: 'RideLocal',
+            description: `Advance Payment for Booking`,
+            order_id: d.order.id,
+            prefill: { contact: '<%= currUser?.phoneNumber || "" %>', email: '<%= currUser?.email || "" %>' },
+            theme: { color: '#2563eb' },
+            handler: async function (response) {
+                const confirmR = await fetch(`/bookings/confirm-advance-payment/${bookingId}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        razorpay_order_id: response.razorpay_order_id,
+                        razorpay_payment_id: response.razorpay_payment_id,
+                        razorpay_signature: response.razorpay_signature
+                    })
+                });
+                const confirmD = await confirmR.json();
+                if (confirmD.success) {
+                    showToast('Payment successful! Booking confirmed.', 'success');
+                    loadTrips(currentTab);
+                } else {
+                    showToast(confirmD.error || 'Payment verification failed', 'error');
+                }
+            },
+            modal: { ondismiss: function () { showToast('Payment cancelled', 'info'); } }
+        };
+        const rzp = new Razorpay(options);
+        rzp.open();
+    } catch (e) { console.error('Pay advance error', e); showToast('Failed to initiate payment', 'error'); }
+}
+
 function showToast(msg, type) {
     const colors = { success: '#059669', error: '#dc2626', info: '#2563eb' };
     const existing = document.getElementById('customerToast');
@@ -337,5 +494,19 @@ function showToast(msg, type) {
     setTimeout(() => { toast.style.opacity = '0'; toast.style.transition = 'opacity 0.3s'; setTimeout(() => toast.remove(), 300); }, 3500);
 }
 
-document.addEventListener('DOMContentLoaded', () => { loadTrips('upcoming'); });
+document.addEventListener('DOMContentLoaded', () => {
+    loadTrips('upcoming');
+    startCustomerTimer();
+    if (typeof io !== 'undefined') {
+        const socket = io();
+        const userId = '<%= (currUser && currUser._id) || "" %>';
+        if (userId) socket.emit('join', userId);
+        socket.on('booking:accepted', () => loadTrips(currentTab));
+        socket.on('booking:rejected', () => loadTrips(currentTab));
+        socket.on('booking:expired', () => loadTrips(currentTab));
+        socket.on('booking:cancelled', () => loadTrips(currentTab));
+        socket.on('booking:counterOffer', () => loadTrips(currentTab));
+        socket.on('booking:confirmed', () => loadTrips(currentTab));
+    }
+});
 </script>

@@ -224,9 +224,9 @@ async function loadBookings(tab) {
 
     let statusQuery = '';
     if (tab === 'pending') statusQuery = 'PENDING';
-    else if (tab === 'accepted') statusQuery = 'ACCEPTED,COUNTER_OFFER_ACCEPTED,TRIP_STARTED';
+    else if (tab === 'accepted') statusQuery = 'ACCEPTED,PAYMENT_PENDING,CONFIRMED,COUNTER_OFFER_ACCEPTED,TRIP_STARTED';
     else if (tab === 'completed') statusQuery = 'TRIP_COMPLETED';
-    else if (tab === 'cancelled') statusQuery = 'CANCELLED,REJECTED';
+    else if (tab === 'cancelled') statusQuery = 'CANCELLED,REJECTED,EXPIRED';
 
     try {
         const response = await fetch(`/bookings/owner?status=${statusQuery}`);
@@ -269,6 +269,10 @@ function createBookingCard(booking) {
     const isCounterOffer = booking.bookingStatus === 'COUNTER_OFFER_SENT';
     const isPending = booking.bookingStatus === 'PENDING';
 
+    const expiresAt = booking.expiresAt ? new Date(booking.expiresAt).getTime() : null;
+    const now = Date.now();
+    const remaining = expiresAt ? Math.max(0, Math.floor((expiresAt - now) / 1000)) : 0;
+
     card.innerHTML = `
         <div class="booking-header">
             <div style="display:flex;align-items:center;gap:12px;flex:1">
@@ -287,6 +291,11 @@ function createBookingCard(booking) {
                 <span class="status-badge ${statusClass}" style="margin-top:8px">
                     ${statusText}
                 </span>
+                ${isPending && expiresAt ? `
+                    <div class="timer-badge" data-expires="${expiresAt}" id="timer-${booking._id}" style="margin-top:6px;font-size:12px;font-weight:600;color:#dc2626;display:flex;align-items:center;gap:4px;justify-content:flex-end">
+                        <i class="fas fa-hourglass-half"></i> <span class="timer-count">${formatTimer(remaining)}</span>
+                    </div>
+                ` : ''}
             </div>
         </div>
 
@@ -376,20 +385,25 @@ function getBookingActions(booking) {
                 </div>
             `;
         case 'ACCEPTED':
+        case 'CONFIRMED':
         case 'COUNTER_OFFER_ACCEPTED':
+            const customerPhone = booking.customerId?.phoneNumber || '';
             return `
                 <div class="booking-actions">
                     <button class="btn-action btn-accept" onclick="startTrip('${booking._id}')">
                         <i class="fas fa-play"></i> Start Trip
                     </button>
-                    <button class="btn-action btn-info">
-                        <i class="fas fa-phone"></i> Call Customer
-                    </button>
-                    <button class="btn-action btn-secondary">
-                        <i class="fas fa-comments"></i> Chat
-                    </button>
+                    ${customerPhone ? `<a href="tel:${customerPhone}" class="btn-action btn-info" style="text-decoration:none"><i class="fas fa-phone"></i> Call Customer</a>` : ''}
                     <button class="btn-icon" onclick="showDetails('${booking._id}')" title="View Details">
                         <i class="fas fa-info-circle"></i>
+                    </button>
+                </div>
+            `;
+        case 'PAYMENT_PENDING':
+            return `
+                <div class="booking-actions">
+                    <button class="btn-action btn-secondary" onclick="showDetails('${booking._id}')">
+                        <i class="fas fa-info-circle"></i> View Details
                     </button>
                 </div>
             `;
@@ -425,10 +439,11 @@ function getBookingActions(booking) {
 
 function getStatusClass(status) {
     const map = {
-        'PENDING': 'status-pending', 'ACCEPTED': 'status-accepted',
+        'PENDING': 'status-pending', 'ACCEPTED': 'status-accepted', 'EXPIRED': 'status-cancelled',
         'COUNTER_OFFER_SENT': 'status-counter-offer', 'COUNTER_OFFER_ACCEPTED': 'status-accepted',
         'CANCELLED': 'status-cancelled', 'REJECTED': 'status-rejected',
-        'TRIP_STARTED': 'status-trip-started', 'TRIP_COMPLETED': 'status-completed'
+        'TRIP_STARTED': 'status-trip-started', 'TRIP_COMPLETED': 'status-completed',
+        'PAYMENT_PENDING': 'status-accepted', 'CONFIRMED': 'status-accepted'
     };
     return map[status] || 'status-pending';
 }
@@ -438,9 +453,39 @@ function formatStatus(status) {
         'PENDING': 'Pending', 'ACCEPTED': 'Accepted',
         'COUNTER_OFFER_SENT': 'Counter Offer', 'COUNTER_OFFER_ACCEPTED': 'Accepted',
         'CANCELLED': 'Cancelled', 'REJECTED': 'Rejected',
-        'TRIP_STARTED': 'Trip Started', 'TRIP_COMPLETED': 'Completed'
+        'TRIP_STARTED': 'Trip Started', 'TRIP_COMPLETED': 'Completed',
+        'EXPIRED': 'Expired',
+        'PAYMENT_PENDING': 'Payment Pending', 'CONFIRMED': 'Confirmed'
     };
     return map[status] || status;
+}
+
+function formatTimer(secs) {
+    if (secs <= 0) return 'Expired';
+    const m = Math.floor(secs / 60);
+    const s = secs % 60;
+    return m + ':' + String(s).padStart(2, '0');
+}
+
+// ── Countdown timer refresh ──
+let timerInterval = null;
+function startTimerUpdater() {
+    if (timerInterval) clearInterval(timerInterval);
+    timerInterval = setInterval(() => {
+        document.querySelectorAll('.timer-badge').forEach(el => {
+            const expiresAt = parseInt(el.dataset.expires);
+            if (!expiresAt) return;
+            const remaining = Math.max(0, Math.floor((expiresAt - Date.now()) / 1000));
+            const countSpan = el.querySelector('.timer-count');
+            if (countSpan) countSpan.textContent = formatTimer(remaining);
+            if (remaining <= 0) {
+                el.innerHTML = '<i class="fas fa-clock"></i> Expired';
+                el.style.color = '#6b7280';
+                // Reload bookings after 2s
+                setTimeout(() => { if (currentTab === 'pending') loadBookings('pending'); }, 2000);
+            }
+        });
+    }, 1000);
 }
 
 function formatDate(d) { if (!d) return 'N/A'; return new Date(d).toLocaleDateString('en-IN', { day:'numeric', month:'short', year:'numeric' }); }
@@ -459,10 +504,12 @@ async function acceptBooking(id) {
     if (!confirm('Accept this booking request?')) return;
     try {
         const r = await fetch(`/bookings/accept/${id}`, { method: 'PUT' });
-        const d = await r.json();
+        const text = await r.text();
+        let d;
+        try { d = JSON.parse(text); } catch(e) { showToast('Server error: ' + text.substring(0,200), 'error'); console.error('Accept response:', text); return; }
         if (d.success) { showToast('Booking accepted successfully!', 'success'); loadBookings(currentTab); }
         else showToast(d.error || 'Failed to accept', 'error');
-    } catch (e) { showToast('Failed to accept booking', 'error'); }
+    } catch (e) { showToast('Failed to accept booking: ' + e.message, 'error'); }
 }
 
 // --- Reject Modal ---
@@ -496,7 +543,9 @@ async function confirmReject() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(body)
         });
-        const d = await r.json();
+        const text = await r.text();
+        let d;
+        try { d = JSON.parse(text); } catch(e) { showToast('Server error: ' + text.substring(0,200), 'error'); console.error('Reject response:', text); closeModal('rejectModal'); return; }
         closeModal('rejectModal');
         if (d.success) { showToast('Booking rejected', 'info'); loadBookings(currentTab); }
         else showToast(d.error || 'Failed to reject', 'error');
@@ -561,11 +610,44 @@ async function showTimeline(id) {
         const r = await fetch(`/bookings/${id}/timeline`);
         const d = await r.json();
         if (d.success && d.timeline) {
-            let msg = d.timeline.map(t => {
-                const date = new Date(t.createdAt).toLocaleString('en-IN');
-                return `${date} - ${t.status} by ${t.changedBy?.username || 'System'} (${t.changedByRole})${t.notes ? ': ' + t.notes : ''}`;
-            }).join('\n');
-            alert('Booking Timeline:\n\n' + msg);
+            let html = '<div style="padding:4px 0">';
+            d.timeline.forEach((t, i) => {
+                const date = new Date(t.createdAt).toLocaleString('en-IN', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' });
+                const icon = t.status === 'PENDING' ? 'fa-clock' : t.status === 'ACCEPTED' ? 'fa-check-circle' : t.status === 'REJECTED' ? 'fa-times-circle' : t.status === 'EXPIRED' ? 'fa-hourglass-end' : t.status === 'TRIP_STARTED' ? 'fa-play' : t.status === 'TRIP_COMPLETED' ? 'fa-flag-checkered' : t.status === 'CANCELLED' ? 'fa-ban' : 'fa-circle';
+                const color = t.status === 'ACCEPTED' || t.status === 'TRIP_COMPLETED' ? '#059669' : t.status === 'REJECTED' || t.status === 'CANCELLED' || t.status === 'EXPIRED' ? '#dc2626' : t.status === 'TRIP_STARTED' ? '#2563eb' : '#d97706';
+                html += `
+                    <div style="display:flex;gap:12px;padding:0 0 16px 0;position:relative">
+                        <div style="display:flex;flex-direction:column;align-items:center;width:24px;flex-shrink:0">
+                            <div style="width:24px;height:24px;border-radius:50%;background:${color};color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;z-index:1">
+                                <i class="fas ${icon}"></i>
+                            </div>
+                            ${i < d.timeline.length - 1 ? '<div style="width:2px;flex:1;background:#e5e7eb;margin:4px 0"></div>' : ''}
+                        </div>
+                        <div style="flex:1;padding-bottom:${i < d.timeline.length - 1 ? '0' : '0'}">
+                            <div style="font-weight:600;font-size:14px;color:#111">${t.status.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</div>
+                            <div style="font-size:12px;color:#6b7280;margin:2px 0">${t.notes || ''}</div>
+                            <div style="font-size:11px;color:#9ca3af">${date} &middot; ${t.changedBy?.username || 'System'} (${t.changedByRole})</div>
+                        </div>
+                    </div>
+                `;
+            });
+            html += '</div>';
+
+            // Show in modal
+            const modal = document.createElement('div');
+            modal.className = 'modal-overlay active';
+            modal.style.display = 'flex';
+            modal.innerHTML = `
+                <div class="modal" style="max-width:500px">
+                    <div class="modal-header">
+                        <h3><i class="fas fa-history" style="color:#2563eb"></i> Booking Timeline</h3>
+                        <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">&times;</button>
+                    </div>
+                    <div class="modal-body">${html}</div>
+                </div>
+            `;
+            modal.addEventListener('click', (e) => { if (e.target === modal) modal.remove(); });
+            document.body.appendChild(modal);
         }
     } catch (e) { showToast('Failed to load timeline', 'error'); }
 }
@@ -589,6 +671,7 @@ function showToast(msg, type) {
 // Load on page load
 document.addEventListener('DOMContentLoaded', () => {
     loadBookings('pending');
+    startTimerUpdater();
     // Socket.IO refresh handler
     if (typeof io !== 'undefined' && typeof socket === 'undefined') {
         window.socket = io();
@@ -598,6 +681,7 @@ document.addEventListener('DOMContentLoaded', () => {
         socket.on('booking:rejected', () => { loadBookings(currentTab); });
         socket.on('booking:counterOffer', () => { loadBookings(currentTab); });
         socket.on('booking:cancelled', () => { loadBookings(currentTab); });
+        socket.on('booking:expired', () => { loadBookings(currentTab); });
         socket.on('notification:new', () => { loadBookings(currentTab); });
     }
     // Close modals on overlay click

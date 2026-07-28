@@ -12,6 +12,7 @@ const { emitBookingUpdate, emitToUser } = require('../utils/socket');
 const WHATSAPP_PHONE_NUMBER_ID = process.env.WHATSAPP_PHONE_NUMBER_ID || '';
 const WHATSAPP_ACCESS_TOKEN = process.env.WHATSAPP_ACCESS_TOKEN || '';
 const MAX_BOOKING_AMOUNT_INR = Number(process.env.MAX_BOOKING_AMOUNT_INR || 500000);
+const BOOKING_EXPIRY_MINUTES = Number(process.env.BOOKING_EXPIRY_MINUTES || 10);
 
 function normalizeWhatsAppNumber(value = '') {
     return String(value).replace(/\D/g, '');
@@ -67,7 +68,7 @@ async function createNotification(recipientId, type, title, message, relatedBook
 async function checkVehicleAvailability(vehicleId, startDate, endDate) {
     try {
         const bookingIds = (await Booking.find({
-            vehicleId, bookingStatus: { $in: ['ACCEPTED', 'COUNTER_OFFER_ACCEPTED', 'TRIP_STARTED'] },
+            vehicleId,             bookingStatus: { $in: ['ACCEPTED', 'PAYMENT_PENDING', 'CONFIRMED', 'COUNTER_OFFER_ACCEPTED', 'TRIP_STARTED'] },
             pickupDateTime: { $lte: endDate },
             $or: [{ returnDate: { $gte: startDate } }, { pickupDateTime: { $gte: startDate } }]
         }, { _id: 1 })).map(b => b._id);
@@ -169,7 +170,7 @@ module.exports.confirmPayment = async (req, res) => {
             if (returnTime) { const [h, m] = returnTime.split(':'); returnDateTime.setHours(parseInt(h), parseInt(m), 0, 0); }
         }
 
-        const ownerWhatsAppNumber = normalizeWhatsAppNumber(listing.whatsappNumber || '');
+        const ownerWhatsappNumber = normalizeWhatsAppNumber(listing.whatsappNumber || '');
         const bookingData = {
             user: req.user._id, listing: id, vehicleId: id, ownerId: listing.owner, renterId: req.user._id, customerId: req.user._id,
             pickup: pickup || '', destination: destination || '', purpose: purpose || '', distanceKm: Number(distanceKm) || 0,
@@ -186,7 +187,7 @@ module.exports.confirmPayment = async (req, res) => {
             await bookingService.updateVehicleStats(id, priceCalculation.totalPrice);
             await blockVehicleAvailability(id, booking._id, pickupDateTime || new Date(), returnDateTime || pickupDateTime || new Date());
             await notificationService.notifyBookingConfirmed(booking._id);
-            const whatsappDelivery = await sendWhatsAppTextMessage(ownerWhatsAppNumber, `New COD booking confirmed for ${listing.title}. Booking ID: ${booking._id}`);
+            const whatsappDelivery = await sendWhatsAppTextMessage(ownerWhatsappNumber, `New COD booking confirmed for ${listing.title}. Booking ID: ${booking._id}`);
             return res.json({ success: true, bookingId: booking._id, whatsappSent: whatsappDelivery.sent, paymentMethod: 'cod', priceBreakdown: priceCalculation.breakdown });
         }
 
@@ -204,7 +205,7 @@ module.exports.confirmPayment = async (req, res) => {
         await blockVehicleAvailability(id, booking._id, pickupDateTime || new Date(), returnDateTime || pickupDateTime || new Date());
         await notificationService.notifyBookingConfirmed(booking._id);
         await notificationService.notifyPaymentReceived(booking._id);
-        const whatsappDelivery = await sendWhatsAppTextMessage(ownerWhatsAppNumber, `New booking confirmed for ${listing.title}. Booking ID: ${booking._id}, Amount: ₹${priceCalculation.totalPrice}`);
+        const whatsappDelivery = await sendWhatsAppTextMessage(ownerWhatsappNumber, `New booking confirmed for ${listing.title}. Booking ID: ${booking._id}, Amount: ₹${priceCalculation.totalPrice}`);
         return res.json({ success: true, bookingId: booking._id, whatsappSent: whatsappDelivery.sent, paymentMethod: 'razorpay', priceBreakdown: priceCalculation.breakdown });
     } catch (e) { console.error('Payment confirmation error', e); return res.status(500).json({ success: false, error: 'Unable to confirm payment' }); }
 };
@@ -223,16 +224,43 @@ module.exports.createBookingRequest = async (req, res) => {
         if (!listing) return res.status(404).json({ success: false, error: 'Vehicle not found' });
         if (!listing.owner || listing.owner.equals(req.user._id)) return res.status(400).json({ success: false, error: 'Cannot book your own vehicle' });
 
+        // Check for duplicate pending booking by same customer for same vehicle
+        const existingPending = await Booking.findOne({
+            vehicleId: id,
+            customerId: req.user._id,
+            bookingStatus: { $in: ['PENDING', 'COUNTER_OFFER_SENT'] }
+        });
+        if (existingPending) {
+            return res.status(400).json({ success: false, error: 'You already have a pending booking request for this vehicle. Please wait for the owner to respond.' });
+        }
+
         let totalDays = Number(booking.tripDays) || 1;
         if (booking.pickupDate && booking.returnDate) {
             const p = new Date(booking.pickupDate), r = new Date(booking.returnDate);
             totalDays = Math.max(1, Math.ceil((r - p) / (1000 * 60 * 60 * 24)));
         }
 
-        let pickupDateTime = new Date(booking.pickupDate || booking.travelDate);
+        // Resolve travel date — support both travelDate and pickupDate field names
+        const travelDateStr = booking.travelDate || booking.pickupDate;
+        if (!travelDateStr) return res.status(400).json({ success: false, error: 'Travel date is required' });
+
+        // Validate travel date is not in the past
+        const travelDate = new Date(travelDateStr);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        if (travelDate < today) return res.status(400).json({ success: false, error: 'Travel date cannot be in the past' });
+
+        let pickupDateTime = new Date(travelDateStr);
         if (booking.pickupTime) {
             const [h, m] = booking.pickupTime.split(':');
             pickupDateTime.setHours(parseInt(h), parseInt(m), 0, 0);
+        }
+
+        // Resolve passengers from either field name
+        const passengers = Number(booking.passengers || booking.passengerCount || 1);
+        if (passengers < 1) return res.status(400).json({ success: false, error: 'At least 1 passenger is required' });
+        if (listing.seats && passengers > listing.seats) {
+            return res.status(400).json({ success: false, error: `This vehicle has a maximum capacity of ${listing.seats} passengers` });
         }
 
         const endDate = booking.returnDate ? new Date(booking.returnDate) : pickupDateTime;
@@ -247,11 +275,12 @@ module.exports.createBookingRequest = async (req, res) => {
         const timeCharge = baseDaily * totalDays;
         const nightStayCharge = (booking.nightStay === 'yes' && nightCharge > 0) ? nightCharge * Math.max(0, totalDays - 1) : 0;
         const basePrice = Math.ceil(timeCharge + distanceCharge + nightStayCharge);
-        const platformFee = Math.max(50, Math.ceil(basePrice * 0.05));
-        const tax = Math.ceil((basePrice + platformFee) * 0.18);
-        const estimatedFare = basePrice + platformFee + tax;
+        const estimatedFare = basePrice > 0 ? basePrice : Math.ceil(distanceKm * ratePerKm);
 
-        const ownerWhatsAppNumber = normalizeWhatsAppNumber(listing.whatsappNumber || '');
+        const ownerWhatsappNumber = normalizeWhatsAppNumber(listing.whatsappNumber || '');
+
+        // Set expiry time for response timer
+        const expiresAt = new Date(Date.now() + BOOKING_EXPIRY_MINUTES * 60 * 1000);
 
         const newBooking = new Booking({
             user: req.user._id, listing: id, vehicleId: id, ownerId: listing.owner,
@@ -259,32 +288,31 @@ module.exports.createBookingRequest = async (req, res) => {
             pickup: booking.pickupLocation || booking.pickupAddress,
             pickupLocation: booking.pickupLocation || booking.pickupAddress,
             pickupAddress: booking.pickupAddress || booking.pickupLocation,
-            pickupCoordinates: booking.pickupCoordinates ? { type: 'Point', coordinates: booking.pickupCoordinates } : (booking.pickupLat && booking.pickupLng ? { type: 'Point', coordinates: [parseFloat(booking.pickupLng), parseFloat(booking.pickupLat)] } : undefined),
+            pickupCoordinates: booking.pickupCoordinates ? { type: 'Point', coordinates: booking.pickupCoordinates } : (booking.pickupLat && booking.pickupLng ? { type: 'Point', coordinates: [parseFloat(booking.pickupLng), parseFloat(booking.pickupLat)] } : null),
             destination: booking.destination || booking.destinationAddress,
             destinationAddress: booking.destinationAddress || booking.destination,
-            destinationCoordinates: booking.destinationCoordinates ? { type: 'Point', coordinates: booking.destinationCoordinates } : (booking.destLat && booking.destLng ? { type: 'Point', coordinates: [parseFloat(booking.destLng), parseFloat(booking.destLat)] } : undefined),
-            pickupDate: new Date(booking.pickupDate || booking.travelDate),
+            destinationCoordinates: booking.destinationCoordinates ? { type: 'Point', coordinates: booking.destinationCoordinates } : (booking.destLat && booking.destLng ? { type: 'Point', coordinates: [parseFloat(booking.destLng), parseFloat(booking.destLat)] } : null),
+            pickupDate: new Date(travelDateStr),
             pickupTime: booking.pickupTime, pickupDateTime,
-            tripType: booking.tripType,
-            passengers: booking.passengers || booking.passengerCount,
+            tripType: booking.tripType || 'local',
+            passengers,
             specialInstructions: booking.specialInstructions || booking.specialNote || '',
             specialNote: booking.specialNote || booking.specialInstructions || '',
             driverType: booking.driverType || 'dedicated-driver',
             distanceKm, estimatedDuration: booking.estimatedDuration || '',
             basePrice, pricePerKM: ratePerKm, totalPrice: estimatedFare, estimatedFare,
-            platformFee, tax, totalDays, tripDays: totalDays,
+            platformFee: 0, tax: 0, totalDays, tripDays: totalDays,
             nightStay: booking.nightStay === 'yes', nightStayCharge,
             paymentMethod: booking.paymentMethod || 'cash', bookingStatus: 'PENDING', paymentStatus: 'PENDING',
-            ownerWhatsappNumber
+            ownerWhatsappNumber,
+            expiresAt,
+            bookingTimerMinutes: BOOKING_EXPIRY_MINUTES
         });
 
         await newBooking.save();
-
         await createBookingTimeline(newBooking._id, 'PENDING', req.user._id, 'customer', 'Booking request submitted');
 
         const io = req.app.get('io');
-
-        // Use notification service for proper notification
         await notificationService.notifyNewBookingRequest(newBooking._id, io);
 
         // Emit real-time booking event
@@ -295,12 +323,18 @@ module.exports.createBookingRequest = async (req, res) => {
                 vehicleName: listing.title || listing.vehicleName,
                 pickup: newBooking.pickupLocation, destination: newBooking.destination,
                 pickupDate: newBooking.pickupDate, pickupTime: newBooking.pickupTime,
-                passengers: newBooking.passengers, estimatedFare: newBooking.estimatedFare
+                passengers: newBooking.passengers, estimatedFare: newBooking.estimatedFare,
+                expiresAt: newBooking.expiresAt
             });
         }
 
-        return res.json({ success: true, bookingId: newBooking._id, message: 'Booking request sent successfully! The owner will review your request.' });
-    } catch (e) { console.error('Create booking request error', e); return res.status(500).json({ success: false, error: 'Unable to create booking request' }); }
+        return res.json({
+            success: true,
+            bookingId: newBooking._id,
+            expiresAt: newBooking.expiresAt,
+            message: 'Booking request sent successfully! The owner will review your request within ' + BOOKING_EXPIRY_MINUTES + ' minutes.'
+        });
+    } catch (e) { console.error('Create booking request error:', e); try { require('fs').appendFileSync('booking-error.log', new Date().toISOString() + ' ' + (e.stack || e.message || e) + '\n'); } catch(ee){} return res.status(500).json({ success: false, error: 'Unable to create booking request' }); }
 };
 
 // 2. Owner accepts booking
@@ -308,19 +342,29 @@ module.exports.acceptBooking = async (req, res) => {
     try {
         const booking = req.booking || await Booking.findById(req.params.bookingId);
         if (!booking) return res.status(404).json({ success: false, error: 'Booking not found' });
-        if (booking.bookingStatus !== 'PENDING') return res.status(400).json({ success: false, error: 'Booking is not in PENDING status' });
+        if (!['PENDING', 'COUNTER_OFFER_SENT'].includes(booking.bookingStatus)) {
+            return res.status(400).json({ success: false, error: `Booking cannot be accepted in its current state (${booking.bookingStatus})` });
+        }
 
-        const previousStatus = booking.bookingStatus;
+        // Check if booking has expired
+        if (booking.expiresAt && new Date() > booking.expiresAt && booking.bookingStatus === 'PENDING') {
+            booking.bookingStatus = 'EXPIRED';
+            booking.bookingUpdatedAt = Date.now();
+            await booking.save();
+            return res.status(400).json({ success: false, error: 'This booking request has already expired' });
+        }
+
         booking.bookingStatus = 'ACCEPTED';
         booking.bookingUpdatedAt = Date.now();
 
-        const listing = await Listing.findById(booking.vehicleId);
+        const listing = await Listing.findById(booking.vehicleId).populate('owner', 'username phoneNumber');
         if (listing) {
             booking.acceptedInfo = {
-                driverName: listing.driverName || '',
-                driverPhone: listing.driverPhoneNumber || '',
+                driverName: listing.driverName || listing.owner?.username || req.user?.username || '',
+                driverPhone: listing.driverPhoneNumber || listing.owner?.phoneNumber || req.user?.phoneNumber || '',
                 vehicleNumber: listing.vehicleNumber || '',
-                ownerName: listing.owner?.username || req.user?.username || ''
+                ownerName: listing.owner?.username || req.user?.username || '',
+                ownerPhone: listing.owner?.phoneNumber || req.user?.phoneNumber || ''
             };
         }
         await booking.save();
@@ -348,7 +392,84 @@ module.exports.acceptBooking = async (req, res) => {
     } catch (e) { console.error('Accept booking error', e); return res.status(500).json({ success: false, error: 'Failed to accept booking' }); }
 };
 
-// 3. Owner rejects booking
+// 3. Customer pays advance (creates Razorpay order)
+module.exports.payAdvance = async (req, res) => {
+    try {
+        const booking = await Booking.findById(req.params.bookingId);
+        if (!booking) return res.status(404).json({ success: false, error: 'Booking not found' });
+        if (booking.customerId?.toString() !== req.user._id.toString()) {
+            return res.status(403).json({ success: false, error: 'Not authorized' });
+        }
+        if (booking.bookingStatus !== 'ACCEPTED') {
+            return res.status(400).json({ success: false, error: `Payment is only allowed for ACCEPTED bookings. Current status: ${booking.bookingStatus}` });
+        }
+        if (booking.paymentStatus === 'PAID') {
+            return res.status(400).json({ success: false, error: 'Payment already completed for this booking' });
+        }
+
+        const rp = getRazorpayInstance();
+        if (!rp) return res.status(500).json({ success: false, error: 'Razorpay API keys not configured on server' });
+
+        const totalFare = booking.totalPrice || booking.estimatedFare || 0;
+        const advanceAmount = Math.max(1, Math.round(totalFare * 0.2)); // 20% advance, min Re. 1
+        if (advanceAmount > MAX_BOOKING_AMOUNT_INR) return res.status(400).json({ success: false, error: 'Advance amount is too high' });
+
+        const order = await rp.orders.create({ amount: advanceAmount * 100, currency: 'INR', receipt: `adv_${booking.bookingId || booking._id}` });
+        booking.razorpayOrderId = order.id;
+        booking.bookingStatus = 'PAYMENT_PENDING';
+        await booking.save();
+
+        return res.json({ success: true, order, advanceAmount, totalFare, key: process.env.RAZORPAY_KEY_ID || '' });
+    } catch (e) { console.error('Pay advance error', e); return res.status(500).json({ success: false, error: 'Unable to process advance payment' }); }
+};
+
+// 4. Confirm advance payment (Razorpay signature verification)
+module.exports.confirmAdvancePayment = async (req, res) => {
+    try {
+        const booking = await Booking.findById(req.params.bookingId);
+        if (!booking) return res.status(404).json({ success: false, error: 'Booking not found' });
+        if (booking.bookingStatus !== 'PAYMENT_PENDING') {
+            return res.status(400).json({ success: false, error: `Payment is not pending for this booking. Current status: ${booking.bookingStatus}` });
+        }
+
+        const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
+        if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
+            return res.status(400).json({ success: false, error: 'Missing payment details' });
+        }
+
+        const key_secret = process.env.RAZORPAY_KEY_SECRET;
+        if (!key_secret) return res.status(500).json({ success: false, error: 'Razorpay secret not configured' });
+
+        const generated_signature = crypto.createHmac('sha256', key_secret).update(`${razorpay_order_id}|${razorpay_payment_id}`).digest('hex');
+        if (generated_signature !== razorpay_signature) {
+            return res.status(400).json({ success: false, error: 'Invalid payment signature' });
+        }
+
+        booking.razorpayPaymentId = razorpay_payment_id;
+        booking.razorpaySignature = razorpay_signature;
+        booking.paymentStatus = 'PAID';
+        booking.bookingStatus = 'CONFIRMED';
+        await booking.save();
+
+        await createBookingTimeline(booking._id, 'CONFIRMED', req.user._id, 'customer', 'Advance payment completed. Booking confirmed.');
+        await createBookingTimeline(booking._id, 'PAYMENT_PENDING', req.user._id, 'customer', 'Advance payment initiated');
+
+        const io = req.app.get('io');
+        await notificationService.notifyBookingConfirmed(booking._id);
+        await notificationService.notifyPaymentReceived(booking._id);
+
+        if (io) {
+            emitBookingUpdate(io, booking.customerId, booking.ownerId, 'booking:confirmed', {
+                bookingId: booking._id, status: 'CONFIRMED',
+                customerId: booking.customerId, ownerId: booking.ownerId
+            });
+        }
+
+        return res.json({ success: true, message: 'Advance payment confirmed. Booking is now confirmed!', booking });
+    } catch (e) { console.error('Confirm advance payment error', e); return res.status(500).json({ success: false, error: 'Unable to confirm advance payment' }); }
+};
+
+// 5. Owner rejects booking
 module.exports.rejectBooking = async (req, res) => {
     try {
         const booking = req.booking || await Booking.findById(req.params.bookingId);
@@ -477,7 +598,7 @@ module.exports.cancelBooking = async (req, res) => {
         const isOwner = booking.ownerId && booking.ownerId.equals(req.user._id);
         if (!isCustomer && !isOwner) return res.status(403).json({ success: false, error: 'Not authorized to cancel this booking' });
 
-        if (['CANCELLED', 'TRIP_COMPLETED'].includes(booking.bookingStatus)) return res.status(400).json({ success: false, error: 'Cannot cancel this booking' });
+        if (['CANCELLED', 'TRIP_COMPLETED', 'EXPIRED'].includes(booking.bookingStatus)) return res.status(400).json({ success: false, error: 'Cannot cancel this booking' });
 
         const { reason } = req.body;
         booking.bookingStatus = 'CANCELLED';
@@ -491,11 +612,11 @@ module.exports.cancelBooking = async (req, res) => {
         const role = isCustomer ? 'customer' : 'owner';
         await createBookingTimeline(booking._id, 'CANCELLED', req.user._id, role, reason || 'Booking cancelled');
 
-        const recipientId = isCustomer ? booking.ownerId : booking.customerId;
         const io = req.app.get('io');
         await notificationService.notifyBookingCancelled(booking._id, role, io);
 
         if (io) {
+            const recipientId = isCustomer ? booking.ownerId : booking.customerId;
             emitToUser(io, recipientId, 'booking:cancelled', { bookingId: booking._id, status: 'CANCELLED', cancelledBy: role });
         }
 
@@ -519,7 +640,7 @@ module.exports.startTrip = async (req, res) => {
         const io = req.app.get('io');
         if (io) {
             emitBookingUpdate(io, booking.customerId, booking.ownerId, 'booking:tripStarted', { bookingId: booking._id, status: 'TRIP_STARTED' });
-            emitToUser(io, booking.customerId, 'notification:new', { type: 'TRIP_STARTED', title: 'Trip Started', message: 'Your trip has started!', relatedBooking: booking._id });
+            emitToUser(io, booking.customerId, 'notification:new', { type: 'TRIP_STARTED', title: '🚗 Trip Started', message: 'Your trip has started! Enjoy your ride.', relatedBooking: booking._id });
         }
 
         return res.json({ success: true, message: 'Trip started successfully' });
@@ -539,7 +660,6 @@ module.exports.completeTrip = async (req, res) => {
         await booking.save();
 
         await removeVehicleAvailability(booking._id);
-
         await createBookingTimeline(booking._id, 'TRIP_COMPLETED', req.user._id, 'owner', 'Trip completed');
 
         const io = req.app.get('io');
@@ -618,6 +738,26 @@ module.exports.getBookingDetails = async (req, res) => {
     } catch (e) { console.error('Get booking details error', e); return res.status(500).json({ success: false, error: 'Unable to fetch booking details' }); }
 };
 
+// Get booking status (lightweight, for timer countdown)
+module.exports.getBookingStatus = async (req, res) => {
+    try {
+        const booking = await Booking.findById(req.params.bookingId)
+            .select('bookingStatus expiresAt bookingId estimatedFare acceptedInfo pickupDate pickupTime');
+        if (!booking) return res.status(404).json({ success: false, error: 'Booking not found' });
+
+        const isCustomer = req.user && booking.customerId && booking.customerId.toString() === req.user._id.toString();
+        // Allow access to anyone logged in with the booking ID (further auth on full details endpoint)
+        return res.json({
+            success: true,
+            bookingId: booking.bookingId,
+            status: booking.bookingStatus,
+            expiresAt: booking.expiresAt,
+            estimatedFare: booking.estimatedFare,
+            acceptedInfo: ['ACCEPTED', 'PAYMENT_PENDING', 'CONFIRMED'].includes(booking.bookingStatus) ? booking.acceptedInfo : undefined
+        });
+    } catch (e) { console.error('Get booking status error', e); return res.status(500).json({ success: false, error: 'Unable to fetch booking status' }); }
+};
+
 // -----------------------------------------------------------------------
 // Availability APIs
 // -----------------------------------------------------------------------
@@ -654,7 +794,7 @@ module.exports.getOwnerDashboardData = async (req, res) => {
         const ownerId = req.user._id;
         const [pendingBookings, acceptedBookings, totalBookings, recentBookings] = await Promise.all([
             Booking.countDocuments({ ownerId, bookingStatus: 'PENDING' }),
-            Booking.countDocuments({ ownerId, bookingStatus: { $in: ['ACCEPTED', 'COUNTER_OFFER_ACCEPTED', 'TRIP_STARTED'] } }),
+            Booking.countDocuments({ ownerId, bookingStatus: { $in: ['ACCEPTED', 'PAYMENT_PENDING', 'CONFIRMED', 'COUNTER_OFFER_ACCEPTED', 'TRIP_STARTED'] } }),
             Booking.countDocuments({ ownerId }),
             Booking.find({ ownerId }).sort({ bookingCreatedAt: -1 }).limit(5).populate('customerId', 'username').populate('vehicleId', 'title vehicleName')
         ]);
@@ -666,7 +806,7 @@ module.exports.getCustomerDashboardData = async (req, res) => {
     try {
         const customerId = req.user._id;
         const [upcomingTrips, completedTrips, totalTrips, recentTrips] = await Promise.all([
-            Booking.countDocuments({ customerId, bookingStatus: { $in: ['PENDING', 'ACCEPTED', 'COUNTER_OFFER_SENT', 'COUNTER_OFFER_ACCEPTED', 'TRIP_STARTED'] } }),
+            Booking.countDocuments({ customerId, bookingStatus: { $in: ['PENDING', 'ACCEPTED', 'PAYMENT_PENDING', 'CONFIRMED', 'COUNTER_OFFER_SENT', 'COUNTER_OFFER_ACCEPTED', 'TRIP_STARTED'] } }),
             Booking.countDocuments({ customerId, bookingStatus: 'TRIP_COMPLETED' }),
             Booking.countDocuments({ customerId }),
             Booking.find({ customerId }).sort({ bookingCreatedAt: -1 }).limit(5).populate('vehicleId', 'title vehicleName images image')

@@ -74,14 +74,18 @@
         </div>
 
         <input type="hidden" id="distanceKm" name="booking[distanceKm]" value="<%= searchParams?.distance || 0 %>">
-        <input type="hidden" id="estimatedFare" name="booking[estimatedFare]" value="">
-        <input type="hidden" name="booking[tripType]" value="one-way">
+        <input type="hidden" id="estimatedFare" name="booking[estimatedFare]" value="0">
+        <input type="hidden" name="booking[tripType]" value="local">
         <input type="hidden" name="booking[estimatedDuration]" value="">
         <input type="hidden" name="booking[paymentMethod]" value="cash">
 
         <button type="submit" class="btn btn-primary btn-lg btn-block" id="submitBtn">
           <i class="fas fa-paper-plane"></i> Send Booking Request
         </button>
+        <div id="bookingSuccess" class="alert alert-success" style="display:none;margin-top:12px">
+          <i class="fas fa-check-circle"></i>
+          <span><strong>Request sent!</strong> You'll be notified when the owner responds.</span>
+        </div>
         <div id="bookingError" class="alert alert-error" style="display:none;margin-top:12px"><i class="fas fa-exclamation-circle"></i><span id="bookingErrorMsg"></span></div>
       </form>
     </div>
@@ -115,9 +119,9 @@
             <i class="fas fa-road"></i> <span id="fsDistText">0 km</span> &middot; ₹<span id="fsPerKm"><%= perKm %></span>/km
           </div>
 
-          <div class="booking-note">
-            <i class="fas fa-clock"></i> Booking stays pending until owner confirms
-          </div>
+        <div class="booking-note">
+            <i class="fas fa-hourglass-half"></i> <strong>This is a booking request.</strong> The owner will review and confirm within 10 minutes. No payment needed yet.
+        </div>
         </div>
       </div>
     </div>
@@ -322,11 +326,14 @@ document.addEventListener('DOMContentLoaded', () => {
       const params = new URLSearchParams();
       for (const [key, val] of formData) params.append(key, val);
       const r = await fetch(this.action, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: params.toString() });
-      const d = await r.json();
+      const text = await r.text();
+      let d;
+      try { d = JSON.parse(text); } catch(e) { errMsg.textContent = 'Server error. Check console for details.'; errDiv.style.display = 'flex'; console.error('Booking response:', text); btn.disabled = false; btn.innerHTML = '<i class=\"fas fa-paper-plane\"></i> Send Booking Request'; return; }
       if (d.success) {
-        // Show success and redirect to my-trips
-        btn.innerHTML = '<i class="fas fa-check-circle"></i> Sent! Redirecting...';
-        setTimeout(() => { window.location.href = '/customers/my-trips'; }, 1200);
+        document.getElementById('bookingSuccess').style.display = 'flex';
+        btn.innerHTML = '<i class="fas fa-check-circle"></i> Request Sent!';
+        btn.disabled = true;
+        setTimeout(() => { window.location.href = '/customers/my-trips'; }, 2000);
       } else {
         errMsg.textContent = d.error || 'Unable to create booking request';
         errDiv.style.display = 'flex';

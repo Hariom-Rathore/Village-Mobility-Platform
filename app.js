@@ -319,7 +319,18 @@ io.on('connection', (socket) => {
     });
 });
 
-const PORT = process.env.PORT || 8080;
+// Start the background booking expiry job
+const { startBookingExpiryJob } = require('./utils/bookingExpiry');
+startBookingExpiryJob(io);
+
+const PORT = process.env.PORT || 8081;
+server.on('error', (err) => {
+    if (err.code === 'EADDRINUSE') {
+        console.error(`Port ${PORT} is already in use. Kill existing process with:`);
+        console.error(`  taskkill /PID $(netstat -ano | findstr :${PORT} | findstr LISTENING | awk '{print $5}') /F`);
+        process.exit(1);
+    }
+});
 server.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);
 });

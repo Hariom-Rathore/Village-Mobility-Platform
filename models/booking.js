@@ -71,8 +71,10 @@ const BookingSchema = new Schema({
   bookingStatus: {
     type: String,
     enum: [
-      'PENDING', 'ACCEPTED', 'REJECTED', 'COUNTER_OFFER_SENT',
-      'COUNTER_OFFER_ACCEPTED', 'CANCELLED', 'TRIP_STARTED', 'TRIP_COMPLETED'
+      'PENDING', 'ACCEPTED', 'REJECTED', 'EXPIRED',
+      'COUNTER_OFFER_SENT', 'COUNTER_OFFER_ACCEPTED',
+      'CANCELLED', 'TRIP_STARTED', 'TRIP_COMPLETED',
+      'PAYMENT_PENDING', 'CONFIRMED'
     ],
     default: 'PENDING'
   },
@@ -81,6 +83,10 @@ const BookingSchema = new Schema({
     enum: ['PENDING', 'PAID', 'FAILED', 'REFUNDED', 'PARTIALLY_REFUNDED'],
     default: 'PENDING'
   },
+
+  // Response Timer
+  expiresAt: { type: Date },
+  bookingTimerMinutes: { type: Number, default: 10 },
 
   // Counter Offer
   counterOffer: {
@@ -100,8 +106,12 @@ const BookingSchema = new Schema({
     driverPhone: { type: String },
     vehicleNumber: { type: String },
     ownerName: { type: String },
+    ownerPhone: { type: String },
     otp: { type: String }
   },
+
+  // Chat — architecture ready (future feature)
+  chatRoomId: { type: String },
 
   // Metadata
   cancellationReason: { type: String },
@@ -117,14 +127,14 @@ const BookingSchema = new Schema({
 // Indexes for performance
 BookingSchema.index({ pickupCoordinates: "2dsphere" });
 BookingSchema.index({ destinationCoordinates: "2dsphere" });
-BookingSchema.index({ bookingId: 1 }, { unique: true });
 BookingSchema.index({ ownerId: 1, bookingStatus: 1, createdAt: -1 });
 BookingSchema.index({ customerId: 1, bookingStatus: 1, createdAt: -1 });
 BookingSchema.index({ vehicleId: 1, bookingStatus: 1 });
 BookingSchema.index({ vehicleId: 1, pickupDateTime: 1, bookingStatus: 1 });
 BookingSchema.index({ bookingStatus: 1, createdAt: -1 });
+BookingSchema.index({ bookingStatus: 1, expiresAt: 1 }); // for expiry job
 
-BookingSchema.pre('save', function (next) {
+BookingSchema.pre('save', function () {
   if (!this.bookingId) {
     const prefix = 'BK';
     const timestamp = Date.now().toString(36).toUpperCase();
@@ -144,7 +154,6 @@ BookingSchema.pre('save', function (next) {
   if (this.specialInstructions && !this.specialNote) this.specialNote = this.specialInstructions;
   if (this.specialNote && !this.specialInstructions) this.specialInstructions = this.specialNote;
   this.bookingUpdatedAt = Date.now();
-  next();
 });
 
 module.exports = mongoose.model('Booking', BookingSchema);

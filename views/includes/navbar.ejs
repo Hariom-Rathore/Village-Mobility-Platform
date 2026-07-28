@@ -141,6 +141,7 @@
       socket.on('booking:rejected', fetchUnread);
       socket.on('booking:counterOffer', fetchUnread);
       socket.on('booking:cancelled', fetchUnread);
+      socket.on('booking:expired', fetchUnread);
     } catch(e) {}
   }
 })();

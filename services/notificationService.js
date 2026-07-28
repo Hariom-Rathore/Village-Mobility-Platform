@@ -35,8 +35,8 @@ async function notifyNewBookingRequest(bookingId, io) {
     const customer = booking.customerId;
     const ownerId = booking.ownerId;
 
-    const title = 'New Booking Request';
-    const message = `${customer?.username || 'A customer'} wants to book ${vehicle?.title || 'your vehicle'}. Pickup: ${booking.pickupLocation || booking.pickup || 'N/A'}, Destination: ${booking.destination || 'N/A'}. Fare: ₹${booking.estimatedFare || 0}`;
+    const title = '🔔 New Booking Request';
+    const message = `${customer?.username || 'A customer'} wants to book ${vehicle?.title || 'your vehicle'}.\nPickup: ${booking.pickupLocation || booking.pickup || 'N/A'}\nDestination: ${booking.destination || 'N/A'}\nDate: ${booking.pickupDate ? new Date(booking.pickupDate).toLocaleDateString('en-IN') : 'N/A'}\nTime: ${booking.pickupTime || 'N/A'}\nPassengers: ${booking.passengers || 'N/A'}\nEstimated Fare: ₹${booking.estimatedFare || 0}`;
 
     const notification = await createNotification(
       ownerId,
@@ -57,7 +57,8 @@ async function notifyNewBookingRequest(bookingId, io) {
         estimatedFare: booking.estimatedFare,
         distanceKm: booking.distanceKm,
         estimatedDuration: booking.estimatedDuration,
-        specialNote: booking.specialNote || booking.specialInstructions
+        specialNote: booking.specialNote || booking.specialInstructions,
+        expiresAt: booking.expiresAt
       }
     );
 
@@ -88,30 +89,41 @@ async function notifyBookingAccepted(bookingId, io) {
 
     const vehicle = booking.vehicleId;
     const owner = booking.ownerId;
+    const info = booking.acceptedInfo || {};
 
-    const message = `Your booking for ${vehicle?.title || 'vehicle'} has been accepted by ${owner?.username || 'the owner'}.`;
+    const message = `✅ Your booking for ${vehicle?.title || 'vehicle'} has been accepted by ${owner?.username || 'the owner'}.\nDriver: ${info.driverName || 'Owner will drive'}\nVehicle No: ${info.vehicleNumber || 'N/A'}\nEstimated Pickup Time: ${booking.pickupTime || 'N/A'}\nPlease complete advance payment to confirm your trip.`;
+
     const notification = await createNotification(
       booking.customerId,
       'BOOKING_ACCEPTED',
-      'Booking Accepted',
+      '✅ Booking Accepted',
       message,
       bookingId,
-      booking.vehicleId
+      booking.vehicleId,
+      {
+        ownerName: info.ownerName || owner?.username,
+        ownerPhone: info.ownerPhone || owner?.phoneNumber,
+        driverName: info.driverName,
+        driverPhone: info.driverPhone,
+        vehicleNumber: info.vehicleNumber
+      }
     );
 
     if (io) {
       emitToUser(io, booking.customerId, 'booking:accepted', {
         bookingId,
         status: 'ACCEPTED',
-        notification
+        notification,
+        acceptedInfo: booking.acceptedInfo
       });
       emitToUser(io, booking.customerId, 'notification:new', {
         _id: notification._id,
         type: 'BOOKING_ACCEPTED',
-        title: 'Booking Accepted',
+        title: '✅ Booking Accepted',
         message,
         relatedBooking: bookingId,
         relatedVehicle: booking.vehicleId,
+        data: notification.data,
         createdAt: notification.createdAt,
         isRead: false
       });
@@ -129,13 +141,13 @@ async function notifyBookingRejected(bookingId, reason, io) {
 
     const vehicle = booking.vehicleId;
     const message = reason
-      ? `Your booking request for ${vehicle?.title || 'vehicle'} was declined. Reason: ${reason}`
-      : `Your booking request for ${vehicle?.title || 'vehicle'} was declined. Please choose another nearby vehicle.`;
+      ? `Sorry, your booking request for ${vehicle?.title || 'vehicle'} was declined.\nReason: ${reason}\nPlease choose another nearby vehicle.`
+      : `Sorry, your booking request for ${vehicle?.title || 'vehicle'} was declined.\nPlease choose another nearby vehicle.`;
 
     const notification = await createNotification(
       booking.customerId,
       'BOOKING_REJECTED',
-      'Booking Declined',
+      '❌ Booking Declined',
       message,
       bookingId,
       booking.vehicleId,
@@ -152,7 +164,7 @@ async function notifyBookingRejected(bookingId, reason, io) {
       emitToUser(io, booking.customerId, 'notification:new', {
         _id: notification._id,
         type: 'BOOKING_REJECTED',
-        title: 'Booking Declined',
+        title: '❌ Booking Declined',
         message,
         relatedBooking: bookingId,
         relatedVehicle: booking.vehicleId,
@@ -162,6 +174,47 @@ async function notifyBookingRejected(bookingId, reason, io) {
     }
   } catch (error) {
     console.error('Error in notifyBookingRejected:', error);
+  }
+}
+
+async function notifyBookingExpired(bookingId, io) {
+  try {
+    const booking = await Booking.findById(bookingId)
+      .populate('vehicleId')
+      .populate('customerId')
+      .populate('ownerId');
+    if (!booking) return;
+
+    const vehicle = booking.vehicleId;
+    const customer = booking.customerId;
+
+    const customerMsg = `⏰ Your booking request for ${vehicle?.title || 'vehicle'} has expired. The owner did not respond in time. Please choose another nearby vehicle.`;
+    const ownerMsg = `⏰ Booking request from ${customer?.username || 'customer'} for ${vehicle?.title || 'vehicle'} has expired — you didn't respond in time.`;
+
+    await createNotification(
+      booking.customerId,
+      'BOOKING_EXPIRED',
+      '⏰ Booking Request Expired',
+      customerMsg,
+      bookingId,
+      booking.vehicleId
+    );
+
+    await createNotification(
+      booking.ownerId,
+      'BOOKING_EXPIRED',
+      '⏰ Booking Request Expired',
+      ownerMsg,
+      bookingId,
+      booking.vehicleId
+    );
+
+    if (io) {
+      emitToUser(io, booking.customerId, 'booking:expired', { bookingId, status: 'EXPIRED', message: customerMsg });
+      emitToUser(io, booking.ownerId, 'booking:expired', { bookingId, status: 'EXPIRED', message: ownerMsg });
+    }
+  } catch (error) {
+    console.error('Error in notifyBookingExpired:', error);
   }
 }
 
@@ -176,12 +229,12 @@ async function notifyCounterOfferSent(bookingId, io) {
     const owner = booking.ownerId;
     const counter = booking.counterOffer || {};
 
-    const message = `${owner?.username || 'Owner'} sent a counter offer for ${vehicle?.title || 'your booking'}. Original: ₹${counter.originalFare || booking.estimatedFare || 0}, New: ₹${counter.finalFare || 0}. ${counter.message ? 'Message: ' + counter.message : ''}`;
+    const message = `${owner?.username || 'Owner'} sent a counter offer for ${vehicle?.title || 'your booking'}.\nOriginal: ₹${counter.originalFare || booking.estimatedFare || 0}\nNew: ₹${counter.finalFare || 0}${counter.message ? '\nMessage: ' + counter.message : ''}`;
 
     const notification = await createNotification(
       booking.customerId,
       'COUNTER_OFFER_SENT',
-      'Counter Offer Received',
+      '💬 Counter Offer Received',
       message,
       bookingId,
       booking.vehicleId,
@@ -202,7 +255,7 @@ async function notifyCounterOfferSent(bookingId, io) {
       emitToUser(io, booking.customerId, 'notification:new', {
         _id: notification._id,
         type: 'COUNTER_OFFER_SENT',
-        title: 'Counter Offer Received',
+        title: '💬 Counter Offer Received',
         message,
         relatedBooking: bookingId,
         relatedVehicle: booking.vehicleId,
@@ -232,7 +285,7 @@ async function notifyCounterOfferAccepted(bookingId, io) {
     const notification = await createNotification(
       booking.ownerId,
       'COUNTER_OFFER_ACCEPTED',
-      'Counter Offer Accepted',
+      '✅ Counter Offer Accepted',
       message,
       bookingId,
       booking.vehicleId,
@@ -240,15 +293,11 @@ async function notifyCounterOfferAccepted(bookingId, io) {
     );
 
     if (io) {
-      emitToUser(io, booking.ownerId, 'booking:accepted', {
-        bookingId,
-        status: 'COUNTER_OFFER_ACCEPTED',
-        notification
-      });
+      emitToUser(io, booking.ownerId, 'booking:accepted', { bookingId, status: 'COUNTER_OFFER_ACCEPTED', notification });
       emitToUser(io, booking.ownerId, 'notification:new', {
         _id: notification._id,
         type: 'COUNTER_OFFER_ACCEPTED',
-        title: 'Counter Offer Accepted',
+        title: '✅ Counter Offer Accepted',
         message,
         relatedBooking: bookingId,
         relatedVehicle: booking.vehicleId,
@@ -269,7 +318,7 @@ async function notifyBookingCancelled(bookingId, cancelledBy, io) {
     const vehicle = booking.vehicleId;
     const recipientId = cancelledBy === 'customer' ? booking.ownerId : booking.customerId;
 
-    const message = `Booking for ${vehicle?.title || 'vehicle'} has been cancelled.`;
+    const message = `Booking for ${vehicle?.title || 'vehicle'} has been cancelled by the ${cancelledBy}.`;
 
     const notification = await createNotification(
       recipientId,
@@ -281,12 +330,7 @@ async function notifyBookingCancelled(bookingId, cancelledBy, io) {
     );
 
     if (io) {
-      emitToUser(io, recipientId, 'booking:cancelled', {
-        bookingId,
-        status: 'CANCELLED',
-        cancelledBy,
-        notification
-      });
+      emitToUser(io, recipientId, 'booking:cancelled', { bookingId, status: 'CANCELLED', cancelledBy, notification });
       emitToUser(io, recipientId, 'notification:new', {
         _id: notification._id,
         type: 'BOOKING_CANCELLED',
@@ -303,49 +347,46 @@ async function notifyBookingCancelled(bookingId, cancelledBy, io) {
   }
 }
 
+async function notifyBookingConfirmed(bookingId) {
+  try {
+    const booking = await Booking.findById(bookingId).populate('vehicleId').populate('ownerId');
+    if (!booking) return;
+    const vehicle = booking.vehicleId;
+    const owner = booking.ownerId;
+    const message = `Your booking for ${vehicle?.title || 'vehicle'} has been confirmed.`;
+    await createNotification(booking.customerId, 'BOOKING_ACCEPTED', '✅ Booking Confirmed', message, bookingId, booking.vehicleId);
+  } catch (error) {
+    console.error('Error in notifyBookingConfirmed:', error);
+  }
+}
+
+async function notifyPaymentReceived(bookingId) {
+  try {
+    const booking = await Booking.findById(bookingId).populate('vehicleId');
+    if (!booking) return;
+    const vehicle = booking.vehicleId;
+    const message = `Payment received for booking of ${vehicle?.title || 'vehicle'}. Amount: ₹${booking.estimatedFare || 0}`;
+    await createNotification(booking.ownerId, 'PAYMENT_RECEIVED', 'Payment Received', message, bookingId, booking.vehicleId);
+  } catch (error) {
+    console.error('Error in notifyPaymentReceived:', error);
+  }
+}
+
 async function notifyTripCompleted(bookingId, io) {
   try {
     const booking = await Booking.findById(bookingId).populate('vehicleId');
     if (!booking) return;
 
     const vehicle = booking.vehicleId;
+    const customerMessage = `Your trip in ${vehicle?.title || 'vehicle'} has been completed. Thank you for choosing RideLocal!`;
+    await createNotification(booking.customerId, 'TRIP_COMPLETED', '🏁 Trip Completed', customerMessage, bookingId, booking.vehicleId);
 
-    const customerMessage = `Your trip in ${vehicle?.title || 'vehicle'} has been completed. Please leave a review.`;
-    await createNotification(
-      booking.customerId,
-      'TRIP_COMPLETED',
-      'Trip Completed',
-      customerMessage,
-      bookingId,
-      booking.vehicleId
-    );
-
-    const ownerMessage = `Trip for ${vehicle?.title || 'vehicle'} has been completed. Vehicle is now available.`;
-    const ownerNotification = await createNotification(
-      booking.ownerId,
-      'TRIP_COMPLETED',
-      'Trip Completed',
-      ownerMessage,
-      bookingId,
-      booking.vehicleId
-    );
+    const ownerMessage = `Trip for ${vehicle?.title || 'vehicle'} has been completed. Vehicle is now available for new bookings.`;
+    const ownerNotification = await createNotification(booking.ownerId, 'TRIP_COMPLETED', '🏁 Trip Completed', ownerMessage, bookingId, booking.vehicleId);
 
     if (io) {
-      emitToUser(io, booking.customerId, 'notification:new', {
-        type: 'TRIP_COMPLETED',
-        title: 'Trip Completed',
-        message: customerMessage,
-        relatedBooking: bookingId,
-        relatedVehicle: booking.vehicleId
-      });
-      emitToUser(io, booking.ownerId, 'notification:new', {
-        _id: ownerNotification._id,
-        type: 'TRIP_COMPLETED',
-        title: 'Trip Completed',
-        message: ownerMessage,
-        relatedBooking: bookingId,
-        relatedVehicle: booking.vehicleId
-      });
+      emitToUser(io, booking.customerId, 'notification:new', { type: 'TRIP_COMPLETED', title: '🏁 Trip Completed', message: customerMessage, relatedBooking: bookingId });
+      emitToUser(io, booking.ownerId, 'notification:new', { _id: ownerNotification?._id, type: 'TRIP_COMPLETED', title: '🏁 Trip Completed', message: ownerMessage, relatedBooking: bookingId });
     }
   } catch (error) {
     console.error('Error in notifyTripCompleted:', error);
@@ -383,10 +424,7 @@ async function markAsRead(notificationId, userId) {
 
 async function markAllAsRead(userId) {
   try {
-    await Notification.updateMany(
-      { recipient: userId, isRead: false },
-      { isRead: true }
-    );
+    await Notification.updateMany({ recipient: userId, isRead: false }, { isRead: true });
     return true;
   } catch (error) {
     console.error('Error marking all as read:', error);
@@ -408,9 +446,12 @@ module.exports = {
   notifyNewBookingRequest,
   notifyBookingAccepted,
   notifyBookingRejected,
+  notifyBookingExpired,
   notifyCounterOfferSent,
   notifyCounterOfferAccepted,
   notifyBookingCancelled,
+  notifyBookingConfirmed,
+  notifyPaymentReceived,
   notifyTripCompleted,
   getUserNotifications,
   markAsRead,

@@ -1,6 +1,6 @@
 const express = require("express");
 const router = express.Router();
-const { isLoggedIn, isOwner, validateListing, validateBookingRequest } = require("../utils/middleware.js");
+const { isLoggedIn, isApiLoggedIn, isOwner, validateListing, validateBookingRequest } = require("../utils/middleware.js");
 const listings = require("../controllers/listing.js");
 const bookingController = require("../controllers/booking.js");
 
@@ -38,7 +38,7 @@ router.post('/book/:id/order', isLoggedIn, bookingController.createOrder);
 router.post('/book/:id/confirm', isLoggedIn, bookingController.confirmPayment);
 
 // Legacy booking request route
-router.post('/book/:id/request', isLoggedIn, validateBookingRequest, bookingController.createBookingRequest);
+router.post('/book/:id/request', isApiLoggedIn, validateBookingRequest, bookingController.createBookingRequest);
 
 // Legacy owner booking actions
 router.post('/bookings/:bookingId/accept', isLoggedIn, bookingController.acceptBooking);
