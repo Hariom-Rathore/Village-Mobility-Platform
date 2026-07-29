@@ -64,8 +64,16 @@ const buildListingData = (incomingListing = {}) => ({
 
 const DEFAULT_OWNER_WHATSAPP_NUMBER = process.env.OWNER_WHATSAPP_NUMBER || "";
 
+function haversineKm(lat1, lon1, lat2, lon2) {
+    const R = 6371;
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon / 2) ** 2;
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
 module.exports.index = async (req, res) => {
-    const { category = "all", type, seats, search, tripType } = req.query;
+    const { category = "all", type, seats, search, tripType, pickup } = req.query;
     const filter = { websiteSource: "car-rental" };
 
     // Trip type → smart vehicle recommendations (case-insensitive matching)
@@ -101,7 +109,6 @@ module.exports.index = async (req, res) => {
             { description: searchRegex },
             { category: searchRegex },
         ];
-        // Merge with existing $or from tripType filter
         if (filter.$or) {
             filter.$and = [{ $or: filter.$or }, { $or: searchOr }];
             delete filter.$or;
@@ -110,8 +117,35 @@ module.exports.index = async (req, res) => {
         }
     }
 
-    const alllistings = await Listing.find(filter).sort({ _id: -1 }).populate("owner");
-    res.render("listings/index.ejs", { alllistings, currentCategory: category, currentType: type, currentSeats: seats, currentTripType: tripType || '', currentSearch: search || "" });
+    let alllistings = await Listing.find(filter).sort({ _id: -1 }).populate("owner");
+    let distances = {};
+    let pickupLabel = (pickup || '').trim();
+
+    // If pickup is given, geocode it and sort listings by distance
+    if (pickupLabel) {
+        try {
+            const geoRes = await fetch(`https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&q=${encodeURIComponent(pickupLabel)}`, {
+                headers: { 'User-Agent': 'PROJECT_CAR_DELTA/1.0' }
+            });
+            if (geoRes.ok) {
+                const geoData = await geoRes.json();
+                if (geoData.length > 0) {
+                    const [pickLon, pickLat] = [parseFloat(geoData[0].lon), parseFloat(geoData[0].lat)];
+
+                    alllistings = alllistings.map(l => l.toObject ? l.toObject() : l);
+                    for (const l of alllistings) {
+                        const coords = l.locationCoordinates?.coordinates;
+                        if (coords && coords.length === 2 && coords[0] !== 0 && coords[1] !== 0) {
+                            distances[l._id] = Math.round(haversineKm(pickLat, pickLon, coords[1], coords[0]) * 10) / 10;
+                        }
+                    }
+                    alllistings.sort((a, b) => (distances[a._id] ?? Infinity) - (distances[b._id] ?? Infinity));
+                }
+            }
+        } catch (e) { console.error('Pickup geocode error:', e); }
+    }
+
+    res.render("listings/index.ejs", { alllistings, distances, pickupLabel, currentCategory: category, currentType: type, currentSeats: seats, currentTripType: tripType || '', currentSearch: search || "" });
 };
 
 module.exports.geocode = async (req, res) => {

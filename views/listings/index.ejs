@@ -1,13 +1,21 @@
 <% layout("/listings/layouts/boilerplate") %>
 <% var tripType = typeof currentTripType !== 'undefined' ? currentTripType : ''; %>
+<% var distances = typeof distances !== 'undefined' ? distances : {}; %>
+<% var pickupLabel = typeof pickupLabel !== 'undefined' ? pickupLabel : ''; %>
 <div class="listings-page">
-  <!-- Filters -->
+  <% if (pickupLabel) { %>
+    <div class="pickup-banner">
+      <i class="fas fa-map-marker-alt"></i>
+      Showing vehicles near <strong><%= pickupLabel %></strong>
+      <span> — sorted by distance</span>
+    </div>
+  <% } %>
   <div class="listings-filters">
     <a href="/cars" class="filter-link <%= !tripType ? 'active' : '' %>">
       <div class="filter"><i class="fa-solid fa-fire"></i><p>All</p></div>
     </a>
     <a href="/cars?tripType=local" class="filter-link <%= tripType === 'local' ? 'active' : '' %>">
-      <div class="filter"><i class="fa-solid fa-city"></i><p>Local Trips</p></div>
+      <div class="filter"><i class="fa-solid fa-city"></i><p>Local</p></div>
     </a>
     <a href="/cars?tripType=outstation" class="filter-link <%= tripType === 'outstation' ? 'active' : '' %>">
       <div class="filter"><i class="fa-solid fa-road"></i><p>Outstation</p></div>
@@ -19,10 +27,10 @@
       <div class="filter"><i class="fa-solid fa-plane"></i><p>Airport</p></div>
     </a>
     <a href="/cars?tripType=temple-visit" class="filter-link <%= tripType === 'temple-visit' ? 'active' : '' %>">
-      <div class="filter"><i class="fa-solid fa-place-of-worship"></i><p>Temple Visit</p></div>
+      <div class="filter"><i class="fa-solid fa-place-of-worship"></i><p>Temple</p></div>
     </a>
     <a href="/cars?tripType=tourism" class="filter-link <%= tripType === 'tourism' ? 'active' : '' %>">
-      <div class="filter"><i class="fa-solid fa-mountain"></i><p>Tour Package</p></div>
+      <div class="filter"><i class="fa-solid fa-mountain"></i><p>Tour</p></div>
     </a>
     <a href="/cars?tripType=corporate" class="filter-link <%= tripType === 'corporate' ? 'active' : '' %>">
       <div class="filter"><i class="fa-solid fa-briefcase"></i><p>Corporate</p></div>
@@ -33,16 +41,11 @@
     <a href="/cars?tripType=family" class="filter-link <%= tripType === 'family' ? 'active' : '' %>">
       <div class="filter"><i class="fa-solid fa-people-group"></i><p>Family</p></div>
     </a>
-    <label class="tax-toggle">
-      <input type="checkbox" id="taxSwitch">
-      <span>Display total after taxes</span>
-    </label>
   </div>
 
-  <!-- Grid -->
   <% if (!alllistings || alllistings.length === 0) { %>
-    <div class="empty-state" style="margin-top:40px">
-      <i class="fas fa-car"></i>
+    <div class="empty-state">
+      <div class="empty-icon"><i class="fas fa-car"></i></div>
       <h3>No vehicles found</h3>
       <p><% if (currentSearch && currentSearch.trim()) { %>No results for "<%= currentSearch %>"<% } else if (tripType) { %>No vehicles found for this trip type. Try a different category.<% } else { %>Try adjusting your filters<% } %></p>
     </div>
@@ -52,38 +55,54 @@
         <% let imgUrl = "https://images.pexels.com/photos/11129937/pexels-photo-11129937.jpeg";
            if (listing.image && listing.image.url) {
              imgUrl = listing.image.url;
-             if (imgUrl.includes('cloudinary.com')) imgUrl = imgUrl.replace('/upload/', '/upload/q_auto,f_auto,w_400,h_300,c_limit/');
-             else if (imgUrl.includes('unsplash.com') && !imgUrl.includes('?')) imgUrl += '?auto=format&fit=crop&w=400&q=80';
+             if (imgUrl.includes('cloudinary.com')) imgUrl = imgUrl.replace('/upload/', '/upload/q_auto,f_auto,w_500,h_350,c_limit/');
+             else if (imgUrl.includes('unsplash.com') && !imgUrl.includes('?')) imgUrl += '?auto=format&fit=crop&w=500&q=80';
            } else if (typeof listing.image === "string") {
              imgUrl = listing.image;
-             if (imgUrl.includes('unsplash.com') && !imgUrl.includes('?')) imgUrl += '?auto=format&fit=crop&w=400&q=80';
+             if (imgUrl.includes('unsplash.com') && !imgUrl.includes('?')) imgUrl += '?auto=format&fit=crop&w=500&q=80';
            }
         %>
         <% const av = listing.availabilityStatus || 'AVAILABLE'; %>
-        <% const badgeMap = { AVAILABLE: ['success','Available'], BOOKED: ['danger','Booked'], RESERVED: ['warning','Reserved'], UNDER_MAINTENANCE: ['secondary','Maintenance'], HIDDEN: ['secondary','Hidden'] }; %>
-        <% const [badgeColor, badgeText] = badgeMap[av] || ['secondary','Unknown']; %>
+        <% const isAvail = av === 'AVAILABLE' || av === 'RESERVED'; %>
+        <% const dist = distances[listing._id]; %>
         <a href="/cars/<%=listing._id%>" class="listing-card-link">
-          <div class="card listing-card">
-            <div class="listing-card-img-wrap">
+          <div class="listing-card">
+            <div class="card-img-wrap">
               <img src="<%= imgUrl %>" alt="<%= listing.title %>" loading="lazy" onerror="this.src='https://images.pexels.com/photos/11129937/pexels-photo-11129937.jpeg'">
-              <span class="badge badge-<%= badgeColor %> listing-badge"><%= badgeText %></span>
+              <div class="card-img-overlay"></div>
+              <div class="card-badges">
+                <% if (!isAvail) { %><span class="cb cb-booked">Booked</span><% } %>
+                <% if (dist != null) { %><span class="cb cb-dist"><i class="fas fa-location-dot"></i> <%= dist < 1 ? (dist*1000).toFixed(0)+'m' : dist.toFixed(1)+' km' %></span><% } %>
+              </div>
+              <div class="card-price-tag">
+                <span class="cpt-amount">&#8377;<%= listing.price != null ? listing.price.toLocaleString("en-IN") : "—" %></span>
+                <span class="cpt-unit">/day</span>
+              </div>
             </div>
             <div class="card-body">
-              <h4><%= listing.title %></h4>
-              <p class="price">
-                &#8377; <%= listing.price != null ? listing.price.toLocaleString("en-IN") : "—" %>
-                <small>/day</small>
-                <% if(listing.ratePerKm != null) { %><br><small class="km-rate">&#8377; <%= listing.ratePerKm %>/km</small><% } %>
-                <i class="tax-info" style="display:none"> &nbsp;+18% GST</i>
-              </p>
-              <% if (listing.averageRating && listing.totalReviews > 0) { %>
-                <div class="listing-rating">
-                  <% for(let i = 1; i <= 5; i++) { %>
-                    <i class="<%= i <= Math.floor(listing.averageRating) ? 'fas' : (i <= listing.averageRating ? 'fas fa-star-half-alt' : 'far') %> fa-star"></i>
-                  <% } %>
-                  <span>(<%= listing.totalReviews %>)</span>
-                </div>
-              <% } %>
+              <div class="card-title-row">
+                <h4><%= listing.title %></h4>
+                <% if (listing.averageRating && listing.totalReviews > 0) { %>
+                  <div class="card-rating">
+                    <i class="fas fa-star"></i>
+                    <span><%= listing.averageRating.toFixed(1) %></span>
+                  </div>
+                <% } %>
+              </div>
+              <div class="card-specs">
+                <% if (listing.seats) { %><span class="spec"><i class="fas fa-user"></i> <%= listing.seats %></span><% } %>
+                <% if (listing.fuelType) { %><span class="spec"><i class="fas fa-gas-pump"></i> <%= listing.fuelType.charAt(0).toUpperCase() + listing.fuelType.slice(1) %></span><% } %>
+                <% if (listing.transmission) { %><span class="spec"><i class="fas fa-gear"></i> <%= listing.transmission.charAt(0).toUpperCase() + listing.transmission.slice(1) %></span><% } %>
+                <% if (listing.ratePerKm) { %><span class="spec"><i class="fas fa-tachometer-alt"></i> &#8377;<%= listing.ratePerKm %>/km</span><% } %>
+              </div>
+              <div class="card-location"><i class="fas fa-map-pin"></i> <%= listing.location || listing.city || listing.area || listing.village || '' %></div>
+              <div class="card-footer">
+                <% if (isAvail) { %>
+                  <span class="card-cta">View Details <i class="fas fa-arrow-right"></i></span>
+                <% } else { %>
+                  <span class="card-cta muted">Unavailable</span>
+                <% } %>
+              </div>
             </div>
           </div>
         </a>
@@ -92,34 +111,81 @@
   <% } %>
 </div>
 
-<script>
-document.getElementById('taxSwitch')?.addEventListener('change', function() {
-  document.querySelectorAll('.tax-info').forEach(e => e.style.display = this.checked ? 'inline' : 'none');
-});
-</script>
-
 <style>
 .listings-page { padding: 24px 24px 48px; max-width: var(--max-width); margin: 0 auto; }
-.listings-filters { display: flex; flex-wrap: nowrap; align-items: center; gap: 4px; overflow-x: auto; padding: 4px 0 12px; margin-bottom: 24px; }
+
+/* Pickup banner */
+.pickup-banner { padding: 10px 16px; margin-bottom: 16px; background: linear-gradient(135deg,#eff6ff,#dbeafe); border-radius: 12px; font-size: 13px; color: #1e40af; border: 1px solid #bfdbfe; }
+.pickup-banner i { margin-right: 6px; }
+.pickup-banner span { font-size: 11px; color: #6b7280; }
+
+/* Filters */
+.listings-filters { display: flex; flex-wrap: nowrap; align-items: center; gap: 4px; overflow-x: auto; padding: 4px 0 16px; margin-bottom: 8px; scrollbar-width: none; }
+.listings-filters::-webkit-scrollbar { display: none; }
 .filter-link { text-decoration: none; color: var(--text-secondary); flex: 0 0 auto; }
-.filter { display: flex; flex-direction: column; align-items: center; padding: 10px 14px; border-radius: var(--radius-lg); transition: all 0.2s; min-width: 80px; cursor: pointer; }
-.filter:hover { background: var(--surface); }
-.filter-link.active .filter { background: var(--primary-50); color: var(--primary); }
-.filter i { font-size: 18px; }
-.filter p { margin: 4px 0 0; font-size: 11px; font-weight: 500; white-space: nowrap; }
-.tax-toggle { display: flex; align-items: center; gap: 8px; margin-left: auto; padding: 8px 14px; border: 1px solid var(--border); border-radius: var(--radius-full); white-space: nowrap; cursor: pointer; font-size: 12px; color: var(--text-secondary); flex-shrink: 0; }
-.tax-toggle input[type="checkbox"] { accent-color: var(--primary); width: 14px; height: 14px; }
-.listings-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 24px; }
-.listing-card-link { text-decoration: none; color: inherit; display: block; transition: transform 0.2s; }
-.listing-card-link:hover { transform: translateY(-4px); }
-.listing-card { overflow: hidden; }
-.listing-card-img-wrap { position: relative; height: 200px; overflow: hidden; background: var(--surface); }
-.listing-card-img-wrap img { width: 100%; height: 100%; object-fit: cover; }
-.listing-badge { position: absolute; top: 12px; right: 12px; }
-.listing-card .card-body h4 { font-size: 16px; font-weight: 700; margin-bottom: 4px; }
-.listing-card .card-body .price { font-size: 18px; font-weight: 700; color: var(--primary); }
-.listing-card .card-body .price small { font-size: 12px; font-weight: 400; color: var(--text-secondary); }
-.listing-card .card-body .km-rate { font-size: 12px; color: var(--text-secondary); font-weight: 400; }
-.listing-rating { color: #f59e0b; font-size: 12px; margin-top: 6px; }
-.listing-rating span { color: var(--text-secondary); margin-left: 4px; }
+.filter { display: flex; flex-direction: column; align-items: center; padding: 8px 12px; border-radius: 10px; transition: all 0.2s; min-width: 64px; cursor: pointer; background: transparent; }
+.filter:hover { background: #f1f5f9; }
+.filter-link.active .filter { background: linear-gradient(135deg,#2563eb,#7c3aed); color: #fff; box-shadow: 0 4px 12px rgba(37,99,235,0.25); }
+.filter i { font-size: 16px; }
+.filter p { margin: 3px 0 0; font-size: 10px; font-weight: 600; white-space: nowrap; letter-spacing: 0.2px; }
+
+/* Grid */
+.listings-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 20px; }
+
+/* Card */
+.listing-card-link { text-decoration: none; color: inherit; display: block; }
+.listing-card { background: #fff; border-radius: 16px; overflow: hidden; border: 1px solid #f0f0f0; transition: all 0.3s cubic-bezier(0.4,0,0.2,1); box-shadow: 0 1px 3px rgba(0,0,0,0.04); }
+.listing-card:hover { transform: translateY(-6px); box-shadow: 0 20px 40px rgba(0,0,0,0.1); border-color: transparent; }
+
+/* Image */
+.card-img-wrap { position: relative; height: 220px; overflow: hidden; background: #f3f4f6; }
+.card-img-wrap img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.5s; }
+.listing-card:hover .card-img-wrap img { transform: scale(1.08); }
+.card-img-overlay { position: absolute; inset: 0; background: linear-gradient(0deg, rgba(0,0,0,0.5) 0%, transparent 50%); pointer-events: none; z-index: 1; }
+
+/* Badges on image */
+.card-badges { position: absolute; top: 12px; left: 12px; right: 12px; display: flex; gap: 6px; z-index: 2; }
+.cb { padding: 4px 10px; border-radius: 100px; font-size: 11px; font-weight: 600; backdrop-filter: blur(8px); }
+.cb-booked { background: rgba(220,38,38,0.85); color: #fff; }
+.cb-dist { background: rgba(37,99,235,0.85); color: #fff; margin-left: auto; }
+.cb-dist i { margin-right: 3px; font-size: 10px; }
+
+/* Price tag on image */
+.card-price-tag { position: absolute; bottom: 12px; left: 12px; z-index: 2; display: flex; align-items: baseline; gap: 2px; }
+.cpt-amount { font-size: 22px; font-weight: 800; color: #fff; text-shadow: 0 2px 8px rgba(0,0,0,0.3); }
+.cpt-unit { font-size: 12px; color: rgba(255,255,255,0.8); font-weight: 500; }
+
+/* Card body */
+.card-body { padding: 16px 18px 18px; }
+.card-title-row { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; gap: 8px; }
+.card-title-row h4 { font-size: 16px; font-weight: 700; color: #111; margin: 0; line-height: 1.3; flex: 1; }
+.card-rating { display: flex; align-items: center; gap: 3px; background: #fffbeb; padding: 3px 8px; border-radius: 100px; font-size: 11px; font-weight: 700; color: #92400e; flex-shrink: 0; }
+.card-rating i { color: #f59e0b; font-size: 10px; }
+
+/* Specs */
+.card-specs { display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 8px; }
+.spec { display: flex; align-items: center; gap: 4px; font-size: 11px; color: #6b7280; background: #f9fafb; padding: 4px 8px; border-radius: 6px; font-weight: 500; }
+.spec i { font-size: 10px; color: #9ca3af; }
+
+/* Location */
+.card-location { font-size: 12px; color: #9ca3af; margin-bottom: 12px; display: flex; align-items: center; gap: 4px; }
+.card-location i { font-size: 10px; }
+
+/* Footer / CTA */
+.card-footer { border-top: 1px solid #f3f4f6; padding-top: 12px; }
+.card-cta { font-size: 13px; font-weight: 600; color: #2563eb; display: flex; align-items: center; gap: 6px; transition: gap 0.2s; }
+.listing-card:hover .card-cta { gap: 10px; }
+.card-cta.muted { color: #9ca3af; }
+
+/* Empty */
+.empty-state { text-align: center; padding: 80px 20px; }
+.empty-icon { font-size: 48px; color: #d1d5db; margin-bottom: 16px; }
+.empty-state h3 { font-size: 20px; font-weight: 700; color: #111; margin-bottom: 8px; }
+.empty-state p { color: #6b7280; font-size: 14px; }
+
+@media (max-width: 768px) {
+  .listings-page { padding: 16px; }
+  .listings-grid { grid-template-columns: 1fr; gap: 16px; }
+  .card-img-wrap { height: 200px; }
+}
 </style>

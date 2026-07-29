@@ -9,94 +9,106 @@
   };
   const imgUrl = setupImageUrl(listing.image?.url || (typeof listing.image === 'string' ? listing.image : null), 1200);
   const av = listing.availabilityStatus || 'AVAILABLE';
-  const badgeMap = { AVAILABLE: ['success','Available Now'], BOOKED: ['danger','Booked'], RESERVED: ['warning','Reserved'], UNDER_MAINTENANCE: ['secondary','Maintenance'], HIDDEN: ['secondary','Not Available'] };
-  const [badgeColor, badgeText] = badgeMap[av] || ['secondary','Unknown'];
+  const isAvail = av === 'AVAILABLE' || av === 'RESERVED';
   const isOwner = currUser && listing.owner?._id?.equals(currUser._id);
 %>
 
-<div class="vehicle-detail fade-in">
-  <div class="detail-layout">
-    <!-- Left: Image + Info -->
-    <div class="detail-main">
-      <img src="<%= imgUrl %>" alt="<%= listing.title %>" class="detail-hero" onerror="this.src='https://images.pexels.com/photos/11129937/pexels-photo-11129937.jpeg'">
+<div class="vehicle-detail">
+  <!-- Hero -->
+  <div class="detail-hero-wrap">
+    <img src="<%= imgUrl %>" alt="<%= listing.title %>" class="detail-hero" onerror="this.src='https://images.pexels.com/photos/11129937/pexels-photo-11129937.jpeg'">
+    <div class="hero-overlay"></div>
+    <div class="hero-content">
+      <div class="hero-badges">
+        <span class="hb <%= isAvail ? 'hb-avail' : 'hb-booked' %>"><i class="fas fa-<%= isAvail ? 'check-circle' : 'ban' %>"></i> <%= isAvail ? 'Available Now' : 'Currently Booked' %></span>
+        <% if (listing.category) { %><span class="hb hb-cat"><%= listing.category %></span><% } %>
+      </div>
+      <h1 class="hero-title"><%= listing.title %></h1>
+      <p class="hero-loc"><i class="fas fa-map-pin"></i> <%= listing.location %><% if (listing.city) { %>, <%= listing.city %><% } %></p>
+    </div>
+  </div>
 
-      <div class="detail-section">
-        <div class="detail-header">
-          <div>
-            <h1><%= listing.title %></h1>
-            <p class="detail-location"><i class="fas fa-map-pin"></i> <%= listing.location %><% if (listing.city) { %>, <%= listing.city %><% } %></p>
-          </div>
-          <span class="badge badge-lg badge-<%= badgeColor %>"><%= badgeText %></span>
-        </div>
-        <p class="detail-desc"><%= listing.description %></p>
+  <div class="detail-layout">
+    <!-- Main -->
+    <div class="detail-main">
+      <!-- Quick Specs Bar -->
+      <div class="specs-bar">
+        <% if (listing.seats) { %><div class="sb-item"><i class="fas fa-user"></i> <strong><%= listing.seats %></strong> <span>Seats</span></div><% } %>
+        <% if (listing.fuelType) { %><div class="sb-item"><i class="fas fa-gas-pump"></i> <strong><%= listing.fuelType.charAt(0).toUpperCase() + listing.fuelType.slice(1) %></strong> <span>Fuel</span></div><% } %>
+        <% if (listing.transmission) { %><div class="sb-item"><i class="fas fa-gear"></i> <strong><%= listing.transmission.charAt(0).toUpperCase() + listing.transmission.slice(1) %></strong> <span>Gear</span></div><% } %>
+        <% if (listing.year) { %><div class="sb-item"><i class="fas fa-calendar"></i> <strong><%= listing.year %></strong> <span>Year</span></div><% } %>
+        <% if (listing.totalBookings > 0) { %><div class="sb-item"><i class="fas fa-check-circle"></i> <strong><%= listing.totalBookings %></strong> <span>Trips</span></div><% } %>
+        <% if (listing.averageRating) { %><div class="sb-item"><i class="fas fa-star" style="color:#f59e0b"></i> <strong><%= listing.averageRating.toFixed(1) %></strong> <span>Rating</span></div><% } %>
+      </div>
+
+      <!-- Description -->
+      <div class="ds-card">
+        <h3><i class="fas fa-align-left"></i> About This Vehicle</h3>
+        <p class="desc-text"><%= listing.description %></p>
       </div>
 
       <!-- Pricing -->
-      <div class="detail-section">
-        <h3>Pricing</h3>
+      <div class="ds-card">
+        <h3><i class="fas fa-tag"></i> Pricing</h3>
         <div class="pricing-grid">
-          <% if (listing.baseFare) { %><div class="price-item"><span>Base Fare</span><strong>&#8377; <%= listing.baseFare.toLocaleString("en-IN") %></strong></div><% } %>
-          <% if (listing.pricePerKm) { %><div class="price-item"><span>Per KM</span><strong>&#8377; <%= listing.pricePerKm %></strong></div><% } %>
-          <% if (listing.minimumTripFare) { %><div class="price-item"><span>Minimum Fare</span><strong>&#8377; <%= listing.minimumTripFare.toLocaleString("en-IN") %></strong></div><% } %>
-          <% if (listing.nightCharge) { %><div class="price-item"><span>Night Charge</span><strong>&#8377; <%= listing.nightCharge.toLocaleString("en-IN") %></strong></div><% } %>
-          <% if (listing.price) { %><div class="price-item"><span>Day Rate</span><strong>&#8377; <%= listing.price.toLocaleString("en-IN") %></strong></div><% } %>
-          <% if (listing.ratePerKm) { %><div class="price-item"><span>Rate/KM</span><strong>&#8377; <%= listing.ratePerKm %></strong></div><% } %>
+          <% if (listing.baseFare) { %><div class="pi"><div class="pi-label">Base Fare</div><div class="pi-val">&#8377; <%= listing.baseFare.toLocaleString("en-IN") %></div></div><% } %>
+          <% if (listing.pricePerKm) { %><div class="pi"><div class="pi-label">Per KM</div><div class="pi-val">&#8377; <%= listing.pricePerKm %></div></div><% } %>
+          <% if (listing.minimumTripFare) { %><div class="pi"><div class="pi-label">Minimum Fare</div><div class="pi-val">&#8377; <%= listing.minimumTripFare.toLocaleString("en-IN") %></div></div><% } %>
+          <% if (listing.nightCharge) { %><div class="pi"><div class="pi-label">Night Charge</div><div class="pi-val">&#8377; <%= listing.nightCharge.toLocaleString("en-IN") %></div></div><% } %>
+          <% if (listing.price) { %><div class="pi"><div class="pi-label">Day Rate</div><div class="pi-val highlight">&#8377; <%= listing.price.toLocaleString("en-IN") %></div></div><% } %>
+          <% if (listing.ratePerKm) { %><div class="pi"><div class="pi-label">Rate/KM</div><div class="pi-val">&#8377; <%= listing.ratePerKm %></div></div><% } %>
         </div>
-        <p class="text-secondary mt-sm" style="font-size:13px"><i class="fas fa-info-circle"></i> +18% GST applicable</p>
+        <p class="gst-note"><i class="fas fa-info-circle"></i> +18% GST applicable on all fares</p>
       </div>
 
       <!-- Vehicle Details -->
-      <% if (listing.vehicleName || listing.brand || listing.model || listing.year || listing.vehicleNumber || listing.fuelType || listing.transmission || listing.seats || listing.acAvailable !== undefined || listing.musicSystem !== undefined || listing.luggageCapacity) { %>
-      <div class="detail-section">
-        <h3>Vehicle Details</h3>
-        <div class="detail-grid">
-          <% if (listing.vehicleName) { %><div class="detail-item"><span>Vehicle</span><strong><%= listing.vehicleName %></strong></div><% } %>
-          <% if (listing.brand && listing.model) { %><div class="detail-item"><span>Brand/Model</span><strong><%= listing.brand %> <%= listing.model %></strong></div><% } %>
-          <% if (listing.year) { %><div class="detail-item"><span>Year</span><strong><%= listing.year %></strong></div><% } %>
-          <% if (listing.vehicleNumber) { %><div class="detail-item"><span>Number</span><strong><%= listing.vehicleNumber %></strong></div><% } %>
-          <% if (listing.fuelType) { %><div class="detail-item"><span>Fuel</span><strong><%= listing.fuelType.charAt(0).toUpperCase() + listing.fuelType.slice(1) %></strong></div><% } %>
-          <% if (listing.transmission) { %><div class="detail-item"><span>Transmission</span><strong><%= listing.transmission.charAt(0).toUpperCase() + listing.transmission.slice(1) %></strong></div><% } %>
-          <% if (listing.seats) { %><div class="detail-item"><span>Seating</span><strong><%= listing.seats %> Seater</strong></div><% } %>
-          <% if (listing.acAvailable !== undefined) { %><div class="detail-item"><span>AC</span><strong><%= listing.acAvailable ? 'Yes' : 'No' %></strong></div><% } %>
-          <% if (listing.musicSystem !== undefined) { %><div class="detail-item"><span>Music System</span><strong><%= listing.musicSystem ? 'Yes' : 'No' %></strong></div><% } %>
-          <% if (listing.luggageCapacity) { %><div class="detail-item"><span>Luggage</span><strong><%= listing.luggageCapacity %></strong></div><% } %>
+      <% if (listing.vehicleName || listing.brand || listing.model || listing.vehicleNumber || listing.acAvailable !== undefined || listing.musicSystem !== undefined || listing.luggageCapacity) { %>
+      <div class="ds-card">
+        <h3><i class="fas fa-car"></i> Vehicle Specifications</h3>
+        <div class="vspecs-grid">
+          <% if (listing.vehicleName) { %><div class="vi"><span class="vi-lbl">Model</span><span class="vi-val"><%= listing.vehicleName %></span></div><% } %>
+          <% if (listing.brand && listing.model) { %><div class="vi"><span class="vi-lbl">Brand</span><span class="vi-val"><%= listing.brand %> <%= listing.model %></span></div><% } %>
+          <% if (listing.vehicleNumber) { %><div class="vi"><span class="vi-lbl">Number</span><span class="vi-val"><%= listing.vehicleNumber %></span></div><% } %>
+          <% if (listing.acAvailable !== undefined) { %><div class="vi"><span class="vi-lbl">AC</span><span class="vi-val"><%= listing.acAvailable ? '✔ Available' : '✖ Not Available' %></span></div><% } %>
+          <% if (listing.musicSystem !== undefined) { %><div class="vi"><span class="vi-lbl">Music</span><span class="vi-val"><%= listing.musicSystem ? '✔ Available' : '✖ Not Available' %></span></div><% } %>
+          <% if (listing.luggageCapacity) { %><div class="vi"><span class="vi-lbl">Luggage</span><span class="vi-val"><%= listing.luggageCapacity %></span></div><% } %>
         </div>
       </div>
       <% } %>
 
       <!-- Driver -->
       <% if (listing.driverType) { %>
-      <div class="detail-section">
-        <h3>Driver Information</h3>
-        <div class="detail-grid">
-          <div class="detail-item"><span>Driver</span><strong><%= listing.driverType === 'owner' ? 'Owner drives' : 'Dedicated Driver' %></strong></div>
-          <% if (listing.driverType === 'dedicated-driver' && listing.driverName) { %><div class="detail-item"><span>Name</span><strong><%= listing.driverName %></strong></div><% } %>
-          <% if (listing.driverExperience) { %><div class="detail-item"><span>Experience</span><strong><%= listing.driverExperience %> years</strong></div><% } %>
+      <div class="ds-card">
+        <h3><i class="fas fa-id-card"></i> Driver</h3>
+        <div class="vspecs-grid">
+          <div class="vi"><span class="vi-lbl">Type</span><span class="vi-val"><%= listing.driverType === 'owner' ? 'Owner will drive' : 'Dedicated Driver' %></span></div>
+          <% if (listing.driverType === 'dedicated-driver' && listing.driverName) { %><div class="vi"><span class="vi-lbl">Name</span><span class="vi-val"><%= listing.driverName %></span></div><% } %>
+          <% if (listing.driverExperience) { %><div class="vi"><span class="vi-lbl">Experience</span><span class="vi-val"><%= listing.driverExperience %> years</span></div><% } %>
         </div>
       </div>
       <% } %>
 
-      <!-- Booking Rules -->
+      <!-- Rules -->
       <% if (listing.bookingRules) { %>
-      <div class="detail-section">
-        <h3>Booking Rules</h3>
-        <div class="detail-grid">
-          <% if (listing.bookingRules.minimumBookingAmount) { %><div class="detail-item"><span>Min Booking</span><strong>&#8377; <%= listing.bookingRules.minimumBookingAmount %></strong></div><% } %>
-          <% if (listing.bookingRules.maximumPassengers) { %><div class="detail-item"><span>Max Passengers</span><strong><%= listing.bookingRules.maximumPassengers %></strong></div><% } %>
-          <% if (listing.bookingRules.smokingAllowed !== undefined) { %><div class="detail-item"><span>Smoking</span><strong><%= listing.bookingRules.smokingAllowed ? 'Allowed' : 'Not Allowed' %></strong></div><% } %>
-          <% if (listing.bookingRules.petsAllowed !== undefined) { %><div class="detail-item"><span>Pets</span><strong><%= listing.bookingRules.petsAllowed ? 'Allowed' : 'Not Allowed' %></strong></div><% } %>
-          <% if (listing.bookingRules.nightDriving !== undefined) { %><div class="detail-item"><span>Night Driving</span><strong><%= listing.bookingRules.nightDriving ? 'Available' : 'Not Available' %></strong></div><% } %>
+      <div class="ds-card">
+        <h3><i class="fas fa-clipboard-list"></i> Rules</h3>
+        <div class="vspecs-grid">
+          <% if (listing.bookingRules.minimumBookingAmount) { %><div class="vi"><span class="vi-lbl">Min Booking</span><span class="vi-val">&#8377; <%= listing.bookingRules.minimumBookingAmount %></span></div><% } %>
+          <% if (listing.bookingRules.maximumPassengers) { %><div class="vi"><span class="vi-lbl">Max Passengers</span><span class="vi-val"><%= listing.bookingRules.maximumPassengers %></span></div><% } %>
+          <% if (listing.bookingRules.smokingAllowed !== undefined) { %><div class="vi"><span class="vi-lbl">Smoking</span><span class="vi-val"><%= listing.bookingRules.smokingAllowed ? '✔ Allowed' : '✖ Not Allowed' %></span></div><% } %>
+          <% if (listing.bookingRules.petsAllowed !== undefined) { %><div class="vi"><span class="vi-lbl">Pets</span><span class="vi-val"><%= listing.bookingRules.petsAllowed ? '✔ Allowed' : '✖ Not Allowed' %></span></div><% } %>
+          <% if (listing.bookingRules.nightDriving !== undefined) { %><div class="vi"><span class="vi-lbl">Night Driving</span><span class="vi-val"><%= listing.bookingRules.nightDriving ? '✔ Available' : '✖ Not Available' %></span></div><% } %>
         </div>
       </div>
       <% } %>
 
       <!-- Trip Types -->
       <% if (listing.availableTripTypes && listing.availableTripTypes.length > 0) { %>
-      <div class="detail-section">
-        <h3>Available For</h3>
-        <div class="flex gap-sm" style="flex-wrap:wrap">
+      <div class="ds-card">
+        <h3><i class="fas fa-route"></i> Available For</h3>
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
           <% listing.availableTripTypes.forEach(t => { %>
-            <span class="badge badge-info"><%= t.charAt(0).toUpperCase() + t.slice(1).replace('-',' ') %></span>
+            <span class="tt-badge"><%= t.charAt(0).toUpperCase() + t.slice(1).replace('-',' ') %></span>
           <% }) %>
         </div>
       </div>
@@ -104,8 +116,8 @@
 
       <!-- Gallery -->
       <% if (listing.images && listing.images.length > 0) { %>
-      <div class="detail-section">
-        <h3>Photos</h3>
+      <div class="ds-card">
+        <h3><i class="fas fa-images"></i> Photos</h3>
         <div class="gallery-grid">
           <% listing.images.forEach(img => { %>
             <img src="<%= setupImageUrl(img.url, 400) %>" alt="<%= img.type || 'Photo' %>" loading="lazy" onerror="this.style.display='none'">
@@ -115,107 +127,121 @@
       <% } %>
 
       <!-- Calendar -->
-      <div class="detail-section">
-        <h3>Availability Calendar</h3>
-        <div class="calendar-legend">
-          <span class="chip chip-success"><span class="dot dot-success"></span> Available</span>
-          <span class="chip chip-danger"><span class="dot dot-danger"></span> Booked</span>
+      <div class="ds-card">
+        <h3><i class="fas fa-calendar-alt"></i> Availability</h3>
+        <div class="cal-legend">
+          <span><span class="dot dot-avail"></span> Available</span>
+          <span><span class="dot dot-booked"></span> Booked</span>
         </div>
-        <div id="calendar-loading" class="text-secondary" style="font-size:14px;padding:10px 0">Loading calendar...</div>
-        <div id="availability-calendar" class="calendar-grid"></div>
+        <div id="cal-loading" class="loading-text">Loading calendar...</div>
+        <div id="cal-grid" class="cal-grid"></div>
       </div>
-
-      <!-- Booking Stats -->
-      <% if (listing.totalBookings > 0) { %>
-      <div class="detail-section">
-        <div class="flex gap-md">
-          <div class="stat-card"><div class="stat-value"><%= listing.totalBookings %></div><div class="stat-label">Bookings</div></div>
-          <div class="stat-card"><div class="stat-value">&#8377;<%= (listing.totalRevenue || 0).toLocaleString('en-IN') %></div><div class="stat-label">Revenue</div></div>
-        </div>
-      </div>
-      <% } %>
     </div>
 
-    <!-- Right: Sidebar -->
+    <!-- Sidebar -->
     <div class="detail-sidebar">
-      <div class="card sidebar-card">
-        <div class="card-body">
-          <div class="owner-info">
-            <div class="owner-avatar"><%= (listing.owner?.username || 'U').charAt(0).toUpperCase() %></div>
+      <div class="sidebar-sticky">
+        <!-- Owner Card -->
+        <div class="s-card">
+          <div class="s-owner">
+            <div class="s-avatar"><%= (listing.owner?.username || 'U').charAt(0).toUpperCase() %></div>
             <div>
-              <strong><%= listing.owner?.username || "Vehicle Owner" %></strong>
+              <div class="s-owner-name"><%= listing.owner?.username || "Vehicle Owner" %></div>
               <% if (listing.owner?.averageRating) { %>
-                <div style="font-size:12px;color:#f59e0b"><%= '★'.repeat(Math.round(listing.owner.averageRating)) %> <%= listing.owner.averageRating.toFixed(1) %></div>
+                <div class="s-owner-rating">
+                  <% for(let i=1;i<=5;i++){ %><i class="<%= i <= Math.round(listing.owner.averageRating) ? 'fas' : 'far' %> fa-star"></i><% } %>
+                  <span><%= listing.owner.averageRating.toFixed(1) %></span>
+                </div>
               <% } %>
             </div>
           </div>
+
           <% if (isOwner) { %>
-            <div class="sidebar-actions">
-              <a href="/cars/<%= listing._id %>/edit" class="btn btn-primary btn-block"><i class="fas fa-edit"></i> Edit</a>
+            <div class="s-actions">
+              <a href="/cars/<%= listing._id %>/edit" class="btn btn-primary btn-block"><i class="fas fa-edit"></i> Edit Listing</a>
               <form method="post" action="/cars/<%= listing._id %>?_method=DELETE" onsubmit="return confirm('Delete this vehicle?')">
                 <button class="btn btn-danger btn-block"><i class="fas fa-trash"></i> Delete</button>
               </form>
             </div>
-          <% } else if (av === 'AVAILABLE' || av === 'RESERVED') { %>
-            <div class="sidebar-actions">
-              <a href="/cars/book/<%= listing._id %>" class="btn btn-primary btn-block btn-lg"><i class="fas fa-calendar-check"></i> Book Now</a>
+          <% } else if (isAvail) { %>
+            <div class="s-actions">
+              <a href="/cars/book/<%= listing._id %>" class="btn-book-now">
+                <i class="fas fa-calendar-check"></i> Book Now
+                <small>Pay 20% advance to confirm</small>
+              </a>
             </div>
           <% } else { %>
-            <button class="btn btn-secondary btn-block btn-lg" disabled><i class="fas fa-ban"></i> Not Available</button>
+            <div class="s-actions">
+              <button class="btn btn-secondary btn-block btn-lg" disabled><i class="fas fa-ban"></i> Not Available</button>
+            </div>
           <% } %>
-          <div class="sidebar-meta">
-            <div><i class="fas fa-tag"></i> <%= listing.category || 'General' %></div>
-            <div><i class="fas fa-route"></i> <%= listing.serviceRadius ? listing.serviceRadius + ' KM' : 'Anywhere' %></div>
+
+          <div class="s-meta">
+            <div class="s-meta-item"><i class="fas fa-tag"></i> <span><%= listing.category || 'General' %></span></div>
+            <div class="s-meta-item"><i class="fas fa-route"></i> <span><%= listing.serviceRadius ? 'Within ' + listing.serviceRadius + ' KM' : 'Anywhere' %></span></div>
+            <% if (listing.vehicleNumber) { %><div class="s-meta-item"><i class="fas fa-id-card"></i> <span><%= listing.vehicleNumber %></span></div><% } %>
             <% if (!isOwner) { %>
-              <div class="text-secondary" style="font-size:12px"><i class="fas fa-lock"></i> Contact info after booking</div>
+              <div class="s-meta-item muted"><i class="fas fa-lock"></i> <span>Contact details shared after booking</span></div>
             <% } %>
           </div>
         </div>
+
+        <!-- Stats -->
+        <% if (listing.totalBookings > 0) { %>
+        <div class="s-card s-stats">
+          <div class="s-stat"><div class="ss-val"><%= listing.totalBookings %></div><div class="ss-lbl">Bookings</div></div>
+          <div class="s-stat"><div class="ss-val">&#8377;<%= (listing.totalRevenue || 0).toLocaleString('en-IN') %></div><div class="ss-lbl">Revenue</div></div>
+        </div>
+        <% } %>
       </div>
     </div>
   </div>
 
   <!-- Reviews -->
   <div class="reviews-section">
-    <hr>
+    <div class="reviews-header">
+      <h3><i class="fas fa-comments"></i> Reviews <span class="review-count">(<%= listing.reviews?.length || 0 %>)</span></h3>
+      <% if(currUser && !isOwner) { %>
+        <button class="btn btn-primary btn-sm" onclick="document.getElementById('reviewForm').classList.toggle('hidden')"><i class="fas fa-plus"></i> Write Review</button>
+      <% } %>
+    </div>
+
     <% if(currUser && !isOwner) { %>
-      <h3>Leave a Review</h3>
-      <form action="/cars/<%= listing.id %>/reviews" method="POST">
-        <div class="star-rating">
-          <input type="radio" id="s5" name="review[rating]" value="5" checked><label for="s5">★</label>
-          <input type="radio" id="s4" name="review[rating]" value="4"><label for="s4">★</label>
-          <input type="radio" id="s3" name="review[rating]" value="3"><label for="s3">★</label>
-          <input type="radio" id="s2" name="review[rating]" value="2"><label for="s2">★</label>
-          <input type="radio" id="s1" name="review[rating]" value="1"><label for="s1">★</label>
-        </div>
-        <div class="input-group mt-sm">
-          <textarea class="input-field" name="review[comment]" rows="4" placeholder="Share your experience..." required></textarea>
-        </div>
-        <button class="btn btn-primary mt-sm">Submit Review</button>
-      </form>
+    <form id="reviewForm" class="review-form hidden" action="/cars/<%= listing.id %>/reviews" method="POST">
+      <div class="star-rating">
+        <input type="radio" id="s5" name="review[rating]" value="5" checked><label for="s5">★</label>
+        <input type="radio" id="s4" name="review[rating]" value="4"><label for="s4">★</label>
+        <input type="radio" id="s3" name="review[rating]" value="3"><label for="s3">★</label>
+        <input type="radio" id="s2" name="review[rating]" value="2"><label for="s2">★</label>
+        <input type="radio" id="s1" name="review[rating]" value="1"><label for="s1">★</label>
+      </div>
+      <textarea class="rf-input" name="review[comment]" rows="3" placeholder="Share your experience..." required></textarea>
+      <button class="btn btn-primary">Submit Review</button>
+    </form>
     <% } %>
 
-    <h3 style="margin-top:32px">Reviews (<%= listing.reviews?.length || 0 %>)</h3>
     <% if (listing.reviews && listing.reviews.length > 0) { %>
       <% for(review of listing.reviews){ %>
         <div class="review-card">
-          <div class="review-header">
-            <div class="review-avatar"><%= (review.author?.username || 'U').charAt(0).toUpperCase() %></div>
-            <div>
+          <div class="rc-header">
+            <div class="rc-avatar"><%= (review.author?.username || 'U').charAt(0).toUpperCase() %></div>
+            <div class="rc-info">
               <strong><%= review.author?.username || 'Anonymous' %></strong>
-              <div class="review-stars"><% for(let i=1;i<=5;i++){ %><span class="<%= i <= review.rating ? 'on' : '' %>">★</span><% } %></div>
+              <div class="rc-stars">
+                <% for(let i=1;i<=5;i++){ %><i class="<%= i <= review.rating ? 'fas' : 'far' %> fa-star"></i><% } %>
+              </div>
             </div>
             <% if(currUser && review.author?._id?.equals(currUser._id)) { %>
               <form method="POST" action="/cars/<%= listing._id %>/reviews/<%=review._id%>?_method=DELETE" style="margin-left:auto">
-                <button class="btn btn-sm btn-ghost" style="color:var(--danger)"><i class="fas fa-trash"></i></button>
+                <button class="btn-icon-sm"><i class="fas fa-trash"></i></button>
               </form>
             <% } %>
           </div>
-          <p><%= review.comment %></p>
+          <p class="rc-body"><%= review.comment %></p>
         </div>
       <% } %>
     <% } else { %>
-      <p class="text-secondary">No reviews yet.</p>
+      <p class="no-reviews">No reviews yet. Be the first to review!</p>
     <% } %>
   </div>
 </div>
@@ -223,8 +249,8 @@
 <script>
 const listingId = '<%= listing._id %>';
 async function loadCalendar() {
-  const cont = document.getElementById('availability-calendar');
-  const load = document.getElementById('calendar-loading');
+  const cont = document.getElementById('cal-grid');
+  const load = document.getElementById('cal-loading');
   if (!cont) return;
   try {
     const s = new Date(), e = new Date(); e.setDate(e.getDate()+30);
@@ -232,7 +258,7 @@ async function loadCalendar() {
     const d = await r.json();
     if (d.success && d.calendar) {
       load.style.display = 'none';
-      let h = '<div class="calendar-header">Sun</div><div class="calendar-header">Mon</div><div class="calendar-header">Tue</div><div class="calendar-header">Wed</div><div class="calendar-header">Thu</div><div class="calendar-header">Fri</div><div class="calendar-header">Sat</div>';
+      let h = '<div class="cal-hdr">S</div><div class="cal-hdr">M</div><div class="cal-hdr">T</div><div class="cal-hdr">W</div><div class="cal-hdr">T</div><div class="cal-hdr">F</div><div class="cal-hdr">S</div>';
       d.calendar.forEach(day => {
         const cls = day.available ? 'cal-avail' : 'cal-booked';
         h += `<div class="cal-day ${cls}"><span>${new Date(day.date).getDate()}</span></div>`;
@@ -245,59 +271,153 @@ document.addEventListener('DOMContentLoaded', loadCalendar);
 </script>
 
 <style>
-.vehicle-detail { max-width: var(--max-width); margin: 0 auto; padding: 24px; }
-.detail-layout { display: grid; grid-template-columns: 1fr 340px; gap: 32px; }
+.vehicle-detail { max-width: var(--max-width); margin: 0 auto; padding: 0 24px 48px; }
+
+/* Hero */
+.detail-hero-wrap { position: relative; border-radius: 20px; overflow: hidden; margin-bottom: 24px; height: 400px; }
+.detail-hero { width: 100%; height: 100%; object-fit: cover; }
+.hero-overlay { position: absolute; inset: 0; background: linear-gradient(0deg, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0.1) 60%, rgba(0,0,0,0.2) 100%); z-index: 1; }
+.hero-content { position: absolute; bottom: 0; left: 0; right: 0; padding: 32px; z-index: 2; }
+.hero-badges { display: flex; gap: 8px; margin-bottom: 12px; }
+.hb { padding: 5px 12px; border-radius: 100px; font-size: 12px; font-weight: 600; backdrop-filter: blur(8px); }
+.hb-avail { background: rgba(5,150,105,0.85); color: #fff; }
+.hb-booked { background: rgba(220,38,38,0.85); color: #fff; }
+.hb-cat { background: rgba(255,255,255,0.2); color: #fff; }
+.hero-title { font-size: 32px; font-weight: 800; color: #fff; margin: 0 0 6px; text-shadow: 0 2px 10px rgba(0,0,0,0.3); }
+.hero-loc { color: rgba(255,255,255,0.8); font-size: 15px; margin: 0; }
+.hero-loc i { margin-right: 6px; }
+
+/* Layout */
+.detail-layout { display: grid; grid-template-columns: 1fr 340px; gap: 24px; align-items: start; }
 .detail-main { min-width: 0; }
-.detail-hero { width: 100%; border-radius: var(--radius-xl); max-height: 450px; object-fit: cover; margin-bottom: 24px; }
-.detail-section { background: var(--card); border: 1px solid var(--border-light); border-radius: var(--radius-lg); padding: 24px; margin-bottom: 16px; }
-.detail-section h3 { font-size: 16px; font-weight: 700; margin-bottom: 14px; }
-.detail-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; margin-bottom: 12px; flex-wrap: wrap; }
-.detail-header h1 { font-size: 26px; font-weight: 800; line-height: 1.2; }
-.detail-location { color: var(--text-secondary); font-size: 14px; margin-top: 4px; }
-.detail-location i { margin-right: 4px; }
-.detail-desc { font-size: 15px; line-height: 1.7; color: var(--text-secondary); }
-.pricing-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px,1fr)); gap: 12px; }
-.price-item { background: var(--surface); border-radius: var(--radius-md); padding: 14px; }
-.price-item span { display: block; font-size: 12px; color: var(--text-secondary); margin-bottom: 2px; }
-.price-item strong { font-size: 18px; color: var(--primary); }
+
+/* Specs Bar */
+.specs-bar { display: flex; gap: 0; margin-bottom: 20px; background: #fff; border-radius: 14px; overflow: hidden; border: 1px solid #f0f0f0; }
+.sb-item { flex: 1; text-align: center; padding: 14px 8px; border-right: 1px solid #f3f4f6; }
+.sb-item:last-child { border-right: none; }
+.sb-item i { display: block; font-size: 16px; color: #2563eb; margin-bottom: 4px; }
+.sb-item strong { display: block; font-size: 15px; font-weight: 700; color: #111; }
+.sb-item span { display: block; font-size: 10px; color: #9ca3af; font-weight: 500; text-transform: uppercase; letter-spacing: 0.3px; }
+
+/* Cards */
+.ds-card { background: #fff; border: 1px solid #f0f0f0; border-radius: 16px; padding: 24px; margin-bottom: 16px; }
+.ds-card h3 { font-size: 15px; font-weight: 700; margin: 0 0 14px; display: flex; align-items: center; gap: 8px; color: #111; }
+.ds-card h3 i { color: #2563eb; font-size: 14px; }
+.desc-text { font-size: 15px; line-height: 1.7; color: #4b5563; margin: 0; }
+
+/* Pricing Grid */
+.pricing-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px,1fr)); gap: 8px; }
+.pi { background: #f9fafb; border-radius: 10px; padding: 12px; transition: background 0.2s; }
+.pi:hover { background: #f3f4f6; }
+.pi-label { font-size: 11px; color: #9ca3af; margin-bottom: 2px; font-weight: 500; }
+.pi-val { font-size: 16px; font-weight: 700; color: #374151; }
+.pi-val.highlight { color: #2563eb; font-size: 18px; }
+.gst-note { font-size: 12px; color: #9ca3af; margin: 12px 0 0; display: flex; align-items: center; gap: 4px; }
+
+/* Vehicle Specs Grid */
+.vspecs-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.vi { display: flex; justify-content: space-between; align-items: center; padding: 10px 14px; background: #f9fafb; border-radius: 10px; }
+.vi-lbl { font-size: 12px; color: #9ca3af; font-weight: 500; }
+.vi-val { font-size: 14px; font-weight: 600; color: #111; }
+
+/* Trip Type Badges */
+.tt-badge { display: inline-flex; align-items: center; padding: 6px 14px; background: linear-gradient(135deg,#eff6ff,#dbeafe); color: #1e40af; border-radius: 100px; font-size: 12px; font-weight: 600; border: 1px solid #bfdbfe; }
 
 /* Gallery */
-.gallery-grid { display: grid; grid-template-columns: repeat(auto-fill,minmax(200px,1fr)); gap: 12px; }
-.gallery-grid img { width: 100%; height: 160px; object-fit: cover; border-radius: var(--radius-md); }
+.gallery-grid { display: grid; grid-template-columns: repeat(auto-fill,minmax(180px,1fr)); gap: 10px; }
+.gallery-grid img { width: 100%; height: 140px; object-fit: cover; border-radius: 10px; transition: transform 0.3s; }
+.gallery-grid img:hover { transform: scale(1.03); }
 
 /* Calendar */
-.calendar-legend { display: flex; gap: 16px; margin-bottom: 10px; }
-.calendar-grid { display: grid; grid-template-columns: repeat(7,1fr); gap: 4px; }
-.calendar-header { text-align: center; font-weight: 600; font-size: 12px; color: var(--text-secondary); padding: 6px 0; }
-.cal-day { text-align: center; padding: 8px 4px; border-radius: var(--radius-sm); font-size: 14px; font-weight: 600; }
+.cal-legend { display: flex; gap: 16px; margin-bottom: 10px; font-size: 12px; color: #6b7280; }
+.dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 4px; vertical-align: middle; }
+.dot-avail { background: #10b981; }
+.dot-booked { background: #ef4444; }
+.loading-text { font-size: 14px; color: #9ca3af; padding: 8px 0; }
+.cal-grid { display: grid; grid-template-columns: repeat(7,1fr); gap: 4px; }
+.cal-hdr { text-align: center; font-weight: 700; font-size: 11px; color: #9ca3af; padding: 6px 0; text-transform: uppercase; }
+.cal-day { text-align: center; padding: 8px 4px; border-radius: 8px; font-size: 13px; font-weight: 600; }
 .cal-day span { display: block; }
-.cal-avail { background: #dcfce7; color: #166534; }
-.cal-booked { background: #fee2e2; color: #991b1b; cursor: not-allowed; }
+.cal-avail { background: #d1fae5; color: #065f46; }
+.cal-booked { background: #fee2e2; color: #991b1b; }
 
 /* Sidebar */
-.sidebar-card { position: sticky; top: 96px; }
-.owner-info { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
-.owner-avatar { width: 48px; height: 48px; border-radius: 50%; background: var(--gradient); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 700; }
-.sidebar-actions { display: flex; flex-direction: column; gap: 10px; }
-.sidebar-meta { margin-top: 20px; display: flex; flex-direction: column; gap: 8px; font-size: 14px; color: var(--text-secondary); }
-.sidebar-meta i { width: 20px; color: var(--primary); }
+.detail-sidebar { }
+.sidebar-sticky { position: sticky; top: 96px; display: flex; flex-direction: column; gap: 16px; }
+.s-card { background: #fff; border-radius: 16px; padding: 24px; border: 1px solid #f0f0f0; }
+.s-owner { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+.s-avatar { width: 48px; height: 48px; border-radius: 50%; background: linear-gradient(135deg,#2563eb,#7c3aed); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 700; flex-shrink: 0; }
+.s-owner-name { font-size: 15px; font-weight: 700; color: #111; }
+.s-owner-rating { font-size: 12px; color: #f59e0b; margin-top: 2px; }
+.s-owner-rating i { margin-right: 1px; }
+.s-owner-rating span { color: #6b7280; margin-left: 4px; font-weight: 600; }
 
-/* Reviews */
-.reviews-section { max-width: 760px; }
-.star-rating { direction: rtl; display: inline-flex; gap: 2px; }
+/* Book Now Button */
+.btn-book-now { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; padding: 16px; background: linear-gradient(135deg,#2563eb,#7c3aed); color: #fff; border-radius: 12px; text-decoration: none; font-size: 18px; font-weight: 700; transition: all 0.2s; box-shadow: 0 4px 16px rgba(37,99,235,0.3); }
+.btn-book-now:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(37,99,235,0.4); color: #fff; }
+.btn-book-now small { font-size: 11px; font-weight: 500; opacity: 0.8; }
+
+.s-actions { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
+.s-meta { display: flex; flex-direction: column; gap: 10px; }
+.s-meta-item { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #4b5563; }
+.s-meta-item i { width: 16px; color: #2563eb; font-size: 13px; }
+.s-meta-item.muted { color: #9ca3af; }
+.s-meta-item.muted i { color: #9ca3af; }
+
+/* Stats */
+.s-stats { display: flex; gap: 0; padding: 0; overflow: hidden; }
+.s-stat { flex: 1; text-align: center; padding: 20px 12px; border-right: 1px solid #f3f4f6; }
+.s-stat:last-child { border-right: none; }
+.ss-val { font-size: 20px; font-weight: 800; color: #111; }
+.ss-lbl { font-size: 11px; color: #9ca3af; margin-top: 2px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.3px; }
+
+/* Review Section */
+.reviews-section { max-width: 760px; margin-top: 32px; }
+.reviews-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+.reviews-header h3 { font-size: 18px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+.reviews-header h3 i { color: #2563eb; }
+.review-count { color: #9ca3af; font-weight: 500; }
+.review-form { background: #f9fafb; border-radius: 14px; padding: 20px; margin-bottom: 20px; }
+.review-form.hidden { display: none; }
+
+/* Star Rating Input */
+.star-rating { direction: rtl; display: inline-flex; gap: 2px; margin-bottom: 12px; }
 .star-rating input { display: none; }
 .star-rating label { font-size: 28px; color: #d1d5db; cursor: pointer; transition: color 0.15s; }
-.star-rating input:checked ~ label, .star-rating label:hover, .star-rating label:hover ~ label { color: #f59e0b; }
-.review-card { background: var(--card); border: 1px solid var(--border-light); border-radius: var(--radius-lg); padding: 18px; margin-bottom: 12px; }
-.review-header { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
-.review-avatar { width: 36px; height: 36px; border-radius: 50%; background: var(--primary-50); color: var(--primary); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px; }
-.review-stars { font-size: 14px; }
-.review-stars span { color: #d1d5db; }
-.review-stars span.on { color: #f59e0b; }
+.star-rating input:checked ~ label,
+.star-rating label:hover,
+.star-rating label:hover ~ label { color: #f59e0b; }
 
-@media (max-width: 900px) {
+.rf-input { width: 100%; padding: 12px 16px; border: 1px solid #e5e7eb; border-radius: 10px; font-size: 14px; font-family: inherit; resize: vertical; margin-bottom: 12px; box-sizing: border-box; }
+.rf-input:focus { outline: none; border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37,99,235,0.1); }
+
+/* Review Cards */
+.review-card { background: #fff; border: 1px solid #f0f0f0; border-radius: 14px; padding: 18px; margin-bottom: 12px; }
+.rc-header { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
+.rc-avatar { width: 36px; height: 36px; border-radius: 50%; background: linear-gradient(135deg,#dbeafe,#bfdbfe); color: #2563eb; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px; flex-shrink: 0; }
+.rc-info { }
+.rc-info strong { font-size: 14px; color: #111; }
+.rc-stars { font-size: 12px; color: #f59e0b; margin-top: 2px; }
+.rc-stars i { margin-right: 1px; }
+.btn-icon-sm { background: none; border: none; color: #9ca3af; cursor: pointer; padding: 4px; font-size: 14px; }
+.btn-icon-sm:hover { color: #dc2626; }
+.rc-body { font-size: 14px; line-height: 1.6; color: #4b5563; margin: 0; }
+.no-reviews { color: #9ca3af; font-size: 14px; }
+
+@media (max-width: 1024px) {
   .detail-layout { grid-template-columns: 1fr; }
   .detail-sidebar { order: -1; }
-  .sidebar-card { position: static; }
+  .sidebar-sticky { position: static; }
+}
+
+@media (max-width: 768px) {
+  .detail-hero-wrap { height: 280px; border-radius: 14px; }
+  .hero-title { font-size: 24px; }
+  .hero-content { padding: 20px; }
+  .specs-bar { flex-wrap: wrap; }
+  .sb-item { flex: 1 0 33%; border-bottom: 1px solid #f3f4f6; }
+  .vspecs-grid { grid-template-columns: 1fr; }
+  .pricing-grid { grid-template-columns: 1fr 1fr; }
+  .vehicle-detail { padding: 0 12px 32px; }
 }
 </style>
