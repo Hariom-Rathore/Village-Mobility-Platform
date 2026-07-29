@@ -412,7 +412,7 @@ footer { background: #0f172a; color: rgba(255,255,255,0.7); padding: 80px 0 40px
       <p>RideLocal connects you with verified local vehicle owners and professional drivers. Transparent pricing, no hidden fees, and real-time booking.</p>
       <div class="btn-group">
         <a href="/customers/home?search=1" class="btn btn-primary btn-lg"><i class="fas fa-search"></i> Book a Trip</a>
-        <a href="/cars/new-step" class="btn btn-outline btn-lg"><i class="fas fa-plus-circle"></i> List Your Vehicle</a>
+        <a href="/cars/new-step" class="btn btn-outline btn-lg"><i class="fas fa-plus-circle"></i> Add Your Vehicle</a>
       </div>
       <div class="hero-trust">
         <span class="trust-item"><i class="fas fa-id-card"></i> Verified Drivers</span>
@@ -463,8 +463,13 @@ footer { background: #0f172a; color: rgba(255,255,255,0.7); padding: 80px 0 40px
         <input type="text" id="searchDest" placeholder="Enter destination" value="<%= req?.query?.destination || '' %>">
       </div>
       <div class="search-field">
-        <label><i class="far fa-calendar-alt"></i> Date</label>
+        <label><i class="far fa-calendar-alt"></i> Pickup Date</label>
         <input type="date" id="searchDate">
+      </div>
+      <div class="search-field">
+        <label><i class="far fa-calendar-alt"></i> Return Date</label>
+        <input type="date" id="searchReturnDate">
+        <small style="display:block;font-size:10px;color:#9ca3af;margin-top:2px">Skip for one-way</small>
       </div>
       <div class="search-field">
         <label><i class="far fa-clock"></i> Time</label>
@@ -555,12 +560,14 @@ function handleSearch() {
   const pickup = document.getElementById('searchPickup').value;
   const dest = document.getElementById('searchDest').value;
   const date = document.getElementById('searchDate').value;
+  const returnDate = document.getElementById('searchReturnDate').value;
   const time = document.getElementById('searchTime').value;
   const passengers = document.getElementById('searchPassengers').value;
   const params = new URLSearchParams();
   if (pickup) params.set('pickup', pickup);
   if (dest) params.set('destination', dest);
   if (date) params.set('date', date);
+  if (returnDate) params.set('returndate', returnDate);
   if (time) params.set('time', time);
   if (passengers) params.set('passengers', passengers);
   window.location.href = '/cars?' + params.toString();
@@ -569,6 +576,17 @@ function handleSearch() {
 document.addEventListener('DOMContentLoaded', () => {
   setupAutocomplete('searchPickup');
   setupAutocomplete('searchDest');
+
+  const urlParams = new URLSearchParams(window.location.search);
+  if (urlParams.has('search')) {
+    const searchEl = document.querySelector('.search-section');
+    if (searchEl) {
+      setTimeout(() => {
+        searchEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        document.getElementById('searchPickup')?.focus();
+      }, 300);
+    }
+  }
 });
 </script>
 
