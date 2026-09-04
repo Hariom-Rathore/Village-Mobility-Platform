@@ -10,6 +10,7 @@
     "start": "node app.js",
     "dev": "node app.js",
     "watch": "nodemon app.js",
+    "ai:start": "cd ai-agent && venv\\Scripts\\python.exe -m app.main",
     "init": "node init/index.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
@@ -18,8 +19,6 @@
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
-    "@google/genai": "^2.0.0",
-    "@google/generative-ai": "^0.24.1",
     "cloudinary": "^1.41.3",
     "connect-flash": "^0.1.1",
     "connect-mongo": "^6.0.0",

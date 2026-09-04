@@ -36,12 +36,12 @@ const flash = require("connect-flash");
 const listings= require("./routes/listing.js"); //this is router
 const reviews=require("./routes/review.js");
 const userRouter=require("./routes/user.js");
-const chatbotRouter=require("./routes/chatbot.js");
 const dashboardRouter=require("./routes/dashboard.js");
 const bookingRouter=require("./routes/booking.js");
 const notificationRouter=require("./routes/notification.js");
 const customerRouter=require("./routes/customer.js");
 const ownerRouter=require("./routes/owner.js");
+const aiRouter=require("./routes/ai.js");
 
 const passport=require("passport");
 const localStrategy=require("passport-local");
@@ -252,13 +252,13 @@ app.get("/", (req, res) => {
 
 app.use("/cars",listings);//cars and /cars/:id/reviews this is common part into the all router so this fixed first and after place of this use only /
 app.use("/cars/:id/reviews",reviews);
-app.use("/chatbot",chatbotRouter);
 app.use("/users",userRouter);
 app.use("/dashboard",dashboardRouter);
 app.use("/bookings",bookingRouter);
 app.use("/notifications",notificationRouter);
 app.use("/customers",customerRouter);
 app.use("/owners",ownerRouter);
+app.use("/api/ai", aiRouter);
 
 
 app.all(/.*/,(req,res,next)=>{

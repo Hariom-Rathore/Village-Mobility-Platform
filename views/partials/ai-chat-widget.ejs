@@ -1,0 +1,317 @@
+<!-- AI Chat Widget Component -->
+<div id="ai-chat-widget" class="ai-chat-widget" style="display: none;">
+    <div class="ai-chat-header" onclick="toggleChatWidget()">
+        <h3>🚗 RideLocal Assistant</h3>
+        <button class="ai-chat-close" onclick="toggleChatWidget(event)">×</button>
+    </div>
+    
+    <div class="ai-chat-messages" id="ai-chat-messages">
+        <!-- Messages will be inserted here -->
+    </div>
+    
+    <div class="ai-chat-input-area">
+        <div class="ai-chat-input-wrapper">
+            <input 
+                type="text" 
+                class="ai-chat-input" 
+                id="ai-chat-input" 
+                placeholder="Ask about vehicles, bookings..."
+                onkeypress="handleKeyPress(event)"
+            >
+            <button class="ai-chat-send-button" onclick="sendMessage()" id="ai-chat-send">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/>
+                </svg>
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- AI Chat Toggle Button -->
+<button id="ai-chat-toggle" class="ai-chat-toggle-button" onclick="toggleChatWidget()">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+    </svg>
+</button>
+
+<style>
+.ai-chat-toggle-button {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #2563eb, #7c3aed);
+    color: white;
+    border: none;
+    cursor: pointer;
+    box-shadow: 0 4px 20px rgba(37, 99, 235, 0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s;
+    z-index: 999;
+}
+
+.ai-chat-toggle-button:hover {
+    transform: scale(1.1);
+    box-shadow: 0 6px 25px rgba(37, 99, 235, 0.4);
+}
+
+.ai-chat-toggle-button.hidden {
+    display: none;
+}
+</style>
+
+<script src="/js/ai-chat.js"></script>
+<link rel="stylesheet" href="/css/ai-chat.css">
+
+<script>
+// Initialize AI Chat
+let aiChat = null;
+let conversationHistory = [];
+
+// Initialize when DOM is ready
+document.addEventListener('DOMContentLoaded', function() {
+    initializeAIChat();
+});
+
+async function initializeAIChat() {
+    try {
+        // Get user info from server-side rendered data
+        const userId = '<%- typeof currUser !== "undefined" && currUser ? currUser._id : "" %>';
+        const authToken = '<%= typeof session !== "undefined" && session ? sessionID : "" %>';
+        
+        aiChat = new RideLocalAIChat({
+            aiServiceUrl: '/api/ai',
+            userId: userId || null,
+            authToken: authToken || null,
+            onMessage: handleAIResponse,
+            onError: handleAIError,
+            onStateChange: handleAIStateChange
+        });
+        
+        // Check if AI service is available
+        const health = await aiChat.checkHealth();
+        if (health) {
+            document.getElementById('ai-chat-toggle').classList.remove('hidden');
+        } else {
+            document.getElementById('ai-chat-toggle').classList.add('hidden');
+        }
+        
+    } catch (error) {
+        console.error('Error initializing AI chat:', error);
+        document.getElementById('ai-chat-toggle').classList.add('hidden');
+    }
+}
+
+function toggleChatWidget(event) {
+    if (event) event.stopPropagation();
+    
+    const widget = document.getElementById('ai-chat-widget');
+    const toggleButton = document.getElementById('ai-chat-toggle');
+    
+    if (widget.style.display === 'none') {
+        widget.style.display = 'flex';
+        toggleButton.classList.add('hidden');
+    } else {
+        widget.style.display = 'none';
+        toggleButton.classList.remove('hidden');
+    }
+}
+
+async function sendMessage() {
+    const input = document.getElementById('ai-chat-input');
+    const message = input.value.trim();
+    
+    if (!message || !aiChat) return;
+    
+    // Add user message to UI
+    addMessageToUI('user', message);
+    conversationHistory.push({ role: 'user', content: message });
+    
+    // Clear input
+    input.value = '';
+    
+    // Show typing indicator
+    showTypingIndicator();
+    
+    try {
+        // Send to AI service
+        await aiChat.sendMessage(message);
+    } catch (error) {
+        hideTypingIndicator();
+        addMessageToUI('assistant', 'Sorry, I encountered an error. Please try again.');
+    }
+}
+
+function handleKeyPress(event) {
+    if (event.key === 'Enter') {
+        sendMessage();
+    }
+}
+
+function handleAIResponse(response) {
+    hideTypingIndicator();
+    
+    // Add AI response to UI
+    addMessageToUI('assistant', response.message);
+    conversationHistory.push({ role: 'assistant', content: response.message });
+    
+    // Display vehicles if available
+    if (response.vehicles && response.vehicles.length > 0) {
+        displayVehicles(response.vehicles);
+    }
+    
+    // Display actions if available
+    if (response.actions && response.actions.length > 0) {
+        displayActions(response.actions);
+    }
+    
+    // Handle errors
+    if (response.error) {
+        addErrorToUI(response.error);
+    }
+}
+
+function handleAIError(error) {
+    hideTypingIndicator();
+    addErrorToUI('Connection error. Please try again.');
+}
+
+function handleAIStateChange(state) {
+    // Can be used to update UI based on conversation state.
+    // Intentionally left silent to avoid noisy browser console output.
+}
+
+function addMessageToUI(role, content) {
+    const messagesContainer = document.getElementById('ai-chat-messages');
+    const messageDiv = document.createElement('div');
+    messageDiv.className = `ai-chat-message ${role}`;
+    
+    const now = new Date();
+    const timeString = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    
+    messageDiv.innerHTML = `
+        <div class="message-content">${escapeHtml(content)}</div>
+        <div class="message-time">${timeString}</div>
+    `;
+    
+    messagesContainer.appendChild(messageDiv);
+    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+}
+
+function displayVehicles(vehicles) {
+    const messagesContainer = document.getElementById('ai-chat-messages');
+    const vehiclesDiv = document.createElement('div');
+    vehiclesDiv.className = 'ai-chat-vehicles';
+    
+    vehicles.forEach((vehicle, index) => {
+        const vehicleCard = document.createElement('div');
+        vehicleCard.className = 'ai-chat-vehicle-card';
+        vehicleCard.onclick = () => selectVehicle(index, vehicle);
+        
+        const name = vehicle.vehicleName || vehicle.title || 'Vehicle';
+        const price = vehicle.estimatedFare || vehicle.baseFare || 'Price on request';
+        const seats = vehicle.seats || 'N/A';
+        const type = vehicle.vehicleType || vehicle.carType || 'N/A';
+        
+        vehicleCard.innerHTML = `
+            <div class="vehicle-name">${escapeHtml(name)}</div>
+            <div class="vehicle-details">
+                <span>${seats} seats</span>
+                <span>${type}</span>
+            </div>
+            <div class="vehicle-price">₹${price}</div>
+        `;
+        
+        vehiclesDiv.appendChild(vehicleCard);
+    });
+    
+    messagesContainer.appendChild(vehiclesDiv);
+    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+}
+
+function displayActions(actions) {
+    const messagesContainer = document.getElementById('ai-chat-messages');
+    const actionsDiv = document.createElement('div');
+    actionsDiv.className = 'ai-chat-actions';
+    
+    actions.forEach(action => {
+        const actionButton = document.createElement('button');
+        actionButton.className = 'ai-chat-action-button';
+        if (action.type === 'confirm_booking') {
+            actionButton.classList.add('primary');
+        }
+        actionButton.textContent = action.prompt || action.type;
+        actionButton.onclick = () => handleAction(action);
+        
+        actionsDiv.appendChild(actionButton);
+    });
+    
+    messagesContainer.appendChild(actionsDiv);
+    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+}
+
+function selectVehicle(index, vehicle) {
+    // Send selection message to AI
+    const selectionMessage = `I select option ${index + 1}: ${vehicle.vehicleName || vehicle.title}`;
+    addMessageToUI('user', selectionMessage);
+    
+    // In a full implementation, this would trigger vehicle selection logic
+    // For now, just inform the AI
+    if (aiChat) {
+        aiChat.sendMessage(selectionMessage);
+    }
+}
+
+function handleAction(action) {
+    if (action.type === 'confirm_booking') {
+        const confirmMessage = 'Yes, please proceed with the booking.';
+        addMessageToUI('user', confirmMessage);
+        if (aiChat) {
+            aiChat.sendMessage(confirmMessage);
+        }
+    } else if (action.type === 'select_vehicle') {
+        // Handle vehicle selection
+        addMessageToUI('user', action.prompt);
+    }
+}
+
+function showTypingIndicator() {
+    const messagesContainer = document.getElementById('ai-chat-messages');
+    const typingDiv = document.createElement('div');
+    typingDiv.className = 'ai-chat-typing-indicator';
+    typingDiv.id = 'ai-typing-indicator';
+    typingDiv.innerHTML = `
+        <div class="typing-dot"></div>
+        <div class="typing-dot"></div>
+        <div class="typing-dot"></div>
+    `;
+    messagesContainer.appendChild(typingDiv);
+    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+}
+
+function hideTypingIndicator() {
+    const typingIndicator = document.getElementById('ai-typing-indicator');
+    if (typingIndicator) {
+        typingIndicator.remove();
+    }
+}
+
+function addErrorToUI(error) {
+    const messagesContainer = document.getElementById('ai-chat-messages');
+    const errorDiv = document.createElement('div');
+    errorDiv.className = 'ai-chat-error';
+    errorDiv.textContent = error;
+    messagesContainer.appendChild(errorDiv);
+    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+</script>
