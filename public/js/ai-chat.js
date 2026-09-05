@@ -6,7 +6,7 @@
 class RideLocalAIChat {
     constructor(options = {}) {
         this.aiServiceUrl = options.aiServiceUrl || '/api/ai';
-        this.conversationId = null;
+        this.conversationId = localStorage.getItem('ridelocal_ai_conversation_id');
         this.userId = options.userId || null;
         this.authToken = options.authToken || null;
         this.onMessage = options.onMessage || null;
@@ -40,6 +40,7 @@ class RideLocalAIChat {
             
             // Update conversation ID
             this.conversationId = data.conversation_id;
+            localStorage.setItem('ridelocal_ai_conversation_id', this.conversationId);
             
             // Trigger callbacks
             if (this.onMessage) {

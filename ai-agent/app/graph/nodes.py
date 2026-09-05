@@ -49,18 +49,47 @@ async def classify_intent_node(state: AgentState) -> AgentState:
 
         greeting_words = ["hello", "hi", "hey", "greetings", "good morning", "good evening"]
         general_help_words = ["how are you", "how can you help me", "what can you do", "help me"]
-        vehicle_search_patterns = [
-            "search", "find", "looking for", "show me", "available", "jana", "jaana", "car chahiye",
-            "i need a vehicle", "need a vehicle", "need a car", "need an suv", "need a suv", "need a cab"
-        ]
-
-        if any(word in message_lower for word in ["cancel", "cancellation"]):
+        is_greeting = contains_word(greeting_words)
+        is_general_chat = any(word in message_lower for word in general_help_words)
+        if is_greeting:
+            intent = "greeting"
+        elif is_general_chat:
+            intent = "general_chat"
+        elif any(word in message_lower for word in ["cancel", "cancellation"]):
             intent = "cancellation"
         elif any(word in message_lower for word in ["my booking", "my trips", "show my bookings", "upcoming bookings"]):
             intent = "user_bookings"
         elif (
-            state.get("selected_vehicle")
-            and any(word in message_lower for word in ["confirm booking", "proceed with booking", "confirm", "reserve this"])
+            state.get("needs_confirmation")
+            and re.fullmatch(r"(?:yes|haan|ha|confirm|proceed|ok|okay|yes,?\s*(?:please\s*)?(?:proceed|confirm)?)", message_lower)
+        ):
+            intent = "booking_request"
+            state["booking_confirmed"] = True
+        elif any(word in message_lower for word in ["cancel booking", "cancel my booking"]):
+            intent = "cancellation"
+        elif any(phrase in message_lower for phrase in [
+            "compare", "which one is cheaper", "which car is cheap", "cheapest", "best car",
+            "more seats", "most seats", "sasti", "sabse sasti", "kaunsi car better"
+        ]):
+            intent = "vehicle_comparison"
+        elif any(phrase in message_lower for phrase in [
+            "available", "availability", "check availability", "is this car available",
+            "ye available", "available hai", "book kar sakte"
+        ]) and state.get("selected_vehicle"):
+            intent = "availability_check"
+        elif any(phrase in message_lower for phrase in [
+            "details", "detail", "price", "how many seats", "kitne seats", "ac hai",
+            "owner kaun", "driver", "this car", "this vehicle", "iski", "is car ke"
+        ]) and state.get("search_results"):
+            intent = "vehicle_details"
+        elif state.get("search_results") and re.search(
+            r'\b(?:select|selected|choose|chosen|first|second|third|last|pehli|pahli|dusri|doosri|teesri|aakhri|cheapest|sasti)\b',
+            message_lower,
+        ):
+            intent = "vehicle_details"
+        elif (
+            any(word in message_lower for word in ["book", "reserve", "confirm booking", "proceed with booking"])
+            and (state.get("selected_vehicle") or state.get("search_results"))
         ):
             intent = "booking_request"
         elif any(
@@ -72,11 +101,14 @@ async def classify_intent_node(state: AgentState) -> AgentState:
             ]
         ) and not state.get("selected_vehicle"):
             intent = "vehicle_search"
-        elif (
-            state.get("awaiting_user_input")
-            and state.get("current_intent") in {"vehicle_search", "booking_request", "availability_check"}
+        elif state.get("search_results") and re.search(
+            r'\b(?:pickup|pick-up)?\s*(?:date|time)\b|\b(?:\d{1,2}\s*(?:am|pm)|\d{1,2}\s+(?:jan|january|february|march|april|may|june|july|august|september|october|november|december))\b',
+            message_lower,
         ):
-            intent = state["current_intent"]
+            if state.get("current_intent") == "availability_check":
+                intent = "availability_check"
+            else:
+                intent = "booking_request" if state.get("selected_vehicle") else "vehicle_details"
         elif re.search(r'\b(?:pickup|destination|desination)\b', message_lower):
             intent = "vehicle_search"
         elif state.get("search_results") and re.search(r'\b(?:cars|vehicles|options|tell me about|show me)\b', message_lower):
@@ -89,15 +121,16 @@ async def classify_intent_node(state: AgentState) -> AgentState:
             intent = "availability_check"
         elif any(word in message_lower for word in ["search", "find", "looking for", "show me", "available", "jana", "jaana", "car chahiye"]) or " i need a vehicle" in message_lower or "need a car" in message_lower or "need an suv" in message_lower or "need a suv" in message_lower or "need a vehicle" in message_lower or re.search(r"\bneed(s)?\s+(?:an\s+)?(?:suv|sedan|hatchback|car|vehicle)\b", message_lower) or re.search(r"\b(?:from|to)\s+[a-z]+", message_lower) or re.search(r"\b[a-z]+\s+to\s+[a-z]+\b", message_lower):
             intent = "vehicle_search"
-        elif contains_word(greeting_words):
-            intent = "greeting"
-        elif any(word in message_lower for word in general_help_words):
-            intent = "general_chat"
+        elif (
+            state.get("awaiting_user_input")
+            and state.get("current_intent") in {"vehicle_search", "booking_request", "availability_check"}
+        ):
+            intent = state["current_intent"]
         elif (
             state.get("current_intent") in {"vehicle_search", "booking_request", "availability_check"}
             and (state.get("awaiting_user_input") or state.get("requires_clarification") or state.get("missing_information"))
-            and not contains_word(greeting_words)
-            and not any(word in message_lower for word in general_help_words)
+            and not is_greeting
+            and not is_general_chat
         ):
             intent = state["current_intent"]
         elif re.fullmatch(r"(?:yes|haan|ha|confirm|proceed|ok|okay)", message_lower) and state.get("needs_confirmation"):
@@ -159,7 +192,8 @@ async def extract_information_node(state: AgentState) -> AgentState:
                         if not month_match:
                             return None
                         month = month_map.get(month_match.group(1))
-                        year = 2026
+                        year_match = re.search(r'\b(20\d{2})\b', date_text)
+                        year = int(year_match.group(1)) if year_match else 2026
                         candidate = date(year, month, day)
                         return candidate.isoformat()
             except ValueError:
@@ -207,7 +241,8 @@ async def extract_information_node(state: AgentState) -> AgentState:
             extracted["destination"] = clean_city(route_match.group(2))
 
         city_route = re.search(r'\b([a-z]{3,})\s+to\s+([a-z]{3,})\b', message_lower)
-        if city_route and "pickup_location" not in extracted:
+        generic_booking_phrase = re.search(r'\b(?:need|want)\s+to\s+book\b', message_lower)
+        if city_route and not generic_booking_phrase and "pickup_location" not in extracted:
             extracted["pickup_location"] = clean_city(city_route.group(1))
             extracted["destination"] = clean_city(city_route.group(2))
 
@@ -246,7 +281,7 @@ async def extract_information_node(state: AgentState) -> AgentState:
             if extracted.get("passengers") is None:
                 extracted["passengers"] = seat_count
 
-        date_match = re.search(r'\b(?:on|for|date is|travel date|journey date)?\s*(\d{1,2}\s*(?:th|st|nd|rd)?\s*(?:of\s*)?(?:jan|january|feb|february|mar|march|apr|april|may|jun|june|jul|july|aug|august|sep|sept|september|oct|october|nov|november|dec|december))\b', message_lower)
+        date_match = re.search(r'\b(?:on|for|date is|travel date|journey date)?\s*(\d{1,2}\s*(?:th|st|nd|rd)?\s*(?:of\s*)?(?:jan|january|feb|february|mar|march|apr|april|may|jun|june|jul|july|aug|august|sep|sept|september|oct|october|nov|november|dec|december)(?:\s+20\d{2})?)\b', message_lower)
         if date_match:
             parsed_date = parse_date_text(date_match.group(1))
             if parsed_date:
@@ -266,6 +301,21 @@ async def extract_information_node(state: AgentState) -> AgentState:
                     extracted["start_date"] = candidate.isoformat()
                 except ValueError:
                     pass
+
+        time_match = re.search(
+            r'\b(?:at|around|time is|pickup time is|pick-up time is)?\s*(\d{1,2})(?::(\d{2}))?\s*(am|pm)\b',
+            message_lower,
+        )
+        if time_match:
+            hour = int(time_match.group(1))
+            minute = int(time_match.group(2) or "00")
+            meridiem = time_match.group(3)
+            if 1 <= hour <= 12 and 0 <= minute <= 59:
+                if meridiem == "pm" and hour != 12:
+                    hour += 12
+                elif meridiem == "am" and hour == 12:
+                    hour = 0
+                extracted["pickup_time"] = f"{hour:02d}:{minute:02d}"
 
         vehicle_types = ["suv", "sedan", "hatchback", "innova", "scorpio", "creta", "ertiga", "bmw", "audi", "mercedes"]
         for vtype in vehicle_types:
@@ -287,6 +337,37 @@ async def extract_information_node(state: AgentState) -> AgentState:
             if 0 <= index < len(state["search_results"]):
                 extracted["selected_vehicle_index"] = index
                 extracted["selected_vehicle"] = state["search_results"][index]
+
+        if state.get("search_results") and not extracted.get("selected_vehicle"):
+            ordinal_match = re.search(r'\b(first|one|1st|second|two|2nd|third|three|3rd|last|pehli|pahli|dusri|doosri|teesri|aakhri)\b', message_lower)
+            if ordinal_match:
+                ordinal_map = {
+                    "first": 0, "one": 0, "1st": 0, "pehli": 0, "pahli": 0,
+                    "second": 1, "two": 1, "2nd": 1, "dusri": 1, "doosri": 1,
+                    "third": 2, "three": 2, "3rd": 2, "teesri": 2,
+                    "last": len(state["search_results"]) - 1, "aakhri": len(state["search_results"]) - 1,
+                }
+                index = ordinal_map[ordinal_match.group(1)]
+                if 0 <= index < len(state["search_results"]):
+                    extracted["selected_vehicle_index"] = index
+                    extracted["selected_vehicle"] = state["search_results"][index]
+
+        if state.get("search_results") and not extracted.get("selected_vehicle") and any(
+            phrase in message_lower for phrase in ["cheapest", "sasti", "lowest price", "most affordable"]
+        ):
+            extracted["selected_vehicle_index"] = min(
+                range(len(state["search_results"])),
+                key=lambda index: float(state["search_results"][index].get("estimatedFare") or state["search_results"][index].get("baseFare") or 0),
+            )
+            extracted["selected_vehicle"] = state["search_results"][extracted["selected_vehicle_index"]]
+
+        if state.get("search_results") and not extracted.get("selected_vehicle"):
+            for index, vehicle in enumerate(state["search_results"]):
+                vehicle_name = (vehicle.get("vehicleName") or vehicle.get("title") or "").lower()
+                if vehicle_name and vehicle_name in message_lower:
+                    extracted["selected_vehicle_index"] = index
+                    extracted["selected_vehicle"] = vehicle
+                    break
 
         for key, value in extracted.items():
             if value is not None:
@@ -437,9 +518,10 @@ async def execute_search_node(state: AgentState) -> AgentState:
         seat_capacity = state.get("seats_required")
 
         user_message = state["conversation_history"][-1]["content"] if state.get("conversation_history") else ""
-        if state.get("search_results") and re.search(r'\b(?:cars|vehicles|options|tell me about|show me)\b', user_message.lower()):
-            vehicles = state["search_results"]
-            state["last_response"] = _format_vehicle_search_response(pickup, destination, vehicles)
+        if state.get("search_results") and not re.search(
+            r'\b(?:search|find|show|available|need|want|car chahiye|vehicle chahiye)\b', user_message.lower()
+        ):
+            state["last_response"] = "I still have the vehicles from your search. Tell me which one you want, or ask for its details."
             state["awaiting_user_input"] = False
             state["requires_clarification"] = False
             return state
@@ -510,8 +592,11 @@ async def execute_availability_check_node(state: AgentState) -> AgentState:
         start_date = state.get("start_date")
         end_date = state.get("end_date")
         
-        if not vehicle_id or not start_date:
+        if not vehicle_id:
             state["last_response"] = "I need the vehicle ID and pickup date to check availability."
+            return state
+        if not start_date:
+            state["last_response"] = "What pickup date should I check for this vehicle?"
             return state
         
         result = await check_vehicle_availability(
@@ -551,17 +636,18 @@ async def execute_booking_node(state: AgentState) -> AgentState:
     try:
         logger.info("Executing booking request creation")
         
+        # Check authentication
+        auth_token = state.get("auth_token")
+        if not auth_token:
+            state["needs_confirmation"] = True
+            state["last_response"] = "You need to be logged in to create a booking request. Please log in first."
+            return state
+
         # Booking creation is a side effect and always requires an explicit
         # confirmation after a vehicle has been selected.
         if not state.get("booking_confirmed"):
             state["needs_confirmation"] = True
             state["last_response"] = "I have the booking details. Please reply 'confirm' to send the booking request."
-            return state
-
-        # Check authentication
-        auth_token = state.get("auth_token")
-        if not auth_token:
-            state["last_response"] = "You need to be logged in to create a booking request. Please log in first."
             return state
         
         # Get required parameters
@@ -690,8 +776,12 @@ def _fallback_response(state: AgentState) -> str:
         return f"I found {len(results)} vehicles in this conversation. Please select one by saying, for example, 'select option 2'."
     if intent == "availability_check" and not selected:
         return "Please select a vehicle from the search results first, for example 'select option 1', then I can check its availability."
-    if intent in {"general_chat", "greeting", "general_question"}:
-        return "Hello! I can help with RideLocal vehicles, bookings, and trip details. Ask me about a route, a vehicle, or your bookings."
+    if intent == "greeting":
+        return "Hey! Welcome to RideLocal. I can help you find a vehicle, compare options, check availability, or start a booking."
+    if intent == "general_chat":
+        return "I am here to help with your RideLocal trip. I can search vehicles, explain their details, compare fares, check availability, and guide you through booking."
+    if intent == "general_question":
+        return "I can help with routes, vehicle details, availability, bookings, and your existing trips. What would you like to do?"
     return "I need a little more information to continue."
 
 
@@ -700,6 +790,42 @@ async def generate_response_node(state: AgentState) -> AgentState:
     try:
         # If we already have a response from a tool, use it
         if state.get("last_response"):
+            return state
+
+        selected = state.get("selected_vehicle")
+        results = state.get("search_results", [])
+        intent = state.get("current_intent")
+
+        if intent == "vehicle_details":
+            if not selected and results:
+                state["last_response"] = "Which vehicle should I describe? You can say 'second one', 'Innova', or 'the cheapest one'."
+                return state
+            if selected:
+                vehicle_id = selected.get("_id")
+                if vehicle_id:
+                    detail_result = await get_vehicle_details(str(vehicle_id))
+                    if detail_result.get("success") and detail_result.get("vehicle"):
+                        selected = detail_result["vehicle"]
+                        state["selected_vehicle"] = selected
+                name = selected.get("vehicleName") or selected.get("title") or "This vehicle"
+                details = [
+                    f"Seats: {selected.get('seats')}" if selected.get("seats") is not None else None,
+                    f"Type: {selected.get('vehicleType')}" if selected.get("vehicleType") else None,
+                    f"AC: {'Yes' if selected.get('acAvailable') else 'No'}" if selected.get("acAvailable") is not None else None,
+                    f"Estimated fare: ₹{selected.get('estimatedFare')}" if selected.get("estimatedFare") is not None else None,
+                    f"Rating: {selected.get('rating')}" if selected.get("rating") is not None else None,
+                ]
+                state["last_response"] = f"{name} details:\n" + "\n".join(item for item in details if item)
+                return state
+
+        if intent == "vehicle_comparison" and results:
+            cheapest = min(results, key=lambda vehicle: float(vehicle.get("estimatedFare") or vehicle.get("baseFare") or 0))
+            most_seats = max(results, key=lambda vehicle: int(vehicle.get("seats") or 0))
+            state["last_response"] = (
+                f"Among the vehicles I found, {cheapest.get('vehicleName') or cheapest.get('title', 'one option')} "
+                f"has the lowest fare at ₹{cheapest.get('estimatedFare') or cheapest.get('baseFare')}, while "
+                f"{most_seats.get('vehicleName') or most_seats.get('title', 'another option')} has the most seats ({most_seats.get('seats')})."
+            )
             return state
         
         conversation_history = state.get("conversation_history", [])

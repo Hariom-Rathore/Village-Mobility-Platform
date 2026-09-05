@@ -97,11 +97,11 @@ class RideLocalClient:
     async def get_vehicle_details(self, vehicle_id: str) -> Dict[str, Any]:
         """
         Get detailed vehicle information
-        GET /cars/:id
+        GET /api/ai/vehicles/:id (thin JSON bridge over the existing Listing model)
         """
         try:
             client = await self.get_client()
-            response = await client.get(f"{self.base_url}/cars/{vehicle_id}")
+            response = await client.get(f"{self.base_url}/api/ai/vehicles/{vehicle_id}")
             response.raise_for_status()
             
             data = response.json()

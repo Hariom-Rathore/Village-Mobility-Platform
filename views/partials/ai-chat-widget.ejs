@@ -78,6 +78,10 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 async function initializeAIChat() {
+    const toggleButton = document.getElementById('ai-chat-toggle');
+
+    toggleButton.classList.remove('hidden');
+
     try {
         // Get user info from server-side rendered data
         const userId = '<%- typeof currUser !== "undefined" && currUser ? currUser._id : "" %>';
@@ -92,17 +96,15 @@ async function initializeAIChat() {
             onStateChange: handleAIStateChange
         });
         
-        // Check if AI service is available
-        const health = await aiChat.checkHealth();
-        if (health) {
-            document.getElementById('ai-chat-toggle').classList.remove('hidden');
-        } else {
-            document.getElementById('ai-chat-toggle').classList.add('hidden');
+        await aiChat.checkHealth();
+
+        if (userId && localStorage.getItem('ridelocal_ai_pending_booking') === 'true') {
+            localStorage.removeItem('ridelocal_ai_pending_booking');
+            showTypingIndicator();
+            await aiChat.sendMessage('confirm');
         }
-        
     } catch (error) {
         console.error('Error initializing AI chat:', error);
-        document.getElementById('ai-chat-toggle').classList.add('hidden');
     }
 }
 
@@ -140,9 +142,8 @@ async function sendMessage() {
     try {
         // Send to AI service
         await aiChat.sendMessage(message);
-    } catch (error) {
+    } catch {
         hideTypingIndicator();
-        addMessageToUI('assistant', 'Sorry, I encountered an error. Please try again.');
     }
 }
 
@@ -224,7 +225,20 @@ function displayVehicles(vehicles) {
                 <span>${type}</span>
             </div>
             <div class="vehicle-price">₹${price}</div>
+            <div class="vehicle-card-actions">
+                <button type="button" class="ai-chat-action-button" data-action="details">View Details</button>
+                <button type="button" class="ai-chat-action-button primary" data-action="select">Select</button>
+            </div>
         `;
+
+        vehicleCard.querySelector('[data-action="details"]').onclick = (event) => {
+            event.stopPropagation();
+            window.location.href = `/cars/${vehicle._id}`;
+        };
+        vehicleCard.querySelector('[data-action="select"]').onclick = (event) => {
+            event.stopPropagation();
+            selectVehicle(index, vehicle);
+        };
         
         vehiclesDiv.appendChild(vehicleCard);
     });
@@ -262,6 +276,7 @@ function selectVehicle(index, vehicle) {
     // In a full implementation, this would trigger vehicle selection logic
     // For now, just inform the AI
     if (aiChat) {
+        showTypingIndicator();
         aiChat.sendMessage(selectionMessage);
     }
 }
@@ -271,8 +286,14 @@ function handleAction(action) {
         const confirmMessage = 'Yes, please proceed with the booking.';
         addMessageToUI('user', confirmMessage);
         if (aiChat) {
+            showTypingIndicator();
             aiChat.sendMessage(confirmMessage);
         }
+    } else if (action.type === 'login_required' && action.url) {
+        localStorage.setItem('ridelocal_ai_pending_booking', 'true');
+        window.location.href = action.url;
+    } else if (action.type === 'view_details' && action.url) {
+        window.location.href = action.url;
     } else if (action.type === 'select_vehicle') {
         // Handle vehicle selection
         addMessageToUI('user', action.prompt);

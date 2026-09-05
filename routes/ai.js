@@ -1,5 +1,6 @@
 const express = require("express");
 const router = express.Router();
+const Listing = require("../models/listing");
 
 const AI_SERVICE_URL = process.env.AI_SERVICE_URL || "http://localhost:8000";
 
@@ -18,12 +19,28 @@ router.get("/health", async (req, res) => {
     }
 });
 
+router.get("/vehicles/:id", async (req, res) => {
+    try {
+        const listing = await Listing.findOne({ _id: req.params.id, websiteSource: "car-rental" })
+            .populate("owner", "username averageRating isVerified");
+        if (!listing) return res.status(404).json({ success: false, error: "Vehicle not found" });
+        return res.json({ success: true, vehicle: listing.toObject() });
+    } catch (err) {
+        return res.status(400).json({ success: false, error: "Invalid vehicle id" });
+    }
+});
+
 router.post("/chat", async (req, res) => {
     try {
+        const requestBody = {
+            ...req.body,
+            user_id: req.body.user_id || (req.user && req.user._id ? String(req.user._id) : null),
+            auth_token: req.body.auth_token || (req.isAuthenticated() ? req.headers.cookie : null),
+        };
         const response = await fetch(`${AI_SERVICE_URL}/ai/chat`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(req.body),
+            body: JSON.stringify(requestBody),
             signal: AbortSignal.timeout(120000),
         });
 

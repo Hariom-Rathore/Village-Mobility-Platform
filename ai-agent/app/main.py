@@ -181,7 +181,9 @@ async def chat(request: ChatRequest) -> ChatResponse:
         response_message = result.get("last_response", "I'm sorry, I couldn't process your request.")
         
         # Prepare structured data for response
-        vehicles = result.get("search_results", [])
+        vehicles = result.get("search_results", []) if (
+            result.get("current_intent") == "vehicle_search" and result.get("last_response", "").startswith("I found ")
+        ) else []
         actions = []
         
         # Add action if vehicles are available for selection
@@ -190,13 +192,35 @@ async def chat(request: ChatRequest) -> ChatResponse:
                 "type": "select_vehicle",
                 "prompt": "Select a vehicle to book or get more details"
             })
+
+        if result.get("selected_vehicle") and result.get("current_intent") in {"vehicle_details", "vehicle_comparison", "availability_check", "booking_request"}:
+            selected = result["selected_vehicle"]
+            actions.append({
+                "type": "view_details",
+                "prompt": "View vehicle details",
+                "vehicle_id": str(selected.get("_id")),
+                "url": f"/cars/{selected.get('_id')}"
+            })
         
         # Add action if booking confirmation is needed
-        if result.get("needs_confirmation") and result.get("selected_vehicle"):
+        if result.get("needs_confirmation") and result.get("selected_vehicle") and result.get("auth_token"):
             actions.append({
                 "type": "confirm_booking",
                 "prompt": "Confirm booking request",
                 "vehicle": result.get("selected_vehicle")
+            })
+
+        if (
+            result.get("current_intent") == "booking_request"
+            and result.get("selected_vehicle")
+            and not result.get("missing_information")
+            and not result.get("booking_created")
+            and not result.get("auth_token")
+        ):
+            actions.append({
+                "type": "login_required",
+                "prompt": "Log in to continue booking",
+                "url": "/users/login"
             })
         
         # Prepare state for response (exclude sensitive data)

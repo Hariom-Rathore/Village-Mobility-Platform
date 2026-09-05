@@ -24,9 +24,10 @@ async def get_vehicle_details(vehicle_id: str) -> Dict[str, Any]:
         
         logger.info(f"Vehicle details retrieved successfully for {vehicle_id}")
         
+        vehicle = result.get("vehicle", result) if isinstance(result, dict) else result
         return {
             "success": True,
-            "vehicle": result,
+            "vehicle": vehicle,
             "vehicle_id": vehicle_id
         }
         
