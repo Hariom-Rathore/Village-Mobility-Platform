@@ -32,11 +32,11 @@ class RideLocalAIChat {
                 })
             });
 
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
+            const data = await response.json().catch(() => ({}));
 
-            const data = await response.json();
+            if (!response.ok) {
+                throw new Error(data.message || data.error || `HTTP error! status: ${response.status}`);
+            }
             
             // Update conversation ID
             this.conversationId = data.conversation_id;

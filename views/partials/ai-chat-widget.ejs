@@ -178,7 +178,7 @@ function handleAIResponse(response) {
 
 function handleAIError(error) {
     hideTypingIndicator();
-    addErrorToUI('Connection error. Please try again.');
+    addErrorToUI(error.message || 'The assistant is temporarily unavailable. Please try again.');
 }
 
 function handleAIStateChange(state) {

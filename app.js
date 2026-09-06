@@ -47,6 +47,7 @@ const passport=require("passport");
 const localStrategy=require("passport-local");
 const User= require("./models/user.js");
 const http = require('http');
+const { spawn } = require('child_process');
 const { Server } = require('socket.io');
 
 //session(user ke bare me ki user kitni der baad aaya website pe vesi information) ki inforamtion abb atlas me store hogi jiska dburl le liya h because express sessison me some time data leak ho jata h
@@ -324,6 +325,51 @@ const { startBookingExpiryJob } = require('./utils/bookingExpiry');
 startBookingExpiryJob(io);
 
 const PORT = process.env.PORT || 8081;
+
+async function startLocalAIService() {
+    const aiServiceUrl = process.env.AI_SERVICE_URL || "http://localhost:8000";
+    const autoStartAI = process.env.AI_AUTOSTART !== "false";
+
+    if (!autoStartAI || !/^https?:\/\/(localhost|127\.0\.0\.1):8000\/?$/.test(aiServiceUrl)) {
+        return;
+    }
+
+    try {
+        const response = await fetch(`${aiServiceUrl}/health`, {
+            signal: AbortSignal.timeout(1000),
+        });
+        if (response.ok) {
+            console.log("AI service is already running.");
+            return;
+        }
+    } catch (err) {
+        // Start the bundled service when the local health check is unavailable.
+    }
+
+    const pythonExecutable = process.platform === "win32"
+        ? path.join(__dirname, "ai-agent", "venv", "Scripts", "python.exe")
+        : path.join(__dirname, "ai-agent", "venv", "bin", "python");
+
+    const aiProcess = spawn(pythonExecutable, ["-m", "app.main"], {
+        cwd: path.join(__dirname, "ai-agent"),
+        stdio: "inherit",
+        windowsHide: true,
+    });
+
+    aiProcess.once("error", (error) => {
+        console.error(`Unable to start the AI service: ${error.message}`);
+    });
+    aiProcess.once("spawn", () => {
+        console.log("AI service is starting on port 8000.");
+    });
+
+    const stopAIService = () => {
+        if (!aiProcess.killed) aiProcess.kill();
+    };
+    process.once("SIGINT", stopAIService);
+    process.once("SIGTERM", stopAIService);
+}
+
 server.on('error', (err) => {
     if (err.code === 'EADDRINUSE') {
         console.error(`Port ${PORT} is already in use. Kill existing process with:`);
@@ -333,4 +379,5 @@ server.on('error', (err) => {
 });
 server.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);
+    startLocalAIService();
 });
