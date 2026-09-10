@@ -28,7 +28,11 @@ class Settings:
         self.LLM_MAX_TOKENS = int(os.getenv("LLM_MAX_TOKENS", "1000"))
         
         # RideLocal Backend
-        self.RIDELocal_BACKEND_URL = os.getenv("RIDELocal_BACKEND_URL", "http://localhost:8081")
+        backend_host = os.getenv("RIDELocal_BACKEND_HOST", "")
+        self.RIDELocal_BACKEND_URL = os.getenv(
+            "RIDELocal_BACKEND_URL",
+            f"https://{backend_host}" if backend_host else "http://localhost:8081",
+        ).rstrip("/")
         self.RIDELocal_API_TIMEOUT = int(os.getenv("RIDELocal_API_TIMEOUT", "60"))
         
         # Authentication

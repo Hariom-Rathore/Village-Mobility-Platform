@@ -1,0 +1,49 @@
+services:
+  - type: web
+    name: ridelocal-ai-agent
+    runtime: python
+    rootDir: ai-agent
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: LLM_PROVIDER
+        value: openai
+      - key: LLM_MODEL
+        value: gpt-4o-mini
+      - key: RIDELocal_BACKEND_HOST
+        fromService:
+          type: web
+          name: ridelocal
+          property: host
+      - key: JWT_SECRET
+        sync: false
+      - key: SESSION_SECRET
+        sync: false
+
+  - type: web
+    name: ridelocal
+    runtime: node
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: AI_SERVICE_HOST
+        fromService:
+          type: web
+          name: ridelocal-ai-agent
+          property: host
+      - key: ATLASDB_URL
+        sync: false
+      - key: SECRET
+        sync: false
+      - key: CLOUD_NAME
+        sync: false
+      - key: CLOUD_API_KEY
+        sync: false
+      - key: CLOUD_API_SECRET
+        sync: false
+      - key: OWNER_WHATSAPP_NUMBER
+        sync: false

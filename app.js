@@ -327,6 +327,10 @@ startBookingExpiryJob(io);
 const PORT = process.env.PORT || 8081;
 
 async function startLocalAIService() {
+    if (process.env.NODE_ENV === "production") {
+        return;
+    }
+
     const aiServiceUrl = process.env.AI_SERVICE_URL || "http://localhost:8000";
     const autoStartAI = process.env.AI_AUTOSTART !== "false";
 

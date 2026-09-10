@@ -2,7 +2,10 @@ const express = require("express");
 const router = express.Router();
 const Listing = require("../models/listing");
 
-const AI_SERVICE_URL = process.env.AI_SERVICE_URL || "http://localhost:8000";
+const configuredAIServiceUrl = process.env.AI_SERVICE_URL || (
+    process.env.AI_SERVICE_HOST ? `https://${process.env.AI_SERVICE_HOST}` : "http://localhost:8000"
+);
+const AI_SERVICE_URL = configuredAIServiceUrl.replace(/\/$/, "");
 
 router.get("/health", async (req, res) => {
     try {
@@ -14,7 +17,7 @@ router.get("/health", async (req, res) => {
     } catch (err) {
         return res.status(503).json({
             status: "unavailable",
-            error: "AI service is not running. Start it with: npm run ai:start",
+            error: "AI service is unavailable. Check the AI_SERVICE_URL deployment setting.",
         });
     }
 });
@@ -59,7 +62,7 @@ router.post("/chat", async (req, res) => {
     } catch (err) {
         return res.status(503).json({
             error: "AI service is not running",
-            message: "Sorry, the AI assistant is temporarily unavailable. Please start the AI service with: npm run ai:start",
+            message: "Sorry, the AI assistant is temporarily unavailable. Please try again shortly.",
         });
     }
 });

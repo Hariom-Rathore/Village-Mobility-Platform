@@ -128,6 +128,22 @@ SECRET=your_session_secret
 npm start
 ```
 
+## Deploy With AI Chat on Render
+
+The AI assistant runs as a separate Python web service. Deploy the repository with
+the included `render.yaml` Blueprint, then set the secret values requested by
+Render, including a newly rotated `OPENAI_API_KEY`. The Blueprint connects the
+Node service to the AI service through `AI_SERVICE_HOST` and configures the AI
+service to call the Node service through `RIDELocal_BACKEND_HOST`.
+
+After deployment, verify:
+
+```text
+https://<node-service-host>/api/ai/health
+```
+
+The response must contain `"status":"healthy"` before testing chat.
+
 ---
 
 
