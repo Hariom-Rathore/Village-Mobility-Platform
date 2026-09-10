@@ -1,0 +1,7 @@
+2026-09-10 22:04:31.558 | INFO     | app.graph.workflow:create_workflow:94 - Compiling LangGraph workflow
+INFO:     Started server process [38512]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:8000 (Press CTRL+C to quit)
+(node:4760) [DEP0044] DeprecationWarning: The `util.isArray` API is deprecated. Please use `Array.isArray()` instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)

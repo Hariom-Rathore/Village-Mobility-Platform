@@ -350,8 +350,21 @@ async function startLocalAIService() {
         ? path.join(__dirname, "ai-agent", "venv", "Scripts", "python.exe")
         : path.join(__dirname, "ai-agent", "venv", "bin", "python");
 
-    const aiProcess = spawn(pythonExecutable, ["-m", "app.main"], {
-        cwd: path.join(__dirname, "ai-agent"),
+    const aiAgentDirectory = path.join(__dirname, "ai-agent");
+    const aiProcess = spawn(pythonExecutable, [
+        "-m",
+        "uvicorn",
+        "app.main:app",
+        "--host",
+        "127.0.0.1",
+        "--port",
+        "8000",
+    ], {
+        cwd: aiAgentDirectory,
+        env: {
+            ...process.env,
+            PYTHONPATH: aiAgentDirectory,
+        },
         stdio: "inherit",
         windowsHide: true,
     });
@@ -361,6 +374,11 @@ async function startLocalAIService() {
     });
     aiProcess.once("spawn", () => {
         console.log("AI service is starting on port 8000.");
+    });
+    aiProcess.once("exit", (code, signal) => {
+        if (code !== 0 && signal !== "SIGTERM") {
+            console.error(`AI service stopped unexpectedly (code ${code}, signal ${signal || "none"}).`);
+        }
     });
 
     const stopAIService = () => {
