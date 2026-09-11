@@ -9,6 +9,7 @@ import re
 from loguru import logger
 from langchain_core.messages import HumanMessage, AIMessage
 from langchain_openai import ChatOpenAI
+import httpx
 
 from .state import AgentState
 from ..config import settings
@@ -31,6 +32,57 @@ if settings.LLM_API_KEY:
         max_tokens=settings.LLM_MAX_TOKENS,
         api_key=settings.LLM_API_KEY
     )
+
+
+class GeminiResponse:
+    def __init__(self, content: str):
+        self.content = content
+
+
+class GeminiChat:
+    """Small REST client for Gemini's generateContent endpoint."""
+
+    def __init__(self, api_key: str, model: str):
+        self.api_key = api_key
+        self.model = model.removeprefix("models/")
+
+    def invoke(self, messages: list[dict]) -> GeminiResponse:
+        contents = []
+        system_instruction = None
+        for message in messages:
+            role = message.get("role")
+            content = message.get("content", "")
+            if role == "system":
+                system_instruction = {"parts": [{"text": content}]}
+            else:
+                contents.append({
+                    "role": "model" if role == "assistant" else "user",
+                    "parts": [{"text": content}],
+                })
+
+        payload = {"contents": contents}
+        if system_instruction:
+            payload["system_instruction"] = system_instruction
+
+        response = httpx.post(
+            f"https://generativelanguage.googleapis.com/v1beta/models/{self.model}:generateContent",
+            headers={"x-goog-api-key": self.api_key},
+            json=payload,
+            timeout=60,
+        )
+        response.raise_for_status()
+        data = response.json()
+        text = "".join(
+            part.get("text", "")
+            for part in data.get("candidates", [{}])[0].get("content", {}).get("parts", [])
+        ).strip()
+        if not text:
+            raise ValueError("Gemini returned an empty response")
+        return GeminiResponse(text)
+
+
+if settings.LLM_PROVIDER.lower() == "gemini" and settings.GEMINI_API_KEY:
+    llm = GeminiChat(settings.GEMINI_API_KEY, settings.GEMINI_MODEL)
 
 
 async def classify_intent_node(state: AgentState) -> AgentState:
@@ -119,7 +171,19 @@ async def classify_intent_node(state: AgentState) -> AgentState:
             intent = "vehicle_details"
         elif any(word in message_lower for word in ["is this car available", "check availability", "is it available"]):
             intent = "availability_check"
-        elif any(word in message_lower for word in ["search", "find", "looking for", "show me", "available", "jana", "jaana", "car chahiye"]) or " i need a vehicle" in message_lower or "need a car" in message_lower or "need an suv" in message_lower or "need a suv" in message_lower or "need a vehicle" in message_lower or re.search(r"\bneed(s)?\s+(?:an\s+)?(?:suv|sedan|hatchback|car|vehicle)\b", message_lower) or re.search(r"\b(?:from|to)\s+[a-z]+", message_lower) or re.search(r"\b[a-z]+\s+to\s+[a-z]+\b", message_lower):
+        elif (
+            any(word in message_lower for word in ["search", "find", "looking for", "show me", "available", "jana", "jaana", "car chahiye", "vehicle chahiye"])
+            or " i need a vehicle" in message_lower
+            or "need a car" in message_lower
+            or "need an suv" in message_lower
+            or "need a suv" in message_lower
+            or "need a vehicle" in message_lower
+            or re.search(r"\bneed(s)?\s+(?:an\s+)?(?:suv|sedan|hatchback|car|vehicle)\b", message_lower)
+            or (
+                re.search(r"\b[a-z][a-z .-]{1,30}\s+to\s+[a-z][a-z .-]{1,30}\b", message_lower)
+                and any(term in message_lower for term in ["car", "vehicle", "ride", "trip", "travel", "pickup", "drop"])
+            )
+        ):
             intent = "vehicle_search"
         elif (
             state.get("awaiting_user_input")
@@ -163,6 +227,12 @@ async def extract_information_node(state: AgentState) -> AgentState:
         user_message = state["conversation_history"][-1]["content"] if state["conversation_history"] else ""
 
         logger.info(f"Extracting information from message")
+
+        if state.get("current_intent") not in {
+            "vehicle_search", "vehicle_details", "vehicle_comparison",
+            "availability_check", "booking_request",
+        }:
+            return state
 
         def normalize_text(value: Optional[str]) -> Optional[str]:
             if value is None:
@@ -844,7 +914,8 @@ async def generate_response_node(state: AgentState) -> AgentState:
             state["last_response"] = _fallback_response(state)
             return state
 
-        logger.info(f"Calling LLM provider={settings.LLM_PROVIDER}, model={settings.LLM_MODEL}, messages={len(messages)}")
+        active_model = settings.GEMINI_MODEL if settings.LLM_PROVIDER.lower() == "gemini" else settings.LLM_MODEL
+        logger.info(f"Calling LLM provider={settings.LLM_PROVIDER}, model={active_model}, messages={len(messages)}")
         try:
             response = llm.invoke(messages)
             state["last_response"] = response.content

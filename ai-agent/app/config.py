@@ -9,6 +9,8 @@ from dotenv import load_dotenv
 # Load ai-agent/.env regardless of the current working directory.
 _env_path = Path(__file__).resolve().parent.parent / ".env"
 load_dotenv(dotenv_path=_env_path)
+_project_env_path = _env_path.parent.parent / ".env"
+load_dotenv(dotenv_path=_project_env_path, override=False)
 
 
 class Settings:
@@ -23,6 +25,8 @@ class Settings:
         # LLM Configuration
         self.LLM_PROVIDER = os.getenv("LLM_PROVIDER", "openai")
         self.LLM_API_KEY = os.getenv("OPENAI_API_KEY") or os.getenv("LLM_API_KEY", "")
+        self.GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
+        self.GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
         self.LLM_MODEL = os.getenv("LLM_MODEL", "gpt-4o-mini")
         self.LLM_TEMPERATURE = float(os.getenv("LLM_TEMPERATURE", "0.7"))
         self.LLM_MAX_TOKENS = int(os.getenv("LLM_MAX_TOKENS", "1000"))
