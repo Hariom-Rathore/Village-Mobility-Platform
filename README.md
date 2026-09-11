@@ -132,7 +132,7 @@ npm start
 
 The AI assistant runs as a separate Python web service. Deploy the repository with
 the included `render.yaml` Blueprint, then set the secret values requested by
-Render, including a newly rotated `OPENAI_API_KEY`. The Blueprint connects the
+Render, including a valid `GEMINI_API_KEY`. The Blueprint connects the
 Node service to the AI service through `AI_SERVICE_HOST` and configures the AI
 service to call the Node service through `RIDELocal_BACKEND_HOST`.
 
