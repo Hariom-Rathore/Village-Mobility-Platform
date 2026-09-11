@@ -7,6 +7,15 @@ const configuredAIServiceUrl = process.env.AI_SERVICE_URL || (
 );
 const AI_SERVICE_URL = configuredAIServiceUrl.replace(/\/$/, "");
 
+function logAIServiceError(operation, err) {
+    console.error(`[AI] ${operation} failed`, {
+        serviceUrl: AI_SERVICE_URL,
+        name: err?.name,
+        message: err?.message,
+        cause: err?.cause?.message || err?.cause?.code || undefined,
+    });
+}
+
 router.get("/health", async (req, res) => {
     try {
         const response = await fetch(`${AI_SERVICE_URL}/health`, {
@@ -15,9 +24,10 @@ router.get("/health", async (req, res) => {
         const data = await response.json();
         return res.status(response.status).json(data);
     } catch (err) {
+        logAIServiceError("health check", err);
         return res.status(503).json({
             status: "unavailable",
-            error: "AI service is unavailable. Check the AI_SERVICE_URL deployment setting.",
+            error: "AI service is unavailable. Check the AI service deployment and AI_SERVICE_URL setting.",
         });
     }
 });
@@ -60,6 +70,7 @@ router.post("/chat", async (req, res) => {
 
         return res.status(response.status).json(data);
     } catch (err) {
+        logAIServiceError("chat request", err);
         return res.status(503).json({
             error: "AI service is not running",
             message: "Sorry, the AI assistant is temporarily unavailable. Please try again shortly.",
