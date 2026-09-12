@@ -21,7 +21,22 @@ router.get("/health", async (req, res) => {
         const response = await fetch(`${AI_SERVICE_URL}/health`, {
             signal: AbortSignal.timeout(5000),
         });
-        const data = await response.json();
+        const text = await response.text();
+        let data;
+        try {
+            data = text ? JSON.parse(text) : {};
+        } catch (parseErr) {
+            return res.status(503).json({
+                status: "unavailable",
+                error: `AI service returned HTTP ${response.status} instead of a JSON health response.`,
+            });
+        }
+        if (!response.ok) {
+            return res.status(503).json({
+                status: "unavailable",
+                error: data.error || `AI service returned HTTP ${response.status}.`,
+            });
+        }
         return res.status(response.status).json(data);
     } catch (err) {
         logAIServiceError("health check", err);
@@ -62,9 +77,10 @@ router.post("/chat", async (req, res) => {
         try {
             data = text ? JSON.parse(text) : {};
         } catch (parseErr) {
+            console.error(`[AI] upstream returned non-JSON HTTP ${response.status}`);
             return res.status(502).json({
                 error: "Invalid AI service response",
-                message: "Sorry, the AI assistant returned an unexpected response. Please try again.",
+                message: `AI service returned HTTP ${response.status} with an invalid response. Check the AI service deployment URL and logs.`,
             });
         }
 
