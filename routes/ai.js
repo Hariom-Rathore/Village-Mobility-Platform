@@ -35,6 +35,16 @@ function logAIServiceError(operation, err) {
     });
 }
 
+function unavailableResponse(operation, err) {
+    logAIServiceError(operation, err);
+    const reason = err?.cause?.code || err?.code || err?.name || "unknown error";
+    return {
+        error: "AI service is unavailable",
+        message: `Could not reach the AI service (${reason}). Check the Render AI service deployment and URL.`,
+        upstream_url: AI_SERVICE_URL,
+    };
+}
+
 router.get("/health", async (req, res) => {
     try {
         const response = await fetch(`${AI_SERVICE_URL}/health`, {
@@ -66,10 +76,9 @@ router.get("/health", async (req, res) => {
         }
         return res.status(response.status).json(data);
     } catch (err) {
-        logAIServiceError("health check", err);
         return res.status(503).json({
             status: "unavailable",
-            error: "AI service is unavailable. Check the AI service deployment and AI_SERVICE_URL setting.",
+            ...unavailableResponse("health check", err),
         });
     }
 });
@@ -121,11 +130,7 @@ router.post("/chat", async (req, res) => {
 
         return res.status(response.status).json(data);
     } catch (err) {
-        logAIServiceError("chat request", err);
-        return res.status(503).json({
-            error: "AI service is not running",
-            message: "Sorry, the AI assistant is temporarily unavailable. Please try again shortly.",
-        });
+        return res.status(503).json(unavailableResponse("chat request", err));
     }
 });
 
