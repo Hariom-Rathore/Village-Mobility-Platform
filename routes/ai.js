@@ -3,18 +3,18 @@ const router = express.Router();
 const Listing = require("../models/listing");
 
 function resolveAIServiceUrl() {
+    if (process.env.NODE_ENV === "production" && process.env.AI_SERVICE_HOST) {
+        const host = process.env.AI_SERVICE_HOST.replace(/\/$/, "");
+        return /^https?:\/\//i.test(host)
+            ? host
+            : `${process.env.AI_SERVICE_SCHEME || "http"}://${host}`;
+    }
+
     if (process.env.AI_SERVICE_URL) {
         return process.env.AI_SERVICE_URL.replace(/\/$/, "");
     }
 
-    if (!process.env.AI_SERVICE_HOST) {
-        return "http://localhost:8000";
-    }
-
-    const host = process.env.AI_SERVICE_HOST.replace(/\/$/, "");
-    return /^https?:\/\//i.test(host)
-        ? host
-        : `${process.env.AI_SERVICE_SCHEME || "http"}://${host}`;
+    return "http://localhost:8000";
 }
 
 const configuredAIServiceUrl = resolveAIServiceUrl();
