@@ -3,7 +3,9 @@ const router = express.Router();
 const Listing = require("../models/listing");
 
 const configuredAIServiceUrl = process.env.AI_SERVICE_URL || (
-    process.env.AI_SERVICE_HOST ? `https://${process.env.AI_SERVICE_HOST}` : "http://localhost:8000"
+    process.env.AI_SERVICE_HOST
+        ? `${process.env.AI_SERVICE_SCHEME || "http"}://${process.env.AI_SERVICE_HOST}`
+        : "http://localhost:8000"
 );
 const AI_SERVICE_URL = configuredAIServiceUrl.replace(/\/$/, "");
 
@@ -77,7 +79,11 @@ router.post("/chat", async (req, res) => {
         try {
             data = text ? JSON.parse(text) : {};
         } catch (parseErr) {
-            console.error(`[AI] upstream returned non-JSON HTTP ${response.status}`);
+            console.error("[AI] upstream returned non-JSON response", {
+                serviceUrl: AI_SERVICE_URL,
+                status: response.status,
+                contentType: response.headers.get("content-type"),
+            });
             return res.status(502).json({
                 error: "Invalid AI service response",
                 message: `AI service returned HTTP ${response.status} with an invalid response. Check the AI service deployment URL and logs.`,

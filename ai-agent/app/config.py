@@ -35,7 +35,7 @@ class Settings:
         backend_host = os.getenv("RIDELocal_BACKEND_HOST", "")
         self.RIDELocal_BACKEND_URL = os.getenv(
             "RIDELocal_BACKEND_URL",
-            f"https://{backend_host}" if backend_host else "http://localhost:8081",
+            f"{os.getenv('RIDELocal_BACKEND_SCHEME', 'http')}://{backend_host}" if backend_host else "http://localhost:8081",
         ).rstrip("/")
         self.RIDELocal_API_TIMEOUT = int(os.getenv("RIDELocal_API_TIMEOUT", "60"))
         
