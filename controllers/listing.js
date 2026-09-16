@@ -73,8 +73,11 @@ function haversineKm(lat1, lon1, lat2, lon2) {
 }
 
 module.exports.index = async (req, res) => {
-    const { category = "all", type, seats, search, tripType, pickup } = req.query;
-    const filter = { websiteSource: "car-rental" };
+    const { category = "all", type, seats, search, tripType, pickup, pickupLat, pickupLng } = req.query;
+    const filter = {
+        websiteSource: "car-rental",
+        availabilityStatus: "AVAILABLE",
+    };
 
     // Trip type → smart vehicle recommendations (case-insensitive matching)
     const tripTypeMap = {
@@ -121,8 +124,12 @@ module.exports.index = async (req, res) => {
     let distances = {};
     let pickupLabel = (pickup || '').trim();
 
-    // If pickup is given, geocode it and sort listings by distance
-    if (pickupLabel) {
+    let pickupCoordinates = null;
+    const parsedPickupLat = Number.parseFloat(pickupLat);
+    const parsedPickupLng = Number.parseFloat(pickupLng);
+    if (Number.isFinite(parsedPickupLat) && Number.isFinite(parsedPickupLng)) {
+        pickupCoordinates = { lat: parsedPickupLat, lng: parsedPickupLng };
+    } else if (pickupLabel) {
         try {
             const geoRes = await fetch(`https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&q=${encodeURIComponent(pickupLabel)}`, {
                 headers: { 'User-Agent': 'PROJECT_CAR_DELTA/1.0' }
@@ -130,19 +137,29 @@ module.exports.index = async (req, res) => {
             if (geoRes.ok) {
                 const geoData = await geoRes.json();
                 if (geoData.length > 0) {
-                    const [pickLon, pickLat] = [parseFloat(geoData[0].lon), parseFloat(geoData[0].lat)];
-
-                    alllistings = alllistings.map(l => l.toObject ? l.toObject() : l);
-                    for (const l of alllistings) {
-                        const coords = l.locationCoordinates?.coordinates;
-                        if (coords && coords.length === 2 && coords[0] !== 0 && coords[1] !== 0) {
-                            distances[l._id] = Math.round(haversineKm(pickLat, pickLon, coords[1], coords[0]) * 10) / 10;
-                        }
-                    }
-                    alllistings.sort((a, b) => (distances[a._id] ?? Infinity) - (distances[b._id] ?? Infinity));
+                    pickupCoordinates = {
+                        lng: Number.parseFloat(geoData[0].lon),
+                        lat: Number.parseFloat(geoData[0].lat),
+                    };
                 }
             }
         } catch (e) { console.error('Pickup geocode error:', e); }
+    }
+
+    if (pickupCoordinates) {
+        alllistings = alllistings.map(l => l.toObject ? l.toObject() : l);
+        for (const listing of alllistings) {
+            const coords = listing.locationCoordinates?.coordinates;
+            if (coords && coords.length === 2 && coords[0] !== 0 && coords[1] !== 0) {
+                distances[listing._id] = Math.round(haversineKm(
+                    pickupCoordinates.lat,
+                    pickupCoordinates.lng,
+                    coords[1],
+                    coords[0]
+                ) * 10) / 10;
+            }
+        }
+        alllistings.sort((a, b) => (distances[a._id] ?? Infinity) - (distances[b._id] ?? Infinity));
     }
 
     res.render("listings/index.ejs", { alllistings, distances, pickupLabel, currentCategory: category, currentType: type, currentSeats: seats, currentTripType: tripType || '', currentSearch: search || "" });

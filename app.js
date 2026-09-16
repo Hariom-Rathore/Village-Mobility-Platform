@@ -271,10 +271,18 @@ app.use((err,req,res,next)=>{
     const statusCode = err.statusCode || 500;
     const errorMsg = err.message || "Something went wrong!";
 
+    console.error(`[${req.method} ${req.originalUrl}]`, err.stack || err.message || err);
+
     // show form errors on add/edit listing pages
     if (req.path === "/cars" && req.method === "POST") {
         return res.status(statusCode).render("listings/new.ejs", {
             listing: (err.viewData && err.viewData.listing) || emptyListing,
+            errorMsg,
+        });
+    }
+
+    if (req.path === "/cars/new-step" && req.method === "POST") {
+        return res.status(statusCode).render("listings/new-step.ejs", {
             errorMsg,
         });
     }

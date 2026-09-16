@@ -7,7 +7,14 @@ const bookingController = require("../controllers/booking.js");
 const multer = require('multer');
 const { storage } = require("../cloudconfig.js");
 const upload = multer({ storage });
-const uploadMultiple = multer({ storage: storage }).fields([
+const uploadMultiple = multer({
+    storage,
+    limits: { fileSize: 15 * 1024 * 1024 },
+    fileFilter: (req, file, callback) => {
+        const allowed = file.mimetype.startsWith('image/') || file.mimetype === 'application/pdf';
+        callback(allowed ? null : new Error('Only image and PDF files are allowed'), allowed);
+    }
+}).fields([
     { name: 'frontImage', maxCount: 1 }, { name: 'rearImage', maxCount: 1 },
     { name: 'leftImage', maxCount: 1 }, { name: 'rightImage', maxCount: 1 },
     { name: 'interiorImage', maxCount: 1 }, { name: 'dashboardImage', maxCount: 1 },

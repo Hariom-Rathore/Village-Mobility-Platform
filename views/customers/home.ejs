@@ -503,6 +503,9 @@ function setupAutocomplete(inputId) {
 
   input.addEventListener('input', () => {
     clearTimeout(timer);
+    delete input.dataset.lat;
+    delete input.dataset.lon;
+    delete input.dataset.display;
     const v = input.value.trim();
     if (v.length < 2) { container.innerHTML = ''; container.classList.remove('open'); return; }
     curFocus = -1;
@@ -559,7 +562,8 @@ function focusItem(items, i) {
 function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
 function handleSearch() {
-  const pickup = document.getElementById('searchPickup').value;
+  const pickupEl = document.getElementById('searchPickup');
+  const pickup = pickupEl.value;
   const dest = document.getElementById('searchDest').value;
   const date = document.getElementById('searchDate').value;
   const returnDate = document.getElementById('searchReturnDate').value;
@@ -567,6 +571,10 @@ function handleSearch() {
   const passengers = document.getElementById('searchPassengers').value;
   const params = new URLSearchParams();
   if (pickup) params.set('pickup', pickup);
+  if (pickupEl.dataset.lat && pickupEl.dataset.lon) {
+    params.set('pickupLat', pickupEl.dataset.lat);
+    params.set('pickupLng', pickupEl.dataset.lon);
+  }
   if (dest) params.set('destination', dest);
   if (date) params.set('date', date);
   if (returnDate) params.set('returndate', returnDate);

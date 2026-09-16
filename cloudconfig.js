@@ -11,13 +11,22 @@ cloudinary.config({
 //this is source code for make a folder on cloudinary
 const storage = new CloudinaryStorage({
   cloudinary: cloudinary,
-  params: {
-    folder: (req, file) => process.env.NODE_ENV === 'production' ? 'wonderlust_PROD' : 'wonderlust_DEV',
-    allowedFormates:["png","jpg","jpeg"],
-    transformation: [
-      { quality: 'auto', fetch_format: 'auto' },
-      { width: 1200, height: 800, crop: 'limit' }
-    ]
+  params: async (req, file) => {
+    const isPdf = file.mimetype === 'application/pdf';
+    const params = {
+      folder: process.env.NODE_ENV === 'production' ? 'wonderlust_PROD' : 'wonderlust_DEV',
+      resource_type: isPdf ? 'raw' : 'image',
+      allowed_formats: isPdf ? ['pdf'] : ['png', 'jpg', 'jpeg', 'webp'],
+    };
+
+    if (!isPdf) {
+      params.transformation = [
+        { quality: 'auto', fetch_format: 'auto' },
+        { width: 1200, height: 800, crop: 'limit' }
+      ];
+    }
+
+    return params;
   },
 });
 
