@@ -5,9 +5,11 @@ const Listing = require("../models/listing");
 function resolveAIServiceUrl() {
     if (process.env.NODE_ENV === "production" && process.env.AI_SERVICE_HOST) {
         const host = process.env.AI_SERVICE_HOST.replace(/\/$/, "");
+        const port = process.env.AI_SERVICE_PORT;
+        const hostWithPort = port && !/:[0-9]+$/.test(host) ? `${host}:${port}` : host;
         return /^https?:\/\//i.test(host)
-            ? host
-            : `${process.env.AI_SERVICE_SCHEME || "http"}://${host}`;
+            ? hostWithPort
+            : `${process.env.AI_SERVICE_SCHEME || "http"}://${hostWithPort}`;
     }
 
     if (process.env.AI_SERVICE_URL) {

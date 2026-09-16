@@ -20,6 +20,11 @@ services:
           property: host
       - key: RIDELocal_BACKEND_SCHEME
         value: http
+      - key: RIDELocal_BACKEND_PORT
+        fromService:
+          type: web
+          name: ridelocal
+          property: port
       - key: JWT_SECRET
         sync: false
       - key: SESSION_SECRET
@@ -40,6 +45,11 @@ services:
           property: host
       - key: AI_SERVICE_SCHEME
         value: http
+      - key: AI_SERVICE_PORT
+        fromService:
+          type: web
+          name: ridelocal-ai-agent
+          property: port
       - key: ATLASDB_URL
         sync: false
       - key: SECRET
