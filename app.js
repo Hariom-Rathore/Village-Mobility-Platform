@@ -236,7 +236,7 @@ app.use((req, res, next) => {
 });
 
 app.get("/", (req, res) => {
-    if (req.user && req.user.role === "owner") return res.redirect("/owners/dashboard");
+    if (req.user && req.user.role === "owner") return res.redirect("/owners/enhanced-dashboard");
     res.redirect("/customers/home");
 });
 

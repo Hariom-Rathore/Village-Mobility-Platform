@@ -1,0 +1,448 @@
+<% layout("/listings/layouts/boilerplate") %>
+<style>
+:root {
+  --primary: #2563eb;
+  --primary-50: #eff6ff;
+  --surface: #f8fafc;
+  --border: #e2e8f0;
+  --border-light: #f1f5f9;
+  --text: #1e293b;
+  --text-secondary: #64748b;
+  --danger: #ef4444;
+  --success: #10b981;
+  --warning: #f59e0b;
+  --radius-lg: 16px;
+  --radius-full: 9999px;
+  --max-width: 1280px;
+}
+
+.vehicles-page {
+  padding: 24px;
+  max-width: var(--max-width);
+  margin: 0 auto;
+}
+
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.page-title {
+  font-size: 24px;
+  font-weight: 700;
+  margin: 0;
+}
+
+.page-subtitle {
+  font-size: 14px;
+  color: var(--text-secondary);
+  margin-top: 4px;
+}
+
+.filters-bar {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.search-input {
+  flex: 1;
+  min-width: 200px;
+  padding: 10px 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  font-size: 14px;
+}
+
+.filter-select {
+  padding: 10px 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  font-size: 14px;
+  background: white;
+}
+
+.btn {
+  padding: 10px 20px;
+  border-radius: var(--radius-lg);
+  border: none;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-primary { background: var(--primary); color: white; }
+.btn-primary:hover { background: #1d4ed8; }
+
+.btn-success { background: var(--success); color: white; }
+.btn-danger { background: var(--danger); color: white; }
+.btn-warning { background: var(--warning); color: white; }
+
+.btn-ghost {
+  background: transparent;
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+
+.btn-ghost:hover {
+  background: var(--surface);
+}
+
+.btn-sm {
+  padding: 6px 12px;
+  font-size: 12px;
+}
+
+.vehicles-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 20px;
+}
+
+.vehicle-card {
+  background: white;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-light);
+  overflow: hidden;
+  transition: all 0.2s;
+}
+
+.vehicle-card:hover {
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.vehicle-image {
+  width: 100%;
+  height: 180px;
+  object-fit: cover;
+  background: var(--surface);
+}
+
+.vehicle-content {
+  padding: 16px;
+}
+
+.vehicle-title {
+  font-size: 16px;
+  font-weight: 700;
+  margin: 0 0 8px 0;
+}
+
+.vehicle-specs {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.spec-tag {
+  padding: 4px 10px;
+  background: var(--surface);
+  border-radius: var(--radius-full);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.vehicle-price {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--primary);
+  margin-bottom: 12px;
+}
+
+.vehicle-status {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: var(--radius-full);
+  font-size: 11px;
+  font-weight: 600;
+  margin-bottom: 12px;
+}
+
+.status-available { background: #d1fae5; color: #065f46; }
+.status-booked { background: #fee2e2; color: #991b1b; }
+.status-maintenance { background: #fef3c7; color: #92400e; }
+.status-hidden { background: #f1f5f9; color: #64748b; }
+
+.vehicle-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.vehicle-actions .btn {
+  flex: 1;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 60px 20px;
+  color: var(--text-secondary);
+}
+
+.empty-state i {
+  font-size: 64px;
+  margin-bottom: 16px;
+  color: var(--border);
+}
+
+.stats-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.stat-item {
+  background: white;
+  padding: 16px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-light);
+  text-align: center;
+}
+
+.stat-value {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--primary);
+}
+
+.stat-label {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-top: 4px;
+}
+
+@media (max-width: 768px) {
+  .vehicles-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .page-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+}
+</style>
+
+<div class="vehicles-page">
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">My Vehicles (मेरे वाहन)</h1>
+      <p class="page-subtitle">Manage your vehicle inventory</p>
+    </div>
+    <button class="btn btn-primary" onclick="window.location.href='/cars/new'">
+      <i class="fas fa-plus me-2"></i> Add New Vehicle
+    </button>
+  </div>
+
+  <!-- Stats Row -->
+  <div class="stats-row">
+    <div class="stat-item">
+      <div class="stat-value" id="totalVehicles">0</div>
+      <div class="stat-label">Total Vehicles</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-value" id="availableVehicles">0</div>
+      <div class="stat-label">Available</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-value" id="bookedVehicles">0</div>
+      <div class="stat-label">Booked</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-value" id="maintenanceVehicles">0</div>
+      <div class="stat-label">Maintenance</div>
+    </div>
+  </div>
+
+  <!-- Filters -->
+  <div class="filters-bar">
+    <input type="text" class="search-input" id="searchInput" placeholder="Search vehicles..." onkeyup="filterVehicles()">
+    <select class="filter-select" id="statusFilter" onchange="filterVehicles()">
+      <option value="">All Status</option>
+      <option value="AVAILABLE">Available</option>
+      <option value="BOOKED">Booked</option>
+      <option value="UNDER_MAINTENANCE">Maintenance</option>
+      <option value="HIDDEN">Hidden</option>
+    </select>
+    <select class="filter-select" id="typeFilter" onchange="filterVehicles()">
+      <option value="">All Types</option>
+      <option value="sedan">Sedan</option>
+      <option value="suv">SUV</option>
+      <option value="hatchback">Hatchback</option>
+      <option value="luxury">Luxury</option>
+      <option value="tempo">Tempo Traveller</option>
+    </select>
+    <select class="filter-select" id="fuelFilter" onchange="filterVehicles()">
+      <option value="">All Fuel Types</option>
+      <option value="petrol">Petrol</option>
+      <option value="diesel">Diesel</option>
+      <option value="electric">Electric</option>
+      <option value="cng">CNG</option>
+    </select>
+  </div>
+
+  <!-- Vehicles Grid -->
+  <div class="vehicles-grid" id="vehiclesGrid">
+    <div class="empty-state">
+      <i class="fas fa-car"></i>
+      <p>Loading vehicles...</p>
+    </div>
+  </div>
+</div>
+
+<script>
+let allVehicles = [];
+
+async function loadVehicles() {
+  try {
+    const res = await fetch('/owners/api/vehicles');
+    const data = await res.json();
+    
+    if (data.success) {
+      allVehicles = data.vehicles;
+      renderVehicles(allVehicles);
+      updateStats(allVehicles);
+    } else {
+      document.getElementById('vehiclesGrid').innerHTML = `
+        <div class="empty-state">
+          <i class="fas fa-exclamation-circle"></i>
+          <p>Failed to load vehicles</p>
+        </div>
+      `;
+    }
+  } catch (error) {
+    document.getElementById('vehiclesGrid').innerHTML = `
+      <div class="empty-state">
+        <i class="fas fa-exclamation-circle"></i>
+        <p>Error loading vehicles</p>
+      </div>
+    `;
+  }
+}
+
+function renderVehicles(vehicles) {
+  const grid = document.getElementById('vehiclesGrid');
+  
+  if (!vehicles || vehicles.length === 0) {
+    grid.innerHTML = `
+      <div class="empty-state" style="grid-column: 1 / -1;">
+        <i class="fas fa-car"></i>
+        <p>No vehicles found</p>
+        <button class="btn btn-primary" onclick="window.location.href='/cars/new'">
+          <i class="fas fa-plus me-2"></i> Add Your First Vehicle
+        </button>
+      </div>
+    `;
+    return;
+  }
+  
+  grid.innerHTML = vehicles.map(vehicle => {
+    const imageUrl = vehicle.image?.url || vehicle.images?.[0]?.url || 'https://images.pexels.com/photos/11129937/pexels-photo-11129937.jpeg';
+    const status = vehicle.availabilityStatus || 'AVAILABLE';
+    const statusClass = `status-${status.toLowerCase().replace('_', '-')}`;
+    
+    return `
+      <div class="vehicle-card">
+        <img src="${imageUrl}" alt="${vehicle.title}" class="vehicle-image" onerror="this.src='https://images.pexels.com/photos/11129937/pexels-photo-11129937.jpeg'">
+        <div class="vehicle-content">
+          <h3 class="vehicle-title">${vehicle.title || vehicle.vehicleName || 'Vehicle'}</h3>
+          <div class="vehicle-specs">
+            ${vehicle.seats ? `<span class="spec-tag"><i class="fas fa-user"></i> ${vehicle.seats} Seats</span>` : ''}
+            ${vehicle.fuelType ? `<span class="spec-tag"><i class="fas fa-gas-pump"></i> ${vehicle.fuelType.charAt(0).toUpperCase() + vehicle.fuelType.slice(1)}</span>` : ''}
+            ${vehicle.transmission ? `<span class="spec-tag"><i class="fas fa-gear"></i> ${vehicle.transmission.charAt(0).toUpperCase() + vehicle.transmission.slice(1)}</span>` : ''}
+            ${vehicle.vehicleType ? `<span class="spec-tag"><i class="fas fa-car"></i> ${vehicle.vehicleType}</span>` : ''}
+          </div>
+          <div class="vehicle-price">
+            ₹${(vehicle.price || vehicle.ratePerKm || 0).toLocaleString('en-IN')}
+            ${vehicle.ratePerKm ? '/km' : '/day'}
+          </div>
+          <span class="vehicle-status ${statusClass}">${status.replace('_', ' ')}</span>
+          <div class="vehicle-actions">
+            <button class="btn btn-ghost btn-sm" onclick="window.location.href='/cars/${vehicle._id}'">
+              <i class="fas fa-eye"></i> View
+            </button>
+            <button class="btn btn-ghost btn-sm" onclick="window.location.href='/cars/${vehicle._id}/edit'">
+              <i class="fas fa-edit"></i> Edit
+            </button>
+            <button class="btn btn-danger btn-sm" onclick="deleteVehicle('${vehicle._id}')">
+              <i class="fas fa-trash"></i> Delete
+            </button>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function updateStats(vehicles) {
+  const total = vehicles.length;
+  const available = vehicles.filter(v => v.availabilityStatus === 'AVAILABLE').length;
+  const booked = vehicles.filter(v => v.availabilityStatus === 'BOOKED').length;
+  const maintenance = vehicles.filter(v => v.availabilityStatus === 'UNDER_MAINTENANCE').length;
+  
+  document.getElementById('totalVehicles').textContent = total;
+  document.getElementById('availableVehicles').textContent = available;
+  document.getElementById('bookedVehicles').textContent = booked;
+  document.getElementById('maintenanceVehicles').textContent = maintenance;
+}
+
+function filterVehicles() {
+  const search = document.getElementById('searchInput').value.toLowerCase();
+  const status = document.getElementById('statusFilter').value;
+  const type = document.getElementById('typeFilter').value.toLowerCase();
+  const fuel = document.getElementById('fuelFilter').value.toLowerCase();
+  
+  const filtered = allVehicles.filter(vehicle => {
+    const matchesSearch = !search || 
+      (vehicle.title && vehicle.title.toLowerCase().includes(search)) ||
+      (vehicle.vehicleName && vehicle.vehicleName.toLowerCase().includes(search)) ||
+      (vehicle.brand && vehicle.brand.toLowerCase().includes(search)) ||
+      (vehicle.model && vehicle.model.toLowerCase().includes(search)) ||
+      (vehicle.location && vehicle.location.toLowerCase().includes(search));
+    
+    const matchesStatus = !status || vehicle.availabilityStatus === status;
+    const matchesType = !type || (vehicle.vehicleType && vehicle.vehicleType.toLowerCase().includes(type));
+    const matchesFuel = !fuel || (vehicle.fuelType && vehicle.fuelType.toLowerCase().includes(fuel));
+    
+    return matchesSearch && matchesStatus && matchesType && matchesFuel;
+  });
+  
+  renderVehicles(filtered);
+}
+
+async function deleteVehicle(id) {
+  if (!confirm('Are you sure you want to delete this vehicle? This action cannot be undone.')) return;
+  
+  try {
+    const res = await fetch(`/cars/${id}`, {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    });
+    
+    const data = await res.json();
+    
+    if (data.success) {
+      alert('Vehicle deleted successfully');
+      loadVehicles();
+    } else {
+      alert(data.error || 'Failed to delete vehicle');
+    }
+  } catch (error) {
+    alert('Error deleting vehicle');
+  }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  loadVehicles();
+});
+</script>

@@ -29,8 +29,8 @@
           <a href="/users/logout" class="btn btn-ghost">Logout</a>
         </div>
       <% } else if(currUser.role === 'owner') { %>
-        <a href="/owners/dashboard" class="nav-link <%= req.path === '/owners/dashboard' ? 'active' : '' %>"><i class="fas fa-chart-simple"></i> Dashboard</a>
-        <a href="/owners/my-vehicles" class="nav-link <%= req.path === '/owners/my-vehicles' ? 'active' : '' %>"><i class="fas fa-car"></i> My Vehicles</a>
+        <a href="/owners/enhanced-dashboard" class="nav-link <%= req.path === '/owners/enhanced-dashboard' ? 'active' : '' %>"><i class="fas fa-chart-simple"></i> Dashboard</a>
+        <a href="/owners/my-vehicles-enhanced" class="nav-link <%= req.path === '/owners/my-vehicles-enhanced' ? 'active' : '' %>"><i class="fas fa-car"></i> My Vehicles</a>
         <a href="/owners/bookings" class="nav-link <%= req.path === '/owners/bookings' ? 'active' : '' %>"><i class="fas fa-calendar-check"></i> Bookings</a>
         <div class="navbar-actions">
           <a href="/notifications" class="nav-link position-relative">
