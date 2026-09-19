@@ -1,0 +1,105 @@
+<% layout("/listings/layouts/boilerplate") %>
+
+<section class="about-hero">
+  <div class="container about-hero-grid">
+    <div class="about-hero-copy">
+      <span class="section-tag"><i class="fas fa-compass"></i> About RideLocal</span>
+      <h1>Local journeys, made <span>simple and trustworthy.</span></h1>
+      <p>RideLocal brings travellers and local vehicle owners together for comfortable trips, transparent pricing, and a booking experience that feels human from start to finish.</p>
+      <div class="about-actions">
+        <a href="/cars" class="btn btn-primary btn-lg"><i class="fas fa-car"></i> Explore vehicles</a>
+        <a href="/cars/new-step" class="btn btn-outline btn-lg"><i class="fas fa-plus-circle"></i> List your vehicle</a>
+      </div>
+    </div>
+    <div class="about-hero-art" aria-label="A local trip begins with a trusted vehicle">
+      <div class="art-glow"></div>
+      <div class="art-road"></div>
+      <div class="art-card art-card-top"><i class="fas fa-shield-heart"></i><span>Verified<br><strong>connections</strong></span></div>
+      <div class="art-card art-card-bottom"><i class="fas fa-location-dot"></i><span>Go further,<br><strong>locally</strong></span></div>
+      <div class="art-car"><i class="fas fa-car-side"></i></div>
+      <span class="art-dot dot-one"></span><span class="art-dot dot-two"></span><span class="art-dot dot-three"></span>
+    </div>
+  </div>
+</section>
+
+<section class="section about-intro">
+  <div class="container about-intro-grid">
+    <div>
+      <span class="section-tag">Why we exist</span>
+      <h2 class="section-title">The better way to move around your city.</h2>
+    </div>
+    <div class="about-intro-copy">
+      <p>Finding a reliable vehicle for a local trip should not mean juggling calls, unclear rates, or last-minute surprises. RideLocal gives customers one clear place to discover vehicles and gives owners the tools to turn their vehicles into dependable local service.</p>
+      <p>Whether you are planning a family outing, a business visit, or your next weekend escape, we make each step easier to understand and easier to trust.</p>
+    </div>
+  </div>
+</section>
+
+<section class="section section-alt about-values">
+  <div class="container">
+    <div class="section-header">
+      <span class="section-tag"><i class="fas fa-sparkles"></i> The RideLocal promise</span>
+      <h2 class="section-title">Built around confidence.</h2>
+      <p class="section-subtitle">Every part of the experience is designed to keep local travel clear, comfortable, and connected.</p>
+    </div>
+    <div class="value-grid">
+      <article class="value-card">
+        <div class="value-icon blue"><i class="fas fa-user-check"></i></div>
+        <h3>People you can trust</h3>
+        <p>Profiles, reviews, and verification help you make an informed choice before every booking.</p>
+      </article>
+      <article class="value-card">
+        <div class="value-icon green"><i class="fas fa-receipt"></i></div>
+        <h3>Pricing with clarity</h3>
+        <p>See the details that matter upfront, so your trip starts without hidden costs or confusion.</p>
+      </article>
+      <article class="value-card">
+        <div class="value-icon orange"><i class="fas fa-headset"></i></div>
+        <h3>Support that stays close</h3>
+        <p>From discovery to the return journey, the platform keeps your booking information close at hand.</p>
+      </article>
+    </div>
+  </div>
+</section>
+
+<section class="section about-process">
+  <div class="container">
+    <div class="section-header">
+      <span class="section-tag">How RideLocal works</span>
+      <h2 class="section-title">From plan to road in three steps.</h2>
+    </div>
+    <div class="process-grid">
+      <div class="process-step"><span class="step-number">01</span><i class="fas fa-magnifying-glass"></i><h3>Find your fit</h3><p>Browse local vehicles and compare the details that matter for your trip.</p></div>
+      <div class="process-step"><span class="step-number">02</span><i class="fas fa-calendar-check"></i><h3>Book with confidence</h3><p>Choose your dates, share your trip details, and confirm transparently.</p></div>
+      <div class="process-step"><span class="step-number">03</span><i class="fas fa-road"></i><h3>Enjoy the journey</h3><p>Travel comfortably while your booking details stay organized in one place.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="about-cta">
+  <div class="container about-cta-inner">
+    <div><span class="section-tag">Your next trip starts here</span><h2>Ready to ride local?</h2><p>Discover a better way to book the journeys that matter.</p></div>
+    <a href="/cars" class="btn btn-primary btn-lg">Find a vehicle <i class="fas fa-arrow-right"></i></a>
+  </div>
+</section>
+
+<style>
+.about-hero { padding: 92px 0 76px; background: linear-gradient(135deg, #eff6ff 0%, #ffffff 54%, #f5f3ff 100%); overflow: hidden; }
+.about-hero-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(380px, 0.9fr); gap: 64px; align-items: center; }
+.about-hero-copy h1 { max-width: 650px; margin: 16px 0; font-size: clamp(38px, 5vw, 64px); line-height: 1.08; letter-spacing: -1.5px; }
+.about-hero-copy h1 span { color: var(--primary); }
+.about-hero-copy > p { max-width: 610px; color: var(--text-secondary); font-size: 18px; line-height: 1.75; }
+.about-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 28px; }
+.about-hero-art { min-height: 390px; position: relative; border-radius: 28px; background: #0f172a; overflow: hidden; box-shadow: var(--shadow-xl); }
+.art-glow { position: absolute; width: 330px; height: 330px; top: -100px; right: -55px; background: #2563eb; opacity: .45; filter: blur(35px); border-radius: 50%; }
+.art-road { position: absolute; width: 150%; height: 170px; left: -20%; bottom: 28px; background: #1e293b; transform: rotate(-11deg); border-top: 2px dashed rgba(255,255,255,.22); border-bottom: 2px solid rgba(255,255,255,.08); }
+.art-car { position: absolute; left: 27%; bottom: 111px; width: 144px; height: 82px; display: grid; place-items: center; border-radius: 22px 22px 16px 16px; background: var(--gradient); color: white; font-size: 58px; transform: rotate(-11deg); box-shadow: 0 18px 30px rgba(0,0,0,.3); }
+.art-card { position: absolute; z-index: 2; display: flex; align-items: center; gap: 10px; padding: 13px 16px; border: 1px solid rgba(255,255,255,.18); border-radius: 14px; background: rgba(255,255,255,.1); color: #fff; backdrop-filter: blur(12px); font-size: 12px; line-height: 1.25; }
+.art-card i { font-size: 18px; color: #93c5fd; }.art-card strong { font-size: 14px; }.art-card-top { top: 42px; left: 32px; }.art-card-bottom { right: 28px; bottom: 35px; }.art-dot { position: absolute; width: 7px; height: 7px; border-radius: 50%; background: #60a5fa; }.dot-one { top: 28%; right: 27%; }.dot-two { top: 19%; left: 46%; background: #c4b5fd; }.dot-three { bottom: 27%; right: 14%; background: #34d399; }
+.about-intro-grid { display: grid; grid-template-columns: .8fr 1.2fr; gap: 100px; align-items: start; }.about-intro .section-title { max-width: 390px; text-align: left; }.about-intro-copy { color: var(--text-secondary); font-size: 17px; line-height: 1.8; }.about-intro-copy p + p { margin-top: 18px; }
+.value-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }.value-card { padding: 28px; background: #fff; border: 1px solid var(--border); border-radius: var(--radius-lg); }.value-icon { width: 48px; height: 48px; display: grid; place-items: center; border-radius: 13px; margin-bottom: 20px; font-size: 19px; }.value-icon.blue { color: #2563eb; background: #dbeafe; }.value-icon.green { color: #059669; background: #d1fae5; }.value-icon.orange { color: #d97706; background: #fef3c7; }.value-card h3, .process-step h3 { margin-bottom: 8px; font-size: 18px; }.value-card p, .process-step p { color: var(--text-secondary); line-height: 1.65; font-size: 14px; }
+.process-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 36px; }.process-step { position: relative; padding: 24px 0 0; border-top: 2px solid var(--border); }.step-number { color: var(--primary); font-size: 13px; font-weight: 800; letter-spacing: 1px; }.process-step > i { display: block; margin: 30px 0 18px; color: var(--accent); font-size: 24px; }
+.about-cta { padding: 52px 0; background: var(--gradient-dark); color: #fff; }.about-cta-inner { display: flex; align-items: center; justify-content: space-between; gap: 24px; }.about-cta .section-tag { background: rgba(255,255,255,.1); color: #93c5fd; }.about-cta h2 { margin: 10px 0 4px; font-size: 32px; }.about-cta p { color: rgba(255,255,255,.65); }.about-cta .btn-primary { flex-shrink: 0; }
+@media (max-width: 800px) { .about-hero { padding: 56px 0; }.about-hero-grid, .about-intro-grid { grid-template-columns: 1fr; gap: 36px; }.about-hero-art { min-height: 300px; }.about-intro-grid { gap: 18px; }.value-grid, .process-grid { grid-template-columns: 1fr; }.about-cta-inner { align-items: flex-start; flex-direction: column; }.about-cta h2 { font-size: 28px; } }
+@media (max-width: 480px) { .about-hero-copy h1 { font-size: 38px; }.about-hero-copy > p { font-size: 16px; }.art-card-top { left: 16px; }.art-card-bottom { right: 16px; }.art-car { left: 20%; } }
+</style>

@@ -240,6 +240,14 @@ app.get("/", (req, res) => {
     res.redirect("/customers/home");
 });
 
+app.get("/about", (req, res) => {
+    res.render("about");
+});
+
+app.get("/favicon.ico", (req, res) => {
+    res.status(204).end();
+});
+
 //make a demo user for checking all things works 
 // app.get("/demouser",async(req,res)=>{
 //     let fakeUser=new User({

@@ -12,6 +12,7 @@
         <a href="/customers/home" class="nav-link <%= req.path === '/customers/home' ? 'active' : '' %>">Home</a>
         <a href="/cars" class="nav-link">Vehicles</a>
         <a href="#how" class="nav-link">How it Works</a>
+        <a href="/about" class="nav-link <%= req.path === '/about' ? 'active' : '' %>">About</a>
         <div class="navbar-actions">
           <a href="/users/login" class="btn btn-ghost">Log in</a>
           <a href="/users/signup" class="btn btn-primary">Sign up</a>
@@ -19,6 +20,7 @@
       <% } else if(currUser.role === 'customer') { %>
         <a href="/customers/home" class="nav-link <%= req.path === '/customers/home' ? 'active' : '' %>"><i class="fas fa-home"></i> Home</a>
         <a href="/cars" class="nav-link"><i class="fas fa-car"></i> Vehicles</a>
+        <a href="/about" class="nav-link <%= req.path === '/about' ? 'active' : '' %>"><i class="fas fa-circle-info"></i> About</a>
         <a href="/customers/my-trips" class="nav-link <%= req.path === '/customers/my-trips' ? 'active' : '' %>"><i class="fas fa-route"></i> My Trips</a>
         <div class="navbar-actions">
           <a href="/notifications" class="nav-link position-relative">
@@ -31,6 +33,7 @@
       <% } else if(currUser.role === 'owner') { %>
         <a href="/owners/enhanced-dashboard" class="nav-link <%= req.path === '/owners/enhanced-dashboard' ? 'active' : '' %>"><i class="fas fa-chart-simple"></i> Dashboard</a>
         <a href="/owners/my-vehicles-enhanced" class="nav-link <%= req.path === '/owners/my-vehicles-enhanced' ? 'active' : '' %>"><i class="fas fa-car"></i> My Vehicles</a>
+        <a href="/about" class="nav-link <%= req.path === '/about' ? 'active' : '' %>"><i class="fas fa-circle-info"></i> About</a>
         <a href="/owners/bookings" class="nav-link <%= req.path === '/owners/bookings' ? 'active' : '' %>"><i class="fas fa-calendar-check"></i> Bookings</a>
         <div class="navbar-actions">
           <a href="/notifications" class="nav-link position-relative">
